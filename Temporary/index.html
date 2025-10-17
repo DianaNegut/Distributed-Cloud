@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mini IPFS Uploader</title>
+    <style>
+        body { font-family: sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; border: 1px solid #ccc; border-radius: 8px; }
+        input, button { font-size: 1em; padding: 10px; margin-top: 10px; }
+        #info, #content { margin-top: 20px; padding: 10px; background-color: #f0f0f0; border-radius: 4px; word-wrap: break-word; }
+        #content img { max-width: 100%; }
+    </style>
+</head>
+<body>
+    <h1>Mini IPFS Uploader</h1>
+
+    <h2>1. Încarcă un fișier în IPFS</h2>
+    <input type="file" id="file-input" />
+    <button id="upload-button">Încarcă</button>
+    <div id="info">Aici va apărea CID-ul fișierului...</div>
+
+    <hr>
+
+    <h2>2. Preia un fișier din IPFS</h2>
+    <input type="text" id="cid-input" placeholder="Introdu CID-ul aici" />
+    <button id="fetch-button">Preia</button>
+    <div id="content">Aici va apărea conținutul fișierului...</div>
+
+    <script src="https://cdn.jsdelivr.net/npm/ipfs-http-client/dist/index.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

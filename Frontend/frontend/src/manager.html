@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IPFS Private Network Manager</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            padding: 40px;
+        }
+
+        @media (max-width: 768px) {
+            .content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 12px;
+            border-left: 4px solid #667eea;
+        }
+
+        .section h2 {
+            font-size: 1.5em;
+            color: #333;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section h2::before {
+            content: '⚙️';
+            font-size: 1.3em;
+        }
+
+        .task {
+            background: white;
+            padding: 15px;
+            margin-bottom: 12px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: all 0.3s ease;
+            border: 2px solid #e9ecef;
+        }
+
+        .task:hover {
+            border-color: #667eea;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+            transform: translateX(4px);
+        }
+
+        .task-check {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            flex-shrink: 0;
+            font-size: 14px;
+        }
+
+        .task-text {
+            flex: 1;
+        }
+
+        .task-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .task-desc {
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .code-block {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            overflow-x: auto;
+            margin-top: 15px;
+            border-left: 4px solid #667eea;
+        }
+
+        .code-block.info {
+            background: #e3f2fd;
+            color: #1565c0;
+            border-left-color: #1976d2;
+        }
+
+        .logs {
+            background: #1e1e1e;
+            color: #00ff00;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            max-height: 400px;
+            overflow-y: auto;
+            line-height: 1.6;
+        }
+
+        .log-time {
+            color: #666;
+        }
+
+        .log-success {
+            color: #4caf50;
+        }
+
+        .log-info {
+            color: #00ff00;
+        }
+
+        .log-warning {
+            color: #ff9800;
+        }
+
+        .key-display {
+            background: #f0f0f0;
+            padding: 12px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 0.85em;
+            word-break: break-all;
+            border: 1px solid #ddd;
+            margin-top: 10px;
+        }
+
+        .section h2[data-icon="🔑"]::before {
+            content: '🔑';
+        }
+
+        .section h2[data-icon="✓"]::before {
+            content: '✓';
+        }
+
+        .section h2[data-icon="📋"]::before {
+            content: '📋';
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            margin-top: 15px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(102, 126, 234, 0.4);
+        }
+
+        .badge {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+
+        .bootstrap-section {
+            grid-column: 1 / -1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌐 IPFS Private Network Manager</h1>
+            <p>Configurare și gestionare rețea IPFS privată</p>
+        </div>
+
+        <div class="content">
+            <div class="section">
+                <h2 data-icon="🔑">Configurare Swarm Key</h2>
+                <div class="task">
+                    <div class="task-check">1</div>
+                    <div class="task-text">
+                        <div class="task-title">Copiere swarm.key</div>
+                        <div class="task-desc">Cheia secretă pentru rețeaua privată</div>
+                    </div>
+                </div>
+                <div class="code-block info">
+Swarm Key (hex):<br>
+ddd244b4b30dca4d8947b4
+                </div>
+                <div class="task">
+                    <div class="task-check">2</div>
+                    <div class="task-text">
+                        <div class="task-title">Bootstrap Node</div>
+                        <div class="task-desc">/ip4/192.168.1.104/tcp/4001/</div>
+                    </div>
+                </div>
+                <button>📋 Copiază Cheia</button>
+            </div>
+
+            <div class="section">
+                <h2 data-icon="✓">Ce face configurarea?</h2>
+                <div class="task">
+                    <div class="task-check">✓</div>
+                    <div class="task-text">
+                        <div class="task-title">Copiere swarm.key</div>
+                        <div class="task-desc">Cheia secretă pentru rețeaua privată</div>
+                    </div>
+                </div>
+                <div class="task">
+                    <div class="task-check">✓</div>
+                    <div class="task-text">
+                        <div class="task-title">Dezactivare AutoConf & AutoTLS</div>
+                        <div class="task-desc">Izolare de rețeaua publică IPFS</div>
+                    </div>
+                </div>
+                <div class="task">
+                    <div class="task-check">✓</div>
+                    <div class="task-text">
+                        <div class="task-title">Activare DHT Routing</div>
+                        <div class="task-desc">Descoperire peer-uri în rețea</div>
+                    </div>
+                </div>
+                <div class="task">
+                    <div class="task-check">✓</div>
+                    <div class="task-text">
+                        <div class="task-title">Stergere servicii externe</div>
+                        <div class="task-desc">Routing și publishing doar intern</div>
+                    </div>
+                </div>
+                <div class="task">
+                    <div class="task-check">✓</div>
+                    <div class="task-text">
+                        <div class="task-title">Configurare Bootstrap</div>
+                        <div class="task-desc">Adaugă doar nodurile tale</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section bootstrap-section">
+                <h2 data-icon="📋">Log Execuție</h2>
+                <div class="logs">
+<span class="log-time">[12:44:04 PM]</span> <span class="log-info">Copiere swarm.key....</span><br>
+<span class="log-time">[12:44:04 PM]</span> <span class="log-success">✓ swarm.key copiat cu succes</span><br>
+<span class="log-time">[12:44:04 PM]</span> <span class="log-info">Dezactivare AutoConf...</span><br>
+<span class="log-time">[12:44:04 PM]</span> <span class="log-success">✓ AutoConf.Enabled = false</span><br>
+<span class="log-time">[12:44:04 PM]</span> <span class="log-info">Dezactivare AutoTLS...</span><br>
+<span class="log-time">[12:44:04 PM]</span> <span class="log-success">✓ AutoTLS.Enabled = false</span><br>
+<span class="log-time">[12:44:04 PM]</span> <span class="log-info">Setare Routing la DHT...</span><br>
+<span class="log-time">[12:44:04 PM]</span> <span class="log-success">✓ Routing.Type = dht</span><br>
+<span class="log-time">[12:44:04 PM]</span> <span class="log-info">Stergere DelegatedRouters...</span><br>
+<span class="log-time">[12:44:04 PM]</span> <span class="log-success">✓ DelegatedRouters = []</span><br>
+<span class="log-time">[12:44:04 PM]</span> <span class="log-info">Stergere DelegatedPublishers...</span><br>
+<span class="log-time">[12:44:04 PM]</span> <span class="log-success">✓ DelegatedPublishers = []</span><br>
+<span class="log-time">[12:44:04 PM]</span> <span class="log-info">Stergere bootstrap public...</span><br>
+<span class="log-time">[12:44:04 PM]</span> <span class="log-success">✓ Configurare completă!</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

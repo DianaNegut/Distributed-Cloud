@@ -213,7 +213,7 @@ function App() {
       </div>
 
       {/* Peers List */}
-      {peers.length > 0 && (
+      {peers.length >= 0 && (
         <div className="panel" style={{ marginTop: '24px' }}>
           <h2 className="panel-title">
             <Users />

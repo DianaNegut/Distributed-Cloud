@@ -33,7 +33,7 @@ router.post('/', async (req, res) => {
     console.log('[JOIN] Configurare finalizată.');
     res.json(result);
   } catch (error) {
-    console.error('❌ Eroare la /api/join-network:', error.message);
+    console.error(' Eroare la /api/join-network:', error.message);
     res.status(500).json({ success: false, error: error.message });
   }
 });

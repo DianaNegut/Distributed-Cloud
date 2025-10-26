@@ -36,9 +36,9 @@ app.use('/api/health', healthRoutes);
 
 // Pornire server
 app.listen(PORT, async () => {
-  console.log(`🚀 Server pornit pe http://localhost:${PORT}`);
-  console.log(`📁 IPFS Path: ${IPFS_PATH}`);
-  console.log(`📁 Kubo Path: ${KUBO_PATH}`);
+  console.log(`Server pornit pe http://localhost:${PORT}`);
+  console.log(`IPFS Path: ${IPFS_PATH}`);
+  console.log(`Kubo Path: ${KUBO_PATH}`);
   await ensureKuboInstalled();
-  console.log(`✅ Health check: http://localhost:${PORT}/api/health`);
+  console.log(`Health check: http://localhost:${PORT}/api/health`);
 });

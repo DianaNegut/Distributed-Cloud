@@ -23,8 +23,8 @@ router.post('/', async (req, res) => {
     const swarmKeyContent = `/key/swarm/psk/1.0.0/\n/base16/\n${swarmKey}`;
     const swarmKeyPath = path.join(IPFS_PATH, 'swarm.key');
     await fsp.writeFile(swarmKeyPath, swarmKeyContent, 'utf8');
-    console.log(`[CONFIG] ✓ swarm.key scris la ${swarmKeyPath}`);
-    logs.push({ message: '✓ swarm.key scris cu succes', type: 'success' });
+    console.log(`[CONFIG] swarm.key scris la ${swarmKeyPath}`);
+    logs.push({ message: 'swarm.key scris cu succes', type: 'success' });
 
     const cmds = [
       'ipfs config --json AutoConf.Enabled false',
@@ -42,12 +42,12 @@ router.post('/', async (req, res) => {
       logs.push({ message: `Executat: ${cmd}`, type: 'info' });
     }
 
-    console.log('[CONFIG] 🎉 Rețea IPFS configurată cu succes!');
-    logs.push({ message: '🎉 Rețea IPFS configurată cu succes!', type: 'success' });
+    console.log('[CONFIG]  Rețea IPFS configurată cu succes!');
+    logs.push({ message: ' Rețea IPFS configurată cu succes!', type: 'success' });
     res.json({ success: true, logs });
   } catch (error) {
-    console.error('[CONFIG] ❌ Eroare la configurarea rețelei:', error.stderr || error.message);
-    logs.push({ message: `❌ Eroare: ${error.error || error.message}`, type: 'error' });
+    console.error('[CONFIG]  Eroare la configurarea rețelei:', error.stderr || error.message);
+    logs.push({ message: ` Eroare: ${error.error || error.message}`, type: 'error' });
     res.status(500).json({ success: false, logs });
   }
 });

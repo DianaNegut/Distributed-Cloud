@@ -30,7 +30,7 @@ router.get('/', async (req, res) => {
 
     res.json({ success: true, swarmKey, bootstrapNode });
   } catch (error) {
-    console.error('❌ Eroare la /api/bootstrap-info:', error.stderr || error.message);
+    console.error(' Eroare la /api/bootstrap-info:', error.stderr || error.message);
     res.status(500).json({ success: false, error: error.stderr || error.message });
   }
 });

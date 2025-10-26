@@ -12,11 +12,11 @@ function execPromise(command, options = {}) {
     console.log(`[EXEC] Executare: ${command}`);
     exec(command, execOptions, (error, stdout, stderr) => {
       if (error) {
-        console.error(`[EXEC] ❌ Eroare la: ${command}`);
+        console.error(`[EXEC]  Eroare la: ${command}`);
         console.error(stderr);
         reject({ error: error.message, stderr });
       } else {
-        console.log(`[EXEC] ✅ Succes: ${command}`);
+        console.log(`[EXEC]  Succes: ${command}`);
         resolve({ stdout, stderr });
       }
     });

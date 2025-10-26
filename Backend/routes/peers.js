@@ -30,7 +30,7 @@ router.get('/', async (req, res) => {
     console.log(`[PEERS] Găsiți ${peers.length} peers.`);
     res.json({ success: true, peers });
   } catch (error) {
-    console.error('[PEERS] ❌ Eroare la `ipfs swarm peers`:', error.stderr || error.message);
+    console.error('[PEERS]  Eroare la `ipfs swarm peers`:', error.stderr || error.message);
     res.status(500).json({ success: false, error: error.stderr || error.message });
   }
 });

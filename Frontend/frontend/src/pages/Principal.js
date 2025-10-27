@@ -7,6 +7,7 @@ import LogsPanel from '../components/LogsPanel';
 import { configureNetwork, getPeers } from '../api/ipfsApi';
 import { useLogs } from '../hooks/useLogs';
 import { Server, RefreshCw, Users } from 'lucide-react';
+import ClusterPanel from '../components/ClusterPanel';
 import '../App.css';
 
 export default function Principal() {
@@ -85,6 +86,17 @@ export default function Principal() {
 
       {peers.length > 0 && <PeersPanel peers={peers} />}
       {logs.length > 0 && <LogsPanel logs={logs} />}
+      <div className="panels-container">
+        <div className="left-panels">
+          <InfoPanel nodeInfo={nodeInfo} />
+          <ConfigPanel />
+          <ClusterPanel /> {/* Adaugă ClusterPanel aici */}
+        </div>
+        <div className="right-panels">
+          <PeersPanel peers={peers} />
+          <LogsPanel />
+        </div>
+      </div>
     </div>
   );
 }

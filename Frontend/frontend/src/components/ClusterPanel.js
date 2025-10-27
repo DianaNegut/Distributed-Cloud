@@ -1,6 +1,5 @@
-// Frontend/frontend/src/components/ClusterPanel.js
 import React, { useState, useEffect, useCallback } from 'react';
-import ipfsApi from '../api/ipfsApi'; // Importă funcțiile API
+import ipfsApi from '../api/ipfsApi'; 
 
 function ClusterPanel() {
   const [peers, setPeers] = useState([]);
@@ -8,40 +7,38 @@ function ClusterPanel() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Funcție pentru a reîncărca lista de peers
+  
   const fetchPeers = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const clusterPeers = await ipfsApi.getClusterPeers();
-      // Răspunsul din backend pare să fie un obiect cu cheia 'peers' care conține un array de string-uri
-      // sau un array direct. Ajustează în funcție de structura exactă returnată.
-      // Presupunând că e un array de string-uri:
+    
       setPeers(Array.isArray(clusterPeers) ? clusterPeers : []);
     } catch (err) {
       setError('Failed to fetch cluster peers.');
       console.error(err);
-      setPeers([]); // Resetează peers în caz de eroare
+      setPeers([]); 
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // Încarcă peers la montarea componentei
+  
   useEffect(() => {
     fetchPeers();
   }, [fetchPeers]);
 
   const handleAddPeer = async (e) => {
-    e.preventDefault(); // Previne reîncărcarea paginii la submit-ul formularului
-    if (!newPeerId.trim()) return; // Nu adăuga peerId gol
+    e.preventDefault(); 
+    if (!newPeerId.trim()) return; 
 
     setLoading(true);
     setError(null);
     try {
       await ipfsApi.addClusterPeer(newPeerId);
-      setNewPeerId(''); // Golește inputul
-      fetchPeers(); // Reîncarcă lista după adăugare
+      setNewPeerId(''); 
+      fetchPeers(); 
     } catch (err) {
       setError(`Failed to add peer ${newPeerId}.`);
       console.error(err);
@@ -55,7 +52,7 @@ function ClusterPanel() {
     setError(null);
     try {
       await ipfsApi.removeClusterPeer(peerIdToRemove);
-      fetchPeers(); // Reîncarcă lista după ștergere
+      fetchPeers(); 
     } catch (err) {
       setError(`Failed to remove peer ${peerIdToRemove}.`);
       console.error(err);
@@ -70,7 +67,6 @@ function ClusterPanel() {
       {error && <p style={{ color: 'red' }}>Error: {error}</p>}
       {loading && <p>Loading...</p>}
 
-      {/* Formular pentru adăugare peer */}
       <form onSubmit={handleAddPeer} style={{ marginBottom: '15px' }}>
         <input
           type="text"
@@ -85,7 +81,6 @@ function ClusterPanel() {
         </button>
       </form>
 
-      {/* Lista de peers */}
       {peers.length > 0 ? (
         <ul>
           {peers.map((peer) => (

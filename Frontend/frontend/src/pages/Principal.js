@@ -93,10 +93,10 @@ export default function Principal() {
         </button>
       </div>
 
-      {/* Afișăm panourile principale o singură dată, cu props corecte */}
+      
       <div className="panels-container">
         <div className="left-panels">
-          <ClusterPanel /> {/* dacă nu ai nevoie, poți comenta */}
+          <ClusterPanel />
         </div>
 
         <div className="right-panels">

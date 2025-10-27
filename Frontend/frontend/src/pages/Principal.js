@@ -22,7 +22,11 @@ export default function Principal() {
     clearLogs();
     try {
       const res = await configureNetwork(swarmKey, bootstrapNode);
-      res.data.logs.forEach((log) => addLog(log.message, log.type));
+      if (res?.data?.logs) {
+        res.data.logs.forEach((log) => addLog(log.message, log.type));
+      } else {
+        addLog('Configurare finalizată (fără logs de la server)', 'success');
+      }
     } catch (err) {
       addLog(`Eroare: ${err.message}`, 'error');
     } finally {
@@ -33,8 +37,9 @@ export default function Principal() {
   const loadPeers = async () => {
     try {
       const res = await getPeers();
-      setPeers(res.data.peers);
-      addLog(`✓ ${res.data.peers.length} peers conectați`, 'success');
+      const fetchedPeers = res?.data?.peers || [];
+      setPeers(fetchedPeers);
+      addLog(`✓ ${fetchedPeers.length} peers conectați`, 'success');
     } catch (err) {
       addLog(`Eroare la peers: ${err.message}`, 'error');
     }
@@ -42,8 +47,12 @@ export default function Principal() {
 
   const copySwarmKey = () => {
     const keyContent = `/key/swarm/psk/1.0.0/\n/base16/\n${swarmKey}`;
-    navigator.clipboard.writeText(keyContent);
-    addLog('Swarm key copiat în clipboard', 'success');
+    try {
+      navigator.clipboard.writeText(keyContent);
+      addLog('Swarm key copiat în clipboard', 'success');
+    } catch (err) {
+      addLog(`Eroare la copiere: ${err.message}`, 'error');
+    }
   };
 
   return (
@@ -84,17 +93,15 @@ export default function Principal() {
         </button>
       </div>
 
-      {peers.length > 0 && <PeersPanel peers={peers} />}
-      {logs.length > 0 && <LogsPanel logs={logs} />}
+      {/* Afișăm panourile principale o singură dată, cu props corecte */}
       <div className="panels-container">
         <div className="left-panels">
-          <InfoPanel nodeInfo={nodeInfo} />
-          <ConfigPanel />
-          <ClusterPanel /> {/* Adaugă ClusterPanel aici */}
+          <ClusterPanel /> {/* dacă nu ai nevoie, poți comenta */}
         </div>
+
         <div className="right-panels">
-          <PeersPanel peers={peers} />
-          <LogsPanel />
+          {peers.length > 0 && <PeersPanel peers={peers} />}
+          {logs.length > 0 && <LogsPanel logs={logs} />}
         </div>
       </div>
     </div>

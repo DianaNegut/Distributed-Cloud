@@ -1,13 +1,12 @@
-// routes/cluster.js
 const express = require('express');
 const router = express.Router();
 const { execPromise } = require('../utils/execPromise');
 const { ensureKuboInstalled } = require('../utils/ensureKuboInstalled');
 const { KUBO_PATH, IPFS_PATH } = require('../config/paths');
+// modul fisiere pentru scriere / citire
 const fs = require('fs');
 const path = require('path');
 
-// Metadate fișiere în IPFS
 const fileMetadataPath = path.join(IPFS_PATH, 'cluster-metadata.json');
 
 function loadMetadata() {
@@ -29,7 +28,7 @@ function saveMetadata(data) {
   }
 }
 
-// Inițializare cluster
+
 router.post('/init', async (req, res) => {
   console.log('[CLUSTER] Inițializare IPFS Cluster...');
   try {
@@ -37,7 +36,7 @@ router.post('/init', async (req, res) => {
 
     const { clusterName = 'ipfs-cluster', replicationFactor = 3 } = req.body;
     
-    // Creează config pentru cluster
+    
     const clusterConfigPath = path.join(IPFS_PATH, 'cluster-config.json');
     const clusterConfig = {
       cluster: {
@@ -67,7 +66,7 @@ router.post('/init', async (req, res) => {
   }
 });
 
-// Adaugă fișier în cluster cu metadate și replicare
+
 router.post('/add', async (req, res) => {
   console.log('[CLUSTER] Procesare cerere de adăugare în cluster...');
   try {
@@ -78,14 +77,14 @@ router.post('/add', async (req, res) => {
       return res.status(400).json({ success: false, error: 'fileHash obligatoriu' });
     }
 
-    // Obține informații despre fișier
+  
     const fileInfo = await execPromise(`ipfs files stat /ipfs/${fileHash}`, { cwd: KUBO_PATH });
     const hashData = JSON.parse(fileInfo.stdout);
 
-    // Fixează pinul pentru a asigura replicare pe toate nodurile
+   
     const pinResult = await execPromise(`ipfs pin add ${fileHash}`, { cwd: KUBO_PATH });
     
-    // Salvează metadate local
+
     const metadata = loadMetadata();
     metadata[fileHash] = {
       name: fileName || `file-${fileHash.substring(0, 8)}`,
@@ -112,28 +111,28 @@ router.post('/add', async (req, res) => {
   }
 });
 
-// Obține starea replicării și statistici cluster
+
 router.get('/status', async (req, res) => {
   console.log('[CLUSTER] Procesare cerere status cluster...');
   try {
     await ensureKuboInstalled();
 
-    // Obține pins
+   
     const pinsResult = await execPromise('ipfs pin ls --type recursive', { cwd: KUBO_PATH });
     const pins = pinsResult.stdout.split('\n').filter(p => p.trim()).map(p => {
       const [hash, type] = p.split(' ');
       return { hash, type };
     });
 
-    // Obține peers conectați
+  
     const peersResult = await execPromise('ipfs swarm peers', { cwd: KUBO_PATH });
     const peers = peersResult.stdout.split('\n').filter(p => p.trim());
 
-    // Obține ID nodului
+   
     const idResult = await execPromise('ipfs id', { cwd: KUBO_PATH });
     const nodeData = JSON.parse(idResult.stdout);
 
-    // Încarcă metadate
+  
     const metadata = loadMetadata();
     const filesList = Object.values(metadata).map(f => ({
       ...f,
@@ -159,23 +158,23 @@ router.get('/status', async (req, res) => {
   }
 });
 
-// Verifică disponibilitate fișier pe cluster
+
 router.get('/availability/:fileHash', async (req, res) => {
   console.log(`[CLUSTER] Verificare disponibilitate: ${req.params.fileHash}`);
   try {
-    await ensureKuboInstilled();
+    await ensureKuboInstalled();
 
     const { fileHash } = req.params;
     
-    // Verifică dacă e pinuit local
+    
     const localPinsResult = await execPromise('ipfs pin ls --type recursive', { cwd: KUBO_PATH });
     const isPinned = localPinsResult.stdout.includes(fileHash);
 
-    // Caută pe DHT
+    
     const findProvidersResult = await execPromise(`ipfs dht findprovs ${fileHash}`, { cwd: KUBO_PATH });
     const providers = findProvidersResult.stdout.split('\n').filter(p => p.trim());
 
-    // Încarcă metadate
+    
     const metadata = loadMetadata();
     const fileMetadata = metadata[fileHash];
 
@@ -198,7 +197,7 @@ router.get('/availability/:fileHash', async (req, res) => {
   }
 });
 
-// Setează replication factor pentru un fișier
+
 router.post('/set-replication', async (req, res) => {
   console.log('[CLUSTER] Setare replication factor...');
   try {
@@ -214,10 +213,10 @@ router.post('/set-replication', async (req, res) => {
       return res.status(400).json({ success: false, error: 'replicationFactor trebuie să fie între 1 și 10' });
     }
 
-    // Pin cu metadate
+ 
     await execPromise(`ipfs pin add ${fileHash}`, { cwd: KUBO_PATH });
 
-    // Actualizează metadate
+    
     const metadata = loadMetadata();
     if (metadata[fileHash]) {
       metadata[fileHash].replicationFactor = replicationFactor;
@@ -237,7 +236,7 @@ router.post('/set-replication', async (req, res) => {
   }
 });
 
-// Lista toate fișierele din cluster
+
 router.get('/files', async (req, res) => {
   console.log('[CLUSTER] Lista fișiere din cluster...');
   try {
@@ -258,7 +257,7 @@ router.get('/files', async (req, res) => {
   }
 });
 
-// Șterge fișier din cluster
+
 router.delete('/files/:fileHash', async (req, res) => {
   console.log(`[CLUSTER] Ștergere fișier: ${req.params.fileHash}`);
   try {
@@ -266,10 +265,10 @@ router.delete('/files/:fileHash', async (req, res) => {
 
     const { fileHash } = req.params;
 
-    // Unpin
+  
     await execPromise(`ipfs pin rm ${fileHash}`, { cwd: KUBO_PATH });
 
-    // Elimină din metadate
+    
     const metadata = loadMetadata();
     delete metadata[fileHash];
     saveMetadata(metadata);
@@ -287,7 +286,7 @@ router.delete('/files/:fileHash', async (req, res) => {
   }
 });
 
-// Health check pentru cluster
+
 router.get('/health', async (req, res) => {
   console.log('[CLUSTER] Health check...');
   try {
@@ -300,7 +299,7 @@ router.get('/health', async (req, res) => {
     try {
       const repoSizeResult = await execPromise('ipfs repo stat', { cwd: KUBO_PATH });
       const output = repoSizeResult.stdout;
-      // Parse output: "NumObjects: 123\nRepoSize: 456789"
+      
       const numMatch = output.match(/NumObjects:\s*(\d+)/);
       const sizeMatch = output.match(/RepoSize:\s*(\d+)/);
       if (numMatch) repoStats.NumObjects = parseInt(numMatch[1]);

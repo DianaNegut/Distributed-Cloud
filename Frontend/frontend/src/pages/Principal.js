@@ -4,6 +4,7 @@ import ConfigPanel from '../components/ConfigPanel';
 import InfoPanel from '../components/InfoPanel';
 import PeersPanel from '../components/PeersPanel';
 import LogsPanel from '../components/LogsPanel';
+import FilesPanel from '../components/FilesPanel';
 import { configureNetwork, getPeers } from '../api/ipfsApi';
 import { useLogs } from '../hooks/useLogs';
 import { Server, RefreshCw, Users } from 'lucide-react';
@@ -93,8 +94,13 @@ export default function Principal() {
         </button>
       </div>
 
-      
-      <div className="panels-container">
+      {/* Secțiune pentru Fișiere - COMPONENTĂ NOUĂ */}
+      <div style={{ marginTop: '24px' }}>
+        <FilesPanel onLog={addLog} />
+      </div>
+
+      {/* Panouri existente */}
+      <div className="panels-container" style={{ marginTop: '24px' }}>
         <div className="left-panels">
           <ClusterPanel />
         </div>

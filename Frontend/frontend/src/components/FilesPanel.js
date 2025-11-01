@@ -13,6 +13,7 @@ function FilesPanel({ onLog }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [description, setDescription] = useState('');
   const [tags, setTags] = useState('');
+  const [keepPrivate, setKeepPrivate] = useState(false);
   const [selectedFileInfo, setSelectedFileInfo] = useState(null);
 
   useEffect(() => {

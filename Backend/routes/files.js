@@ -58,7 +58,8 @@ router.post('/upload', upload.single('file'), async (req, res) => {
     }
 
     const filePath = req.file.path;
-    const { description = '', tags = '' } = req.body;
+    const { description = '', tags = '', keepPrivate = 'false' } = req.body;
+    const isPrivate = keepPrivate === 'true';
 
     // Adaugă fișierul în IPFS
     console.log(`[FILES] Adăugare în IPFS: ${filePath}`);
@@ -89,20 +90,24 @@ router.post('/upload', upload.single('file'), async (req, res) => {
       description: description.trim(),
       tags: parsedTags,
       uploadedAt: new Date().toISOString(),
-      pinned: true
+      pinned: true,
+      isPrivate: isPrivate,
+      distributedToPeers: !isPrivate ? 0 : null // Counter pentru copii distribuite
     };
     saveFilesMetadata(metadata);
 
+    console.log(`[FILES] ✓ Fișier adăugat cu succes: ${fileHash} (${isPrivate ? 'PRIVAT' : 'PUBLIC'})`);
+    
     // Șterge fișierul temporar
     await fsp.unlink(filePath).catch(err => {
       console.warn('[FILES] Nu s-a putut șterge fișierul temporar:', err.message);
     });
-
-    console.log(`[FILES] ✓ Fișier adăugat cu succes: ${fileHash}`);
+    
     res.json({
       success: true,
-      message: 'Fișier adăugat în IPFS cu succes',
-      file: metadata[fileHash]
+      message: `Fișier adăugat în IPFS cu succes ${isPrivate ? '(privat - doar tu îl ai)' : '(va fi distribuit în rețea)'}`,
+      file: metadata[fileHash],
+      nextStep: isPrivate ? null : 'Fișierul va fi distribuit automat către peers conectați'
     });
 
   } catch (error) {
@@ -275,6 +280,107 @@ router.delete('/delete/:fileHash', async (req, res) => {
 
   } catch (error) {
     console.error('[FILES] Eroare la ștergere:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Distribuie fișier către peers (face public un fișier privat)
+router.post('/distribute/:fileHash', async (req, res) => {
+  console.log(`[FILES] Distribuire fișier: ${req.params.fileHash}`);
+  try {
+    await ensureKuboInstalled();
+
+    const { fileHash } = req.params;
+    const metadata = loadFilesMetadata();
+    const fileInfo = metadata[fileHash];
+
+    if (!fileInfo) {
+      return res.status(404).json({ success: false, error: 'Fișier negăsit' });
+    }
+
+    // Verifică dacă e deja distribuit
+    if (!fileInfo.isPrivate) {
+      return res.json({ 
+        success: true, 
+        message: 'Fișierul este deja public',
+        alreadyDistributed: true 
+      });
+    }
+
+    // Găsește peers activi
+    const peersResult = await execPromise('ipfs swarm peers', { cwd: KUBO_PATH });
+    const peers = peersResult.stdout.split('\n').filter(p => p.trim());
+
+    if (peers.length === 0) {
+      return res.json({
+        success: false,
+        error: 'Nu există peers conectați pentru distribuție'
+      });
+    }
+
+    // Actualizează metadata - marchează ca public
+    metadata[fileHash].isPrivate = false;
+    metadata[fileHash].distributedToPeers = 0;
+    metadata[fileHash].distributionStarted = new Date().toISOString();
+    saveFilesMetadata(metadata);
+
+    console.log(`[FILES] ✓ Fișier marcat pentru distribuție: ${fileHash} către ${peers.length} peers`);
+
+    res.json({
+      success: true,
+      message: `Fișier marcat ca PUBLIC. Peers pot acum să-l descarce.`,
+      availablePeers: peers.length,
+      fileHash: fileHash.substring(0, 12) + '...',
+      note: 'Peers trebuie să ruleze "ipfs get ' + fileHash + '" pentru a-l descărca'
+    });
+
+  } catch (error) {
+    console.error('[FILES] Eroare la distribuție:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Verifică statusul distribuției unui fișier
+router.get('/distribution-status/:fileHash', async (req, res) => {
+  console.log(`[FILES] Status distribuție: ${req.params.fileHash}`);
+  try {
+    await ensureKuboInstalled();
+
+    const { fileHash } = req.params;
+    const metadata = loadFilesMetadata();
+    const fileInfo = metadata[fileHash];
+
+    if (!fileInfo) {
+      return res.status(404).json({ success: false, error: 'Fișier negăsit' });
+    }
+
+    // Găsește provideri
+    let providers = [];
+    try {
+      const providersResult = await execPromise(`ipfs dht findprovs ${fileHash}`, { 
+        cwd: KUBO_PATH 
+      });
+      providers = providersResult.stdout.split('\n').filter(p => p.trim());
+    } catch (e) {
+      console.warn('[FILES] Nu s-au putut găsi provideri:', e.message);
+    }
+
+    const distributionInfo = {
+      isPrivate: fileInfo.isPrivate,
+      providersCount: providers.length,
+      providers: providers.slice(0, 5),
+      status: fileInfo.isPrivate ? 'PRIVATE' : 
+              providers.length > 1 ? 'DISTRIBUTED' : 'AVAILABLE',
+      distributionStarted: fileInfo.distributionStarted || null
+    };
+
+    res.json({
+      success: true,
+      distribution: distributionInfo
+    });
+
+  } catch (error) {
+    console.error('[FILES] Eroare la verificare distribuție:', error.message);
     res.status(500).json({ success: false, error: error.message });
   }
 });

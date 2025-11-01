@@ -78,6 +78,73 @@
   border: 1px solid rgba(168, 85, 247, 0.4);
 }
 
+/* Privacy Toggle */
+.privacy-toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.2s;
+}
+
+.privacy-toggle:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(168, 85, 247, 0.3);
+}
+
+.privacy-toggle input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.privacy-label {
+  color: #e9d5ff;
+  font-size: 14px;
+  font-weight: 500;
+  user-select: none;
+}
+
+.privacy-hint {
+  margin-top: 8px;
+  font-size: 13px;
+  padding: 8px 12px;
+  border-radius: 6px;
+}
+
+.hint-private {
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.1);
+  display: block;
+  padding: 8px;
+  border-radius: 6px;
+}
+
+.hint-public {
+  color: #4ade80;
+  background: rgba(74, 222, 128, 0.1);
+  display: block;
+  padding: 8px;
+  border-radius: 6px;
+}
+
+/* Privacy Badge */
+.privacy-badge {
+  display: inline-block;
+  background: rgba(251, 191, 36, 0.2);
+  color: #fbbf24;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  margin-right: 8px;
+  border: 1px solid rgba(251, 191, 36, 0.4);
+}
+
 .file-actions {
   display: flex;
   gap: 8px;

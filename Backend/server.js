@@ -1,46 +1,75 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-require('dotenv').config();
+const fileUpload = require('express-fileupload');
+
+// Import middleware
+const corsConfig = require('./middleware/corsConfig');
+const logger = require('./middleware/logger');
+const auth = require('./middleware/auth');
+
+// Import routes
+const healthRoutes = require('./routes/health');
+const statusRoutes = require('./routes/status');
+const peersRoutes = require('./routes/peers');
+const bootstrapRoutes = require('./routes/bootstrap');
+const joinRoutes = require('./routes/join');
+const configNetworkRoutes = require('./routes/configNetwork');
+const filesRoutes = require('./routes/files');
+const clusterRoutes = require('./routes/cluster');
+const dockerClusterRoutes = require('./routes/dockerCluster'); // RUTĂ NOUĂ
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Middleware
-app.use(cors(require('./middleware/corsConfig')));
+app.use(cors(corsConfig));
 app.use(express.json());
-app.use(require('./middleware/logger'));
+app.use(express.urlencoded({ extended: true }));
 
-// Auth middleware (se aplică după route-urile publice)
-const authMiddleware = require('./middleware/auth');
+// Middleware pentru upload fișiere
+app.use(fileUpload({
+  useTempFiles: true,
+  tempFileDir: '/tmp/',
+  limits: { fileSize: 100 * 1024 * 1024 }, // 100MB
+  abortOnLimit: true
+}));
+
+app.use(logger);
 
 // Routes publice (fără autentificare)
-app.use('/api/health', require('./routes/health'));
-app.use('/api/bootstrap-info', require('./routes/bootstrap'));
-app.use('/api/join-network', require('./routes/join'));
-app.use('/api/cluster/status', require('./routes/cluster'));
+app.use('/api/health', healthRoutes);
+app.use('/api/bootstrap-info', bootstrapRoutes);
+app.use('/api/join-network', joinRoutes);
 
-// Middleware de autentificare pentru route-urile protejate
-app.use(authMiddleware);
+// Routes cu autentificare
+app.use(auth);
+app.use('/api/status', statusRoutes);
+app.use('/api/peers', peersRoutes);
+app.use('/api/configure-network', configNetworkRoutes);
+app.use('/api/files', filesRoutes);
+app.use('/api/cluster', clusterRoutes);
+app.use('/api/docker-cluster', dockerClusterRoutes); // RUTĂ NOUĂ PENTRU DOCKER CLUSTER
 
-// Routes protejate
-app.use('/api/configure-network', require('./routes/configNetwork'));
-app.use('/api/status', require('./routes/status'));
-app.use('/api/peers', require('./routes/peers'));
-app.use('/api/cluster', require('./routes/cluster'));
-app.use('/api/files', require('./routes/files')); // ROUTE NOU pentru fișiere
-
-// Error handling middleware
+// Error handling
 app.use((err, req, res, next) => {
-  console.error('Error:', err);
+  console.error('[ERROR]', err);
   res.status(500).json({ 
     success: false, 
     error: err.message || 'Internal server error' 
   });
 });
 
-// Start server
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({ 
+    success: false, 
+    error: 'Endpoint not found' 
+  });
+});
+
 app.listen(PORT, () => {
-  console.log(`\n🚀 Server pornit pe portul ${PORT}`);
-  console.log(`📡 API disponibil la: http://localhost:${PORT}/api`);
-  console.log(`🔒 Auth: x-api-key = ${process.env.API_KEY || 'supersecret'}\n`);
+  console.log(`\n🚀 Server pornit pe http://localhost:${PORT}`);
+  console.log(`📡 API disponibil la http://localhost:${PORT}/api`);
+  console.log(`🔐 API Key: ${process.env.API_KEY || 'supersecret'}\n`);
 });

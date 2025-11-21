@@ -10,20 +10,49 @@ router.get('/status', async (req, res) => {
   try {
     const clusterInfo = await clusterClient.getClusterInfo();
     const peers = clusterInfo.peers || [];
-    const pins = clusterInfo.pins || [];
+    const pinsData = clusterInfo.pins || {};
 
-    res.json({
+    console.log('[DOCKER-CLUSTER] pinsData type:', typeof pinsData);
+    console.log('[DOCKER-CLUSTER] pinsData is object:', typeof pinsData === 'object');
+    console.log('[DOCKER-CLUSTER] pinsData keys count:', Object.keys(pinsData).length);
+    console.log('[DOCKER-CLUSTER] pinsData keys:', Object.keys(pinsData));
+
+    // Convertește pins din obiect în array
+    let pinsList = [];
+    if (Array.isArray(pinsData)) {
+      console.log('[DOCKER-CLUSTER] pinsData is array, using directly');
+      pinsList = pinsData;
+    } else if (typeof pinsData === 'object' && pinsData !== null) {
+      console.log('[DOCKER-CLUSTER] pinsData is object, converting to array');
+      // Extrage CID-urile și transformă în array de obiecte
+      pinsList = Object.entries(pinsData).map(([cid, pinInfo]) => {
+        console.log(`[DOCKER-CLUSTER] Processing pin: ${cid}`, pinInfo);
+        return {
+          cid: cid,
+          name: pinInfo.name || 'File',
+          ...pinInfo
+        };
+      });
+    }
+
+    console.log(`[DOCKER-CLUSTER] Final pinsList length: ${pinsList.length}`);
+    console.log(`[DOCKER-CLUSTER] Final pinsList:`, JSON.stringify(pinsList, null, 2));
+
+    const responseData = {
       success: true,
       cluster: {
         totalNodes: clusterInfo.totalNodes,
         peers: Array.isArray(peers) ? peers.length : 0,
-        pinnedFiles: Array.isArray(pins) ? pins.length : 0,
+        pinnedFiles: pinsList.length,
         peersList: peers,
-        pinsList: Array.isArray(pins) ? pins.slice(0, 10) : [], // Primele 10 pentru UI
+        pinsList: pinsList, // Send all pins
         nodesHealth: clusterInfo.nodesHealth,
         nodes: clusterInfo.nodes
       }
-    });
+    };
+
+    console.log('[DOCKER-CLUSTER] Sending response:', JSON.stringify(responseData, null, 2));
+    res.json(responseData);
   } catch (error) {
     console.error('[DOCKER-CLUSTER] Eroare la status:', error.message);
     res.status(500).json({ 
@@ -54,8 +83,11 @@ router.get('/peers', async (req, res) => {
 // POST /api/docker-cluster/add - Adaugă fișier în cluster
 router.post('/add', async (req, res) => {
   console.log('[DOCKER-CLUSTER] Adăugare fișier în cluster...');
+  console.log('[DOCKER-CLUSTER] req.files:', req.files);
+  console.log('[DOCKER-CLUSTER] req.body:', req.body);
   
   if (!req.files || !req.files.file) {
+    console.error('[DOCKER-CLUSTER] Niciun fișier găsit în request');
     return res.status(400).json({ 
       success: false, 
       error: 'Niciun fișier nu a fost încărcat' 
@@ -118,6 +150,7 @@ router.post('/add', async (req, res) => {
     res.json({
       success: true,
       message: 'Fișier adăugat în cluster cu succes',
+      cid: cid,
       file: {
         name: uploadedFile.name,
         cid: cid,

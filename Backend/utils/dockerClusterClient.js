@@ -83,24 +83,47 @@ class DockerClusterClient {
         transformResponse: [(data) => {
           // Dacă răspunsul este string, încearcă să-l parsezi
           if (typeof data === 'string') {
-            // Pentru /pins, API-ul returnează NDJSON (multiple JSON-uri pe linii separate)
-            if (endpoint === '/pins' && data.includes('}\n{')) {
+            console.log(`[DOCKER-CLUSTER-CLIENT] Raw response for ${endpoint} (first 500 chars):`, data.substring(0, 500));
+            
+            // Pentru /pins și /peers, API-ul returnează NDJSON (multiple JSON-uri pe linii separate)
+            if (endpoint === '/pins' || endpoint === '/peers') {
               try {
-                // Parsează fiecare linie ca JSON separat și creează un obiect cu CID-uri ca chei
                 const lines = data.trim().split('\n').filter(line => line.trim());
-                const pinsMap = {};
+                console.log(`[DOCKER-CLUSTER-CLIENT] Found ${lines.length} lines in ${endpoint} response`);
                 
-                for (const line of lines) {
-                  const pinData = JSON.parse(line);
-                  if (pinData.cid) {
-                    pinsMap[pinData.cid] = pinData;
+                if (endpoint === '/pins') {
+                  const pinsMap = {};
+                  for (const line of lines) {
+                    try {
+                      const pinData = JSON.parse(line);
+                      if (pinData.cid) {
+                        const cid = pinData.cid;
+                        pinsMap[cid] = pinData;
+                        console.log(`[DOCKER-CLUSTER-CLIENT] Added pin: ${cid}`);
+                      }
+                    } catch (e) {
+                      console.warn(`[DOCKER-CLUSTER-CLIENT] Skipping invalid pin JSON line:`, e.message);
+                    }
                   }
+                  console.log(`[DOCKER-CLUSTER-CLIENT] Total pins mapped: ${Object.keys(pinsMap).length}`);
+                  return pinsMap;
+                } else if (endpoint === '/peers') {
+                  const peersArray = [];
+                  for (const line of lines) {
+                    try {
+                      const peerData = JSON.parse(line);
+                      peersArray.push(peerData);
+                      console.log(`[DOCKER-CLUSTER-CLIENT] Added peer: ${peerData.peername || peerData.id}`);
+                    } catch (e) {
+                      console.warn(`[DOCKER-CLUSTER-CLIENT] Skipping invalid peer JSON line:`, e.message);
+                    }
+                  }
+                  console.log(`[DOCKER-CLUSTER-CLIENT] Total peers parsed: ${peersArray.length}`);
+                  return peersArray;
                 }
-                
-                return pinsMap;
               } catch (e) {
-                console.error('[DOCKER-CLUSTER-CLIENT] Eroare parsare NDJSON:', e.message);
-                return {};
+                console.error(`[DOCKER-CLUSTER-CLIENT] Eroare parsare ${endpoint}:`, e.message);
+                return endpoint === '/pins' ? {} : [];
               }
             }
             
@@ -160,10 +183,14 @@ class DockerClusterClient {
         this.checkAllNodes()
       ]);
 
+      const pinsData = pins.status === 'fulfilled' ? pins.value : {};
+      console.log('[DOCKER-CLUSTER-CLIENT] getClusterInfo - pins type:', typeof pinsData);
+      console.log('[DOCKER-CLUSTER-CLIENT] getClusterInfo - pins keys:', Object.keys(pinsData));
+
       return {
         totalNodes: this.nodes.length,
         peers: peers.status === 'fulfilled' ? peers.value : [],
-        pins: pins.status === 'fulfilled' ? pins.value : [],
+        pins: pinsData,
         nodesHealth: health.status === 'fulfilled' ? health.value : {},
         nodes: this.nodes
       };

@@ -26,11 +26,13 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Middleware pentru upload fișiere
+const os = require('os');
 app.use(fileUpload({
   useTempFiles: true,
-  tempFileDir: '/tmp/',
+  tempFileDir: os.tmpdir(),
   limits: { fileSize: 100 * 1024 * 1024 }, // 100MB
-  abortOnLimit: true
+  abortOnLimit: true,
+  debug: true
 }));
 
 app.use(logger);

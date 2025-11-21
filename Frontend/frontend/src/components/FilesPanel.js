@@ -23,17 +23,31 @@ function FilesPanel({ onLog }) {
   const loadFiles = async () => {
     setLoading(true);
     try {
-      const response = await axios.get(`${API_URL}/files/list`, {
+      // Folosește API-ul Docker Cluster pentru persistență
+      const response = await axios.get(`${API_URL}/docker-cluster/pins`, {
         headers: { 'x-api-key': API_KEY }
       });
       
       if (response.data.success) {
-        setFiles(response.data.files);
-        onLog?.(`✓ ${response.data.totalFiles} fișiere găsite`, 'success');
+        const pinsData = response.data.pins || [];
+        // Convertește pins în format array dacă e obiect
+        const filesArray = Array.isArray(pinsData) 
+          ? pinsData 
+          : Object.entries(pinsData).map(([cid, info]) => ({
+              hash: cid,
+              name: info.name || `file-${cid.substring(0, 8)}`,
+              size: info.size || 0,
+              uploadedAt: info.timestamp || new Date().toISOString(),
+              pinned: true,
+              ...info
+            }));
+        setFiles(filesArray);
+        onLog?.(`✓ ${filesArray.length} fișiere găsite în cluster`, 'success');
       }
     } catch (error) {
       console.error('Eroare la încărcare fișiere:', error);
       onLog?.(`Eroare la încărcare fișiere: ${error.message}`, 'error');
+      setFiles([]);
     } finally {
       setLoading(false);
     }
@@ -58,26 +72,29 @@ function FilesPanel({ onLog }) {
     setUploading(true);
     const formData = new FormData();
     formData.append('file', selectedFile);
-    formData.append('description', description);
-    formData.append('tags', tags);
 
     try {
-      onLog?.(`Încărcare fișier: ${selectedFile.name}...`, 'info');
+      onLog?.(`Încărcare fișier în cluster: ${selectedFile.name}...`, 'info');
       
-      const response = await axios.post(`${API_URL}/files/upload`, formData, {
+      // Folosește API-ul Docker Cluster pentru persistență
+      const response = await axios.post(`${API_URL}/docker-cluster/add`, formData, {
         headers: {
           'x-api-key': API_KEY,
           'Content-Type': 'multipart/form-data'
-        }
+        },
+        timeout: 60000
       });
 
       if (response.data.success) {
-        onLog?.(`✓ Fișier adăugat în IPFS: ${response.data.file.hash}`, 'success');
+        const fileData = response.data.file;
+        onLog?.(`✓ Fișier adăugat în cluster: ${fileData.cid}`, 'success');
+        onLog?.(`✓ Replicat pe ${fileData.pinnedOn} noduri`, 'success');
         setSelectedFile(null);
         setDescription('');
         setTags('');
         document.getElementById('file-input').value = '';
-        await loadFiles();
+        // Așteaptă 2 secunde pentru replicare completă
+        setTimeout(() => loadFiles(), 2000);
       }
     } catch (error) {
       console.error('Eroare la upload:', error);
@@ -91,9 +108,11 @@ function FilesPanel({ onLog }) {
     try {
       onLog?.(`Descărcare fișier: ${file.name}...`, 'info');
       
-      const response = await axios.get(`${API_URL}/files/download/${file.hash}`, {
+      // Folosește API-ul Docker Cluster
+      const response = await axios.get(`${API_URL}/docker-cluster/download/${file.hash}`, {
         headers: { 'x-api-key': API_KEY },
-        responseType: 'blob'
+        responseType: 'blob',
+        timeout: 30000
       });
 
       // Creează link de download
@@ -114,20 +133,21 @@ function FilesPanel({ onLog }) {
   };
 
   const handleDelete = async (file) => {
-    if (!window.confirm(`Sigur vrei să ștergi fișierul "${file.name}"?`)) {
+    if (!window.confirm(`Sigur vrei să ștergi fișierul "${file.name}" din cluster?`)) {
       return;
     }
 
     try {
-      onLog?.(`Ștergere fișier: ${file.name}...`, 'info');
+      onLog?.(`Ștergere fișier din cluster: ${file.name}...`, 'info');
       
-      const response = await axios.delete(`${API_URL}/files/delete/${file.hash}`, {
+      // Folosește API-ul Docker Cluster
+      const response = await axios.delete(`${API_URL}/docker-cluster/pin/${file.hash}`, {
         headers: { 'x-api-key': API_KEY }
       });
 
       if (response.data.success) {
-        onLog?.(`✓ Fișier șters: ${file.name}`, 'success');
-        await loadFiles();
+        onLog?.(`✓ Fișier șters din cluster: ${file.name}`, 'success');
+        setTimeout(() => loadFiles(), 1000);
       }
     } catch (error) {
       console.error('Eroare la ștergere:', error);
@@ -137,12 +157,18 @@ function FilesPanel({ onLog }) {
 
   const handleShowInfo = async (file) => {
     try {
-      const response = await axios.get(`${API_URL}/files/info/${file.hash}`, {
+      // Folosește API-ul Docker Cluster
+      const response = await axios.get(`${API_URL}/docker-cluster/pin/${file.hash}`, {
         headers: { 'x-api-key': API_KEY }
       });
 
       if (response.data.success) {
-        setSelectedFileInfo(response.data.file);
+        setSelectedFileInfo({
+          ...file,
+          replicationCount: response.data.replicationCount,
+          peers: response.data.peers,
+          pinStatus: response.data.pinStatus
+        });
       }
     } catch (error) {
       console.error('Eroare la info:', error);
@@ -167,7 +193,7 @@ function FilesPanel({ onLog }) {
       <div className="panel">
         <h2 className="panel-title">
           <FileText />
-          Gestionare Fișiere IPFS
+          Gestionare Fișiere Cluster (Persistente)
         </h2>
 
         {/* Upload Form */}

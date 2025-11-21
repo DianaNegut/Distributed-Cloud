@@ -19,6 +19,7 @@ function DockerClusterPanel({ onLog }) {
     loadClusterStatus();
     loadPins();
     loadHealth();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadClusterStatus = async () => {
@@ -45,12 +46,16 @@ function DockerClusterPanel({ onLog }) {
       });
       
       if (response.data.success) {
-        setPins(response.data.pins || []);
-        onLog?.(`✓ ${response.data.totalPins} fișiere în cluster Docker`, 'success');
+        const pinsData = response.data.pins || [];
+        // Dacă pins este un obiect, convertește-l în array de CID-uri
+        const pinsArray = Array.isArray(pinsData) ? pinsData : Object.keys(pinsData);
+        setPins(pinsArray);
+        onLog?.(`✓ ${response.data.totalPins || pinsArray.length} fișiere în cluster Docker`, 'success');
       }
     } catch (error) {
       console.error('Eroare la pins:', error);
       onLog?.(`Eroare la încărcare fișiere: ${error.message}`, 'error');
+      setPins([]); // Setează array gol în caz de eroare
     } finally {
       setLoading(false);
     }
@@ -102,8 +107,14 @@ function DockerClusterPanel({ onLog }) {
       });
 
       if (response.data.success) {
-        onLog?.(`✓ Fișier adăugat în cluster: ${response.data.file.cid}`, 'success');
-        onLog?.(`✓ Fișierul este replicat automat pe ${clusterStatus?.totalNodes || 5} noduri`, 'success');
+        const fileData = response.data.file;
+        onLog?.(`✓ Fișier adăugat în cluster: ${fileData.cid}`, 'success');
+        onLog?.(`✓ Replicat pe ${fileData.pinnedOn} noduri`, 'success');
+        
+        // Afișează URL-urile de acces
+        if (fileData.accessUrls && fileData.accessUrls.length > 0) {
+          onLog?.(`📍 Acces direct: ${fileData.accessUrls[0]}`, 'info');
+        }
         
         setSelectedFile(null);
         document.getElementById('docker-file-input').value = '';
@@ -129,7 +140,7 @@ function DockerClusterPanel({ onLog }) {
 
       if (response.data.success) {
         setSelectedPinInfo(response.data);
-        onLog?.(`✓ Informații obținute pentru ${cid}`, 'success');
+        onLog?.(`✓ Replicat pe ${response.data.replicationCount} noduri`, 'success');
       }
     } catch (error) {
       console.error('Eroare la info:', error);
@@ -137,7 +148,13 @@ function DockerClusterPanel({ onLog }) {
     }
   };
 
-  const handleDownload = async (cid) => {
+  const handleViewInBrowser = (cid) => {
+    const url = `http://localhost:8080/ipfs/${cid}`;
+    window.open(url, '_blank');
+    onLog?.(`🌐 Deschis în browser: ${url}`, 'info');
+  };
+
+  const handleDownload = async (cid, filename = null) => {
     try {
       onLog?.(`📥 Descărcare ${cid} din cluster...`, 'info');
       
@@ -147,17 +164,28 @@ function DockerClusterPanel({ onLog }) {
         timeout: 30000
       });
 
+      // Extrage numele fișierului din header Content-Disposition
+      const contentDisposition = response.headers['content-disposition'];
+      let downloadFilename = filename || cid;
+      
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+        if (filenameMatch) {
+          downloadFilename = filenameMatch[1];
+        }
+      }
+
       // Creează link de download
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', cid);
+      link.setAttribute('download', downloadFilename);
       document.body.appendChild(link);
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
 
-      onLog?.(`✓ Fișier descărcat: ${cid}`, 'success');
+      onLog?.(`✓ Fișier descărcat: ${downloadFilename}`, 'success');
     } catch (error) {
       console.error('Eroare la download:', error);
       onLog?.(`❌ Eroare la download: ${error.message}`, 'error');
@@ -333,9 +361,16 @@ function DockerClusterPanel({ onLog }) {
               {pins.map((pin, idx) => (
                 <div key={idx} className="pin-item">
                   <div className="pin-info">
-                    <div className="pin-cid">{pin}</div>
+                    <div className="pin-cid" title={pin}>{pin.substring(0, 20)}...{pin.substring(pin.length - 10)}</div>
                   </div>
                   <div className="pin-actions">
+                    <button
+                      onClick={() => handleViewInBrowser(pin)}
+                      className="action-btn view"
+                      title="Vizualizează în browser"
+                    >
+                      <Server size={18} />
+                    </button>
                     <button
                       onClick={() => handleViewInfo(pin)}
                       className="action-btn"
@@ -369,15 +404,66 @@ function DockerClusterPanel({ onLog }) {
       {selectedPinInfo && (
         <div className="modal-overlay" onClick={() => setSelectedPinInfo(null)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <h3>Status Pin în Cluster</h3>
-            <div className="info-grid">
-              <div><strong>CID:</strong> {selectedPinInfo.cid}</div>
-              <div><strong>Status:</strong> {JSON.stringify(selectedPinInfo.status, null, 2)}</div>
+            <h3>📊 Detalii Fișier în Cluster</h3>
+            
+            <div className="info-section">
+              <strong>CID:</strong>
+              <code className="cid-full">{selectedPinInfo.cid}</code>
             </div>
+
+            <div className="info-section">
+              <strong>Replicare:</strong>
+              <div className="replication-info">
+                <CheckCircle size={16} style={{ color: '#10b981' }} />
+                <span>Fișierul este replicat pe {selectedPinInfo.replicationCount} noduri</span>
+              </div>
+            </div>
+
+            {selectedPinInfo.status && selectedPinInfo.status.peer_map && (
+              <div className="info-section">
+                <strong>Status pe noduri:</strong>
+                <div className="peers-status">
+                  {Object.entries(selectedPinInfo.status.peer_map).map(([peerId, peerInfo]) => (
+                    <div key={peerId} className="peer-status-item">
+                      {peerInfo.status === 'pinned' ? (
+                        <CheckCircle size={14} style={{ color: '#10b981' }} />
+                      ) : (
+                        <Activity size={14} style={{ color: '#f59e0b' }} />
+                      )}
+                      <span>{peerInfo.peername || 'Unknown'}</span>
+                      <span className={`status-badge ${peerInfo.status}`}>{peerInfo.status}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="info-section">
+              <strong>Accesează fișierul:</strong>
+              <div className="access-urls">
+                <button
+                  onClick={() => handleViewInBrowser(selectedPinInfo.cid)}
+                  className="btn btn-primary"
+                  style={{ marginRight: '8px' }}
+                >
+                  🌐 Deschide în Browser
+                </button>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(`http://localhost:8080/ipfs/${selectedPinInfo.cid}`);
+                    onLog?.('📋 Link copiat în clipboard', 'success');
+                  }}
+                  className="btn btn-secondary"
+                >
+                  📋 Copiază Link
+                </button>
+              </div>
+            </div>
+
             <button
               onClick={() => setSelectedPinInfo(null)}
               className="btn btn-secondary"
-              style={{ marginTop: '16px' }}
+              style={{ marginTop: '16px', width: '100%' }}
             >
               Închide
             </button>

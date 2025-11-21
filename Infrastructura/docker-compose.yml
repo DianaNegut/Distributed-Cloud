@@ -1,0 +1,242 @@
+services:
+  ipfs-1:
+    image: ipfs/kubo:latest
+    container_name: ipfs-node-1
+    environment:
+      - IPFS_PROFILE=server
+    volumes:
+      - ipfs-1-data:/data/ipfs
+    ports:
+      - "4001:4001"
+      - "5001:5001"
+      - "8080:8080"
+    networks:
+      - ipfs-net
+
+  cluster-1:
+    image: ipfs/ipfs-cluster:latest
+    container_name: cluster-node-1
+    depends_on:
+      - ipfs-1
+    environment:
+      - CLUSTER_SECRET=${CLUSTER_SECRET}
+      - CLUSTER_PEERNAME=node-1
+      - CLUSTER_IPFSHTTP_NODEMULTIADDRESS=/dns4/ipfs-1/tcp/5001
+      - CLUSTER_REPLICATIONFACTORMIN=2
+      - CLUSTER_REPLICATIONFACTORMAX=3
+      - CLUSTER_RESTAPI_HTTPLISTENMULTIADDRESS=/ip4/0.0.0.0/tcp/9094
+      - CLUSTER_RESTAPI_CORSALLOWEDORIGINS=["*"]
+      - CLUSTER_RESTAPI_CORSALLOWEDMETHODS=["GET","POST","PUT","DELETE","OPTIONS"]
+      - CLUSTER_RESTAPI_CORSALLOWEDHEADERS=["*"]
+      - CLUSTER_RESTAPI_CORSALLOWEDCREDENTIALS=true
+      - CLUSTER_MONITORPINGINTERVAL=10s
+    volumes:
+      - cluster-1-data:/data/ipfs-cluster
+    ports:
+      - "9094:9094"
+      - "9096:9096"
+    networks:
+      - ipfs-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O-", "http://localhost:9094/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  ipfs-2:
+    image: ipfs/kubo:latest
+    container_name: ipfs-node-2
+    environment:
+      - IPFS_PROFILE=server
+    volumes:
+      - ipfs-2-data:/data/ipfs
+    ports:
+      - "4002:4001"
+      - "5002:5001"
+      - "8081:8080"
+    networks:
+      - ipfs-net
+
+  cluster-2:
+    image: ipfs/ipfs-cluster:latest
+    container_name: cluster-node-2
+    depends_on:
+      - ipfs-2
+      - cluster-1
+    environment:
+      - CLUSTER_SECRET=${CLUSTER_SECRET}
+      - CLUSTER_PEERNAME=node-2
+      - CLUSTER_IPFSHTTP_NODEMULTIADDRESS=/dns4/ipfs-2/tcp/5001
+      - CLUSTER_BOOTSTRAP=/dns4/cluster-1/tcp/9096/p2p/${BOOTSTRAP_PEER_ID}
+      - CLUSTER_RESTAPI_HTTPLISTENMULTIADDRESS=/ip4/0.0.0.0/tcp/9094
+      - CLUSTER_RESTAPI_CORSALLOWEDORIGINS=["*"]
+      - CLUSTER_RESTAPI_CORSALLOWEDMETHODS=["GET","POST","PUT","DELETE","OPTIONS"]
+      - CLUSTER_RESTAPI_CORSALLOWEDHEADERS=["*"]
+      - CLUSTER_RESTAPI_CORSALLOWEDCREDENTIALS=true
+      - CLUSTER_MONITORPINGINTERVAL=10s
+    volumes:
+      - cluster-2-data:/data/ipfs-cluster
+    ports:
+      - "9194:9094"
+      - "9196:9096"
+    networks:
+      - ipfs-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O-", "http://localhost:9094/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  ipfs-3:
+    image: ipfs/kubo:latest
+    container_name: ipfs-node-3
+    environment:
+      - IPFS_PROFILE=server
+    volumes:
+      - ipfs-3-data:/data/ipfs
+    ports:
+      - "4003:4001"
+      - "5003:5001"
+      - "8082:8080"
+    networks:
+      - ipfs-net
+
+  cluster-3:
+    image: ipfs/ipfs-cluster:latest
+    container_name: cluster-node-3
+    depends_on:
+      - ipfs-3
+      - cluster-1
+    environment:
+      - CLUSTER_SECRET=${CLUSTER_SECRET}
+      - CLUSTER_PEERNAME=node-3
+      - CLUSTER_IPFSHTTP_NODEMULTIADDRESS=/dns4/ipfs-3/tcp/5001
+      - CLUSTER_BOOTSTRAP=/dns4/cluster-1/tcp/9096/p2p/${BOOTSTRAP_PEER_ID}
+      - CLUSTER_RESTAPI_HTTPLISTENMULTIADDRESS=/ip4/0.0.0.0/tcp/9094
+      - CLUSTER_RESTAPI_CORSALLOWEDORIGINS=["*"]
+      - CLUSTER_RESTAPI_CORSALLOWEDMETHODS=["GET","POST","PUT","DELETE","OPTIONS"]
+      - CLUSTER_RESTAPI_CORSALLOWEDHEADERS=["*"]
+      - CLUSTER_RESTAPI_CORSALLOWEDCREDENTIALS=true
+      - CLUSTER_MONITORPINGINTERVAL=10s
+    volumes:
+      - cluster-3-data:/data/ipfs-cluster
+    ports:
+      - "9294:9094"
+      - "9296:9096"
+    networks:
+      - ipfs-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O-", "http://localhost:9094/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+  
+  ipfs-4:
+    image: ipfs/kubo:latest
+    container_name: ipfs-node-4
+    environment:
+      - IPFS_PROFILE=server
+    volumes:
+      - ipfs-4-data:/data/ipfs
+    ports:
+      - "4004:4001"
+      - "5004:5001"
+      - "8083:8080"
+    networks:
+      - ipfs-net
+
+  cluster-4:
+    image: ipfs/ipfs-cluster:latest
+    container_name: cluster-node-4
+    depends_on:
+      - ipfs-4
+      - cluster-1
+    environment:
+      - CLUSTER_SECRET=${CLUSTER_SECRET}
+      - CLUSTER_PEERNAME=node-4
+      - CLUSTER_IPFSHTTP_NODEMULTIADDRESS=/dns4/ipfs-4/tcp/5001
+      - CLUSTER_BOOTSTRAP=/dns4/cluster-1/tcp/9096/p2p/${BOOTSTRAP_PEER_ID}
+      - CLUSTER_RESTAPI_HTTPLISTENMULTIADDRESS=/ip4/0.0.0.0/tcp/9094
+      - CLUSTER_RESTAPI_CORSALLOWEDORIGINS=["*"]
+      - CLUSTER_RESTAPI_CORSALLOWEDMETHODS=["GET","POST","PUT","DELETE","OPTIONS"]
+      - CLUSTER_RESTAPI_CORSALLOWEDHEADERS=["*"]
+      - CLUSTER_RESTAPI_CORSALLOWEDCREDENTIALS=true
+      - CLUSTER_MONITORPINGINTERVAL=10s
+    volumes:
+      - cluster-4-data:/data/ipfs-cluster
+    ports:
+      - "9394:9094"
+      - "9396:9096"
+    networks:
+      - ipfs-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O-", "http://localhost:9094/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  ipfs-5:
+    image: ipfs/kubo:latest
+    container_name: ipfs-node-5
+    environment:
+      - IPFS_PROFILE=server
+    volumes:
+      - ipfs-5-data:/data/ipfs
+    ports:
+      - "4005:4001"
+      - "5005:5001"
+      - "8084:8080"
+    networks:
+      - ipfs-net
+
+  cluster-5:
+    image: ipfs/ipfs-cluster:latest
+    container_name: cluster-node-5
+    depends_on:
+      - ipfs-5
+      - cluster-1
+    environment:
+      - CLUSTER_SECRET=${CLUSTER_SECRET}
+      - CLUSTER_PEERNAME=node-5
+      - CLUSTER_IPFSHTTP_NODEMULTIADDRESS=/dns4/ipfs-5/tcp/5001
+      - CLUSTER_BOOTSTRAP=/dns4/cluster-1/tcp/9096/p2p/${BOOTSTRAP_PEER_ID}
+      - CLUSTER_RESTAPI_HTTPLISTENMULTIADDRESS=/ip4/0.0.0.0/tcp/9094
+      - CLUSTER_RESTAPI_CORSALLOWEDORIGINS=["*"]
+      - CLUSTER_RESTAPI_CORSALLOWEDMETHODS=["GET","POST","PUT","DELETE","OPTIONS"]
+      - CLUSTER_RESTAPI_CORSALLOWEDHEADERS=["*"]
+      - CLUSTER_RESTAPI_CORSALLOWEDCREDENTIALS=true
+      - CLUSTER_MONITORPINGINTERVAL=10s
+    volumes:
+      - cluster-5-data:/data/ipfs-cluster
+    ports:
+      - "9494:9094"
+      - "9496:9096"
+    networks:
+      - ipfs-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O-", "http://localhost:9094/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  ipfs-1-data:
+  ipfs-2-data:
+  ipfs-3-data:
+  ipfs-4-data:
+  ipfs-5-data:
+  cluster-1-data:
+  cluster-2-data:
+  cluster-3-data:
+  cluster-4-data:
+  cluster-5-data:
+
+networks:
+  ipfs-net:
+    driver: bridge
+

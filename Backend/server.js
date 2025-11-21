@@ -3,12 +3,10 @@ const express = require('express');
 const cors = require('cors');
 const fileUpload = require('express-fileupload');
 
-// Import middleware
 const corsConfig = require('./middleware/corsConfig');
 const logger = require('./middleware/logger');
 const auth = require('./middleware/auth');
 
-// Import routes
 const healthRoutes = require('./routes/health');
 const statusRoutes = require('./routes/status');
 const peersRoutes = require('./routes/peers');
@@ -17,7 +15,7 @@ const joinRoutes = require('./routes/join');
 const configNetworkRoutes = require('./routes/configNetwork');
 const filesRoutes = require('./routes/files');
 const clusterRoutes = require('./routes/cluster');
-const dockerClusterRoutes = require('./routes/dockerCluster'); // RUTĂ NOUĂ
+const dockerClusterRoutes = require('./routes/dockerCluster');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -69,7 +67,7 @@ app.use((req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`\n🚀 Server pornit pe http://localhost:${PORT}`);
-  console.log(`📡 API disponibil la http://localhost:${PORT}/api`);
-  console.log(`🔐 API Key: ${process.env.API_KEY || 'supersecret'}\n`);
+  console.log(`\n[SERVER] Pornit pe http://localhost:${PORT}`);
+  console.log(`[SERVER] API disponibil la http://localhost:${PORT}/api`);
+  console.log(`[SERVER] API Key: ${process.env.API_KEY || 'supersecret'}\n`);
 });

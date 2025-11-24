@@ -82,7 +82,10 @@ export default function NetworkPage() {
     try {
       const res = await getNetworkInfo();
       if (res?.data?.success) {
-        setNetworkStatus({ active: true, checking: false });
+        // Verifică dacă rețeaua privată este efectiv activă
+        const isActive = res.data.network.isActive === true;
+        setNetworkStatus({ active: isActive, checking: false });
+        
         // Actualizează și swarm key-ul și bootstrap node-ul din răspuns
         if (res.data.network.swarmKey) {
           setSwarmKey(res.data.network.swarmKey);
@@ -90,6 +93,12 @@ export default function NetworkPage() {
         if (res.data.network.bootstrapNode) {
           setBootstrapNode(res.data.network.bootstrapNode);
         }
+        
+        console.log('Network status:', { 
+          isActive, 
+          swarmKeyExists: res.data.network.status?.swarmKeyExists,
+          autoConfDisabled: res.data.network.status?.autoConfDisabled
+        });
       } else {
         setNetworkStatus({ active: false, checking: false });
       }

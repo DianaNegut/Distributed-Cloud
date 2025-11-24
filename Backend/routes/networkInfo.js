@@ -13,6 +13,29 @@ router.get('/', async (req, res) => {
     // Swarm key din variabilă de mediu
     const swarmKey = process.env.SWARM_KEY || 'ddd244b4b304dca4d8947b4444a1d76223334cfdafd674263b0b600feae39cbe';
     
+    // Verifică dacă rețeaua privată este activă
+    let isPrivateNetworkActive = false;
+    let swarmKeyExists = false;
+    let autoConfDisabled = false;
+    
+    try {
+      // Verifică dacă swarm.key există în container
+      await execPromise('docker exec ipfs-node-1 test -f /data/ipfs/swarm.key');
+      swarmKeyExists = true;
+      console.log('[NETWORK-INFO] ✓ swarm.key există în container');
+      
+      // Verifică dacă AutoConf.Enabled este false
+      const autoConfResult = await execPromise('docker exec ipfs-node-1 ipfs config AutoConf.Enabled');
+      autoConfDisabled = autoConfResult.stdout.trim() === 'false';
+      console.log(`[NETWORK-INFO] AutoConf.Enabled = ${autoConfResult.stdout.trim()}`);
+      
+      // Rețeaua privată este activă dacă ambele condiții sunt îndeplinite
+      isPrivateNetworkActive = swarmKeyExists && autoConfDisabled;
+      console.log(`[NETWORK-INFO] Private network active: ${isPrivateNetworkActive}`);
+    } catch (error) {
+      console.log('[NETWORK-INFO] Verificare private network eșuată:', error.message);
+    }
+    
     // Obține peer ID de la primul nod Docker IPFS
     let bootstrapNode = '';
     try {
@@ -35,6 +58,11 @@ router.get('/', async (req, res) => {
       bootstrapNode,
       networkName: 'Distributed-Cloud Private Network',
       clusterNodes: 5,
+      isActive: isPrivateNetworkActive,
+      status: {
+        swarmKeyExists,
+        autoConfDisabled
+      },
       instructions: [
         '1. Asigură-te că ai IPFS (kubo) instalat',
         '2. Creează fișierul swarm.key în ~/.ipfs/',

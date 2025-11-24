@@ -16,6 +16,7 @@ const configNetworkRoutes = require('./routes/configNetwork');
 const filesRoutes = require('./routes/files');
 const clusterRoutes = require('./routes/cluster');
 const dockerClusterRoutes = require('./routes/dockerCluster');
+const networkInfoRoutes = require('./routes/networkInfo');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -49,7 +50,8 @@ app.use('/api/peers', peersRoutes);
 app.use('/api/configure-network', configNetworkRoutes);
 app.use('/api/files', filesRoutes);
 app.use('/api/cluster', clusterRoutes);
-app.use('/api/docker-cluster', dockerClusterRoutes); // RUTĂ NOUĂ PENTRU DOCKER CLUSTER
+app.use('/api/docker-cluster', dockerClusterRoutes);
+app.use('/api/network-info', networkInfoRoutes);
 
 // Error handling
 app.use((err, req, res, next) => {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -16,7 +16,7 @@ import {
   Settings,
   Activity
 } from 'lucide-react';
-import { configureNetwork, getPeers } from '../api/ipfsApi';
+import { configureNetwork, getPeers, getNetworkInfo } from '../api/ipfsApi';
 import toast, { Toaster } from 'react-hot-toast';
 
 export default function NetworkPage() {
@@ -26,6 +26,7 @@ export default function NetworkPage() {
   const [peers, setPeers] = useState([]);
   const [logs, setLogs] = useState([]);
   const [loadingPeers, setLoadingPeers] = useState(false);
+  const [networkStatus, setNetworkStatus] = useState({ active: false, checking: true });
 
   const addLog = (message, type) => {
     const newLog = { message, type, timestamp: new Date().toLocaleTimeString() };
@@ -77,6 +78,37 @@ export default function NetworkPage() {
     }
   };
 
+  const checkNetworkStatus = async () => {
+    try {
+      const res = await getNetworkInfo();
+      if (res?.data?.success) {
+        setNetworkStatus({ active: true, checking: false });
+        // Actualizează și swarm key-ul și bootstrap node-ul din răspuns
+        if (res.data.network.swarmKey) {
+          setSwarmKey(res.data.network.swarmKey);
+        }
+        if (res.data.network.bootstrapNode) {
+          setBootstrapNode(res.data.network.bootstrapNode);
+        }
+      } else {
+        setNetworkStatus({ active: false, checking: false });
+      }
+    } catch (err) {
+      setNetworkStatus({ active: false, checking: false });
+      console.error('Network status check failed:', err);
+    }
+  };
+
+  useEffect(() => {
+    // Verifică statusul la mount
+    checkNetworkStatus();
+    
+    // Verifică statusul periodic (la fiecare 10 secunde)
+    const interval = setInterval(checkNetworkStatus, 10000);
+    
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <div className="flex-1 overflow-auto">
       <Toaster position="top-right" />
@@ -107,6 +139,7 @@ export default function NetworkPage() {
                     onChange={(e) => setSwarmKey(e.target.value)}
                     placeholder="Enter your swarm key"
                     icon={Key}
+                    readOnly
                   />
                   
                   <TextArea
@@ -115,6 +148,7 @@ export default function NetworkPage() {
                     onChange={(e) => setBootstrapNode(e.target.value)}
                     placeholder="/ip4/..."
                     rows={3}
+                    readOnly
                   />
 
                   <div className="flex gap-3">
@@ -134,6 +168,20 @@ export default function NetworkPage() {
                     >
                       Copy Key
                     </Button>
+                  </div>
+
+                  <div className="mt-6 p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                    <h3 className="text-sm font-semibold text-blue-400 mb-2">How to Connect</h3>
+                    <p className="text-xs text-gray-400 mb-3">
+                      Share these credentials with others who want to join your private network.
+                    </p>
+                    <div className="space-y-2 text-xs text-gray-300">
+                      <p>1. Install IPFS (kubo) on your machine</p>
+                      <p>2. Create <code className="bg-dark-800 px-1 py-0.5 rounded">~/.ipfs/swarm.key</code> with the key above</p>
+                      <p>3. Run: <code className="bg-dark-800 px-1 py-0.5 rounded">ipfs bootstrap rm --all</code></p>
+                      <p>4. Run: <code className="bg-dark-800 px-1 py-0.5 rounded">ipfs bootstrap add {bootstrapNode}</code></p>
+                      <p>5. Start daemon: <code className="bg-dark-800 px-1 py-0.5 rounded">LIBP2P_FORCE_PNET=1 ipfs daemon</code></p>
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -190,6 +238,16 @@ export default function NetworkPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-400">Private Network</span>
+                    {networkStatus.checking ? (
+                      <Badge variant="default">Checking...</Badge>
+                    ) : (
+                      <Badge variant={networkStatus.active ? "success" : "error"}>
+                        {networkStatus.active ? "Active" : "Inactive"}
+                      </Badge>
+                    )}
+                  </div>
                   <div className="flex items-center justify-between">
                     <span className="text-gray-400">Status</span>
                     <Badge variant={peers.length > 0 ? "success" : "default"}>

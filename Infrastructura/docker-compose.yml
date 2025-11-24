@@ -2,10 +2,14 @@ services:
   ipfs-1:
     image: ipfs/kubo:latest
     container_name: ipfs-node-1
+    entrypoint: /entrypoint.sh
     environment:
       - IPFS_PROFILE=server
+      - LIBP2P_FORCE_PNET=1
     volumes:
       - ipfs-1-data:/data/ipfs
+      - ./swarm.key:/data/ipfs/swarm.key:ro
+      - ./entrypoint.sh:/entrypoint.sh:ro
     ports:
       - "4001:4001"
       - "5001:5001"
@@ -47,10 +51,14 @@ services:
   ipfs-2:
     image: ipfs/kubo:latest
     container_name: ipfs-node-2
+    entrypoint: /entrypoint.sh
     environment:
       - IPFS_PROFILE=server
+      - LIBP2P_FORCE_PNET=1
     volumes:
       - ipfs-2-data:/data/ipfs
+      - ./swarm.key:/data/ipfs/swarm.key:ro
+      - ./entrypoint.sh:/entrypoint.sh:ro
     ports:
       - "4002:4001"
       - "5002:5001"
@@ -92,10 +100,14 @@ services:
   ipfs-3:
     image: ipfs/kubo:latest
     container_name: ipfs-node-3
+    entrypoint: /entrypoint.sh
     environment:
       - IPFS_PROFILE=server
+      - LIBP2P_FORCE_PNET=1
     volumes:
       - ipfs-3-data:/data/ipfs
+      - ./swarm.key:/data/ipfs/swarm.key:ro
+      - ./entrypoint.sh:/entrypoint.sh:ro
     ports:
       - "4003:4001"
       - "5003:5001"
@@ -137,10 +149,14 @@ services:
   ipfs-4:
     image: ipfs/kubo:latest
     container_name: ipfs-node-4
+    entrypoint: /entrypoint.sh
     environment:
       - IPFS_PROFILE=server
+      - LIBP2P_FORCE_PNET=1
     volumes:
       - ipfs-4-data:/data/ipfs
+      - ./swarm.key:/data/ipfs/swarm.key:ro
+      - ./entrypoint.sh:/entrypoint.sh:ro
     ports:
       - "4004:4001"
       - "5004:5001"
@@ -182,10 +198,14 @@ services:
   ipfs-5:
     image: ipfs/kubo:latest
     container_name: ipfs-node-5
+    entrypoint: /entrypoint.sh
     environment:
       - IPFS_PROFILE=server
+      - LIBP2P_FORCE_PNET=1
     volumes:
       - ipfs-5-data:/data/ipfs
+      - ./swarm.key:/data/ipfs/swarm.key:ro
+      - ./entrypoint.sh:/entrypoint.sh:ro
     ports:
       - "4005:4001"
       - "5005:5001"

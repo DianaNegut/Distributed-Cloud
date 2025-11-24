@@ -332,13 +332,13 @@ export default function ClusterPage() {
                       console.log('Opening file with CID:', cid);
                       console.log('Full pin object:', pin);
                       
-                      // Folosește endpoint-ul de proxy din backend
-                      const proxyUrl = `${API_URL}/docker-cluster/file/${cid}`;
+                      // Folosește endpoint-ul de proxy din backend cu inline pentru a putea deschide în browser
+                      const proxyUrl = `${API_URL}/docker-cluster/file/${cid}?api-key=${API_KEY}&inline=true`;
                       
                       console.log('Opening file through proxy:', proxyUrl);
                       
-                      // Deschide fișierul prin backend proxy
-                      window.open(proxyUrl + `?api-key=${API_KEY}`, '_blank');
+                      // Deschide fișierul în tab nou - browserul va decide dacă să-l afișeze sau să-l descarce
+                      window.open(proxyUrl, '_blank');
                     };
                     
                     return (

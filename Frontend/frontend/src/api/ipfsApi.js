@@ -27,6 +27,9 @@ export const joinNetwork = (bootstrapData) =>
 export const getStatus = () =>
   api.get('/status');
 
+export const getNetworkInfo = () =>
+  api.get('/network-info');
+
 // ============ Docker Cluster API ============
 
 export const dockerCluster = {

@@ -12,8 +12,11 @@ ipfs config --json AutoConf.Enabled false
 ipfs config --json Bootstrap '[]'
 ipfs config --json Discovery.MDNS.Enabled true
 
+# Dezactivează AutoConf pentru rețea privată
+ipfs config --json AutoConf.Enabled false
+
 # Permite API pe toate interfețele pentru cluster
 ipfs config Addresses.API /ip4/0.0.0.0/tcp/5001
 
-# Pornește daemon-ul
+# Pornește daemon-ul cu migrare automată
 exec ipfs daemon --migrate=true

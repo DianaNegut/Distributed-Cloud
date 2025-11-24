@@ -420,9 +420,13 @@ router.get('/file/:cid', async (req, res) => {
           console.log('[DOCKER-CLUSTER] Nu s-a putut detecta tipul fișierului');
         }
         
+        // Verifică dacă se cere inline (pentru a deschide în browser) sau download
+        const inline = req.query.inline === 'true';
+        const disposition = inline ? 'inline' : 'attachment';
+        
         // Setează headerele
         res.setHeader('Content-Type', mimeType);
-        res.setHeader('Content-Disposition', `inline; filename="${fileName}"`);
+        res.setHeader('Content-Disposition', `${disposition}; filename="${fileName}"`);
         res.setHeader('Content-Length', stdout.length);
         
         // Trimite fișierul

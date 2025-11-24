@@ -1,12 +1,12 @@
 # Distributed-Cloud
 
-## 📋 Proiect IPFS Private Network cu Docker Cluster
+## Proiect IPFS Private Network cu Docker Cluster
 
 Infrastructură distribuită pentru stocare descentralizată folosind IPFS și IPFS Cluster.
 
 ---
 
-## 🏗️ Structura Proiectului
+## Structura Proiectului
 
 ```
 Distributed-Cloud/
@@ -35,7 +35,7 @@ Distributed-Cloud/
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Pornire Automată (Recomandat)
 
@@ -45,9 +45,9 @@ cd Backend
 ```
 
 Acest script va porni automat:
-1. ✅ Docker IPFS Cluster (5 noduri IPFS + 5 noduri Cluster)
-2. ✅ Backend API (Express.js pe port 3001)
-3. ✅ Teste automate de verificare
+1. Docker IPFS Cluster (5 noduri IPFS + 5 noduri Cluster)
+2. Backend API (Express.js pe port 3001)
+3. Teste automate de verificare
 
 ### Pornire Manuală
 
@@ -72,27 +72,27 @@ npm start
 
 ---
 
-## 📚 Documentație
+## Documentație
 
 ### Backend - Docker IPFS Cluster Integration
 
 | Document | Descriere |
 |----------|-----------|
-| **[INTEGRATION_SUMMARY.md](Backend/INTEGRATION_SUMMARY.md)** | 📋 Sumar complet al integrării |
-| **[DOCKER_CLUSTER_INTEGRATION.md](Backend/DOCKER_CLUSTER_INTEGRATION.md)** | 📖 Ghid complet de integrare și arhitectură |
-| **[TEST_DOCKER_CLUSTER.md](Backend/TEST_DOCKER_CLUSTER.md)** | 🧪 Testare manuală pas cu pas |
-| **[QUICK_COMMANDS.md](Backend/QUICK_COMMANDS.md)** | ⚡ Comenzi rapide pentru operații comune |
+| **[INTEGRATION_SUMMARY.md](Backend/INTEGRATION_SUMMARY.md)** | Sumar complet al integrării |
+| **[DOCKER_CLUSTER_INTEGRATION.md](Backend/DOCKER_CLUSTER_INTEGRATION.md)** | Ghid complet de integrare și arhitectură |
+| **[TEST_DOCKER_CLUSTER.md](Backend/TEST_DOCKER_CLUSTER.md)** | Testare manuală pas cu pas |
+| **[QUICK_COMMANDS.md](Backend/QUICK_COMMANDS.md)** | Comenzi rapide pentru operații comune |
 
 ### Scripts Utile
 
 | Script | Descriere |
 |--------|-----------|
-| **[start-infrastructure.ps1](Backend/start-infrastructure.ps1)** | 🚀 Pornire automată completă |
-| **[test-cluster-integration.ps1](Backend/test-cluster-integration.ps1)** | ✅ Teste automate |
+| **[start-infrastructure.ps1](Backend/start-infrastructure.ps1)** | Pornire automată completă |
+| **[test-cluster-integration.ps1](Backend/test-cluster-integration.ps1)** | Teste automate |
 
 ---
 
-## 🔧 Configurare
+## Configurare
 
 ### Backend/.env
 
@@ -122,7 +122,7 @@ BOOTSTRAP_PEER_ID=12D3KooWF98F4bkJbzxKiza9nAKUrpXZai7nciXkunnVq42LWDVV
 
 ---
 
-## 🌐 Endpoints API
+## Endpoints API
 
 ### Docker Cluster API
 
@@ -146,7 +146,7 @@ BOOTSTRAP_PEER_ID=12D3KooWF98F4bkJbzxKiza9nAKUrpXZai7nciXkunnVq42LWDVV
 
 ---
 
-## 🏗️ Arhitectură
+## Arhitectură
 
 ```
 ┌─────────────┐
@@ -184,23 +184,23 @@ BOOTSTRAP_PEER_ID=12D3KooWF98F4bkJbzxKiza9nAKUrpXZai7nciXkunnVq42LWDVV
 
 ---
 
-## ✨ Features
+## Features
 
-### ✅ Backend
+### Backend
 - **Resilient Communication**: Retry logic cu exponential backoff
 - **Automatic Failover**: Trece automat la alt nod în caz de eroare
 - **Health Monitoring**: Verificare continuă stare noduri
 - **CID Extraction**: Extragere automată CID din răspunsuri
 - **Configurable**: Toate setările în `.env`
 
-### ✅ Docker Cluster
+### Docker Cluster
 - **5 IPFS Nodes**: Stocare distribuită
 - **5 Cluster Nodes**: Coordonare și replicare
 - **Automatic Replication**: Factor configurabil (2-3 copii)
 - **Health Checks**: Monitorizare automată
 - **Auto-restart**: Nodurile se repornesc automat
 
-### ✅ Infrastructură
+### Infrastructură
 - **Docker Compose**: Orchestrare simplă
 - **Persistent Storage**: Volume-uri pentru date
 - **CORS Configured**: Pentru comunicare cross-origin
@@ -208,7 +208,7 @@ BOOTSTRAP_PEER_ID=12D3KooWF98F4bkJbzxKiza9nAKUrpXZai7nciXkunnVq42LWDVV
 
 ---
 
-## 🧪 Testare
+## Testare
 
 ### Test Complet Automat
 
@@ -218,13 +218,13 @@ cd Backend
 ```
 
 Testează automat:
-- ✅ Health check cluster
-- ✅ Status și statistici
-- ✅ Lista peers
-- ✅ Upload fișier
-- ✅ Status pin
-- ✅ Download fișier
-- ✅ Delete pin
+- Health check cluster
+- Status și statistici
+- Lista peers
+- Upload fișier
+- Status pin
+- Download fișier
+- Delete pin
 
 ### Test Manual
 
@@ -232,7 +232,7 @@ Vezi ghidul complet în [TEST_DOCKER_CLUSTER.md](Backend/TEST_DOCKER_CLUSTER.md)
 
 ---
 
-## 🛠️ Troubleshooting
+## Troubleshooting
 
 ### Cluster nu pornește
 
@@ -264,7 +264,7 @@ docker-compose restart
 
 ---
 
-## 📊 Monitoring
+## Monitoring
 
 ### Health Check
 ```powershell
@@ -283,7 +283,7 @@ docker stats
 
 ---
 
-## 🛑 Oprire
+## Oprire
 
 ```powershell
 # Oprește cluster
@@ -296,7 +296,7 @@ docker-compose down -v
 
 ---
 
-## 📦 Dependințe
+## Dependințe
 
 ### Backend
 - Node.js 16+
@@ -309,7 +309,7 @@ docker-compose down -v
 
 ---
 
-## 👨‍💻 Development
+## Development
 
 ### Structura Backend
 
@@ -322,7 +322,7 @@ Backend/
 │   ├── files.js                # File operations
 │   └── ...
 ├── utils/
-│   ├── dockerClusterClient.js  # ⭐ Client pentru Docker Cluster
+│   ├── dockerClusterClient.js  # Client pentru Docker Cluster
 │   └── ...
 └── middleware/
     ├── auth.js
@@ -332,7 +332,7 @@ Backend/
 
 ---
 
-## 🎓 Exemple Cod
+## Exemple Cod
 
 ### Upload fișier din Frontend
 
@@ -365,13 +365,13 @@ const checkHealth = async () => {
 
 ---
 
-## 📄 Licență
+## Licență
 
 Proiect educațional - Lucrare de Licență
 
 ---
 
-## 🙏 Credits
+## Credits
 
 - **IPFS**: https://ipfs.io/
 - **IPFS Cluster**: https://cluster.ipfs.io/
@@ -379,7 +379,7 @@ Proiect educațional - Lucrare de Licență
 
 ---
 
-## 📞 Support
+## Support
 
 Pentru probleme sau întrebări:
 1. Verifică documentația în `Backend/`
@@ -389,5 +389,5 @@ Pentru probleme sau întrebări:
 ---
 
 **Versiune:** 1.0.0  
-**Data:** 20 noiembrie 2025  
-**Status:** ✅ Production Ready
+**Data:** 24 noiembrie 2025  
+**Status:** Production Ready

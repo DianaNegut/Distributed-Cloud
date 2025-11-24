@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  test-peer-1:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: test-peer-1
+    environment:
+      - LIBP2P_FORCE_PNET=1
+    volumes:
+      - test-peer-1-data:/data/ipfs
+    ports:
+      - "4101:4001"  # Swarm port
+      - "5101:5001"  # API port
+      - "8181:8080"  # Gateway port
+    networks:
+      - ipfs-net
+    restart: unless-stopped
+
+  test-peer-2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: test-peer-2
+    environment:
+      - LIBP2P_FORCE_PNET=1
+    volumes:
+      - test-peer-2-data:/data/ipfs
+    ports:
+      - "4102:4001"
+      - "5102:5001"
+      - "8182:8080"
+    networks:
+      - ipfs-net
+    restart: unless-stopped
+
+volumes:
+  test-peer-1-data:
+  test-peer-2-data:
+
+networks:
+  ipfs-net:
+    external: true
+    name: infrastructura_ipfs-net

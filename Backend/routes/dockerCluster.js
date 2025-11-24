@@ -113,11 +113,16 @@ router.post('/add', async (req, res) => {
       timeout: 60000
     });
 
+    console.log('[DOCKER-CLUSTER] Răspuns cluster RAW:', JSON.stringify(responseData, null, 2));
+    console.log('[DOCKER-CLUSTER] Tip răspuns:', typeof responseData);
+    console.log('[DOCKER-CLUSTER] Chei răspuns:', responseData ? Object.keys(responseData) : 'null');
+
     // Extrage CID din răspuns
     const cid = clusterClient.extractCID(responseData);
 
     if (!cid) {
-      console.error('[DOCKER-CLUSTER] Răspuns cluster:', responseData);
+      console.error('[DOCKER-CLUSTER] Nu s-a putut extrage CID din răspuns');
+      console.error('[DOCKER-CLUSTER] Răspuns complet:', JSON.stringify(responseData, null, 2));
       throw new Error('Nu s-a putut extrage CID-ul din răspuns');
     }
 
@@ -354,6 +359,97 @@ router.get('/health', async (req, res) => {
         status: 'ERROR',
         error: error.message
       }
+    });
+  }
+});
+
+// GET /api/docker-cluster/file/:cid - Descarcă fișier prin proxy
+router.get('/file/:cid', async (req, res) => {
+  const { cid } = req.params;
+  console.log(`[DOCKER-CLUSTER] Cerere descărcare fișier: ${cid}`);
+  
+  try {
+    const { exec } = require('child_process');
+    const { promisify } = require('util');
+    const execPromise = promisify(exec);
+    const fileType = require('file-type');
+    
+    // Încearcă să obții informații despre fișier din cluster
+    let fileName = cid;
+    let mimeType = 'application/octet-stream';
+    
+    try {
+      const pinInfo = await clusterClient.get(`/pins/${cid}`);
+      if (pinInfo && pinInfo.name) {
+        fileName = pinInfo.name;
+      }
+    } catch (e) {
+      console.log('[DOCKER-CLUSTER] Nu s-au putut obține informații despre pin');
+    }
+    
+    // Lista de containere IPFS
+    const containers = ['ipfs-node-1', 'ipfs-node-2', 'ipfs-node-3', 'ipfs-node-4', 'ipfs-node-5'];
+    
+    for (const container of containers) {
+      try {
+        console.log(`[DOCKER-CLUSTER] Încercare descărcare de la container: ${container}`);
+        
+        // Execută comanda ipfs cat în container
+        const command = `docker exec ${container} ipfs cat ${cid}`;
+        const { stdout, stderr } = await execPromise(command, {
+          encoding: 'buffer',
+          maxBuffer: 100 * 1024 * 1024 // 100MB
+        });
+        
+        if (stderr && stderr.length > 0) {
+          console.warn(`[DOCKER-CLUSTER] Stderr de la ${container}:`, stderr.toString());
+        }
+        
+        // Detectează tipul fișierului din conținut
+        try {
+          const detectedType = await fileType.fromBuffer(stdout);
+          if (detectedType) {
+            mimeType = detectedType.mime;
+            // Dacă nu avem un nume cu extensie, adaugă extensia detectată
+            if (!fileName.includes('.')) {
+              fileName = `${fileName}.${detectedType.ext}`;
+            }
+            console.log(`[DOCKER-CLUSTER] Tip detectat: ${mimeType}, extensie: ${detectedType.ext}`);
+          }
+        } catch (e) {
+          console.log('[DOCKER-CLUSTER] Nu s-a putut detecta tipul fișierului');
+        }
+        
+        // Setează headerele
+        res.setHeader('Content-Type', mimeType);
+        res.setHeader('Content-Disposition', `inline; filename="${fileName}"`);
+        res.setHeader('Content-Length', stdout.length);
+        
+        // Trimite fișierul
+        res.send(stdout);
+        console.log(`[DOCKER-CLUSTER] Fișier servit cu succes de la ${container} (${stdout.length} bytes, ${mimeType})`);
+        return;
+        
+      } catch (containerError) {
+        console.warn(`[DOCKER-CLUSTER] Container ${container} eșuat:`, containerError.message);
+        continue;
+      }
+    }
+    
+    // Dacă niciun container nu funcționează
+    console.error(`[DOCKER-CLUSTER] Niciun container IPFS nu poate servi CID-ul: ${cid}`);
+    res.status(404).json({
+      success: false,
+      error: 'Fișierul nu poate fi accesat prin niciun nod IPFS disponibil',
+      cid: cid,
+      hint: 'Verifică că fișierul este pinned în cluster'
+    });
+    
+  } catch (error) {
+    console.error('[DOCKER-CLUSTER] Eroare la descărcare fișier:', error.message);
+    res.status(500).json({
+      success: false,
+      error: error.message
     });
   }
 });

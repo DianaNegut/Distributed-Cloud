@@ -323,22 +323,49 @@ export default function ClusterPage() {
             <CardContent>
               {pins.length > 0 ? (
                 <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {pins.map((pin, index) => (
-                    <motion.div
-                      key={pin.cid || index}
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                      className="flex items-center gap-3 p-3 bg-dark-800 rounded-lg"
-                    >
-                      <FileText className="w-5 h-5 text-primary-400 flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-white text-sm font-medium truncate">{pin.name || 'File'}</p>
-                        <p className="text-gray-400 text-xs font-mono truncate">{pin.cid || pin}</p>
-                      </div>
-                      <Badge variant="info">Pinned</Badge>
-                    </motion.div>
-                  ))}
+                  {pins.map((pin, index) => {
+                    const cid = pin.cid || pin;
+                    
+                    const handleOpenFile = async (e) => {
+                      e.stopPropagation();
+                      
+                      console.log('Opening file with CID:', cid);
+                      console.log('Full pin object:', pin);
+                      
+                      // Folosește endpoint-ul de proxy din backend
+                      const proxyUrl = `${API_URL}/docker-cluster/file/${cid}`;
+                      
+                      console.log('Opening file through proxy:', proxyUrl);
+                      
+                      // Deschide fișierul prin backend proxy
+                      window.open(proxyUrl + `?api-key=${API_KEY}`, '_blank');
+                    };
+                    
+                    return (
+                      <motion.div
+                        key={cid || index}
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                        className="flex items-center gap-3 p-3 bg-dark-800 rounded-lg hover:bg-dark-700 transition-colors"
+                      >
+                        <FileText className="w-5 h-5 text-primary-400 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-white text-sm font-medium truncate">{pin.name || 'File'}</p>
+                          <p className="text-gray-400 text-xs font-mono truncate">{cid}</p>
+                        </div>
+                        <Button
+                          onClick={handleOpenFile}
+                          size="sm"
+                          variant="primary"
+                          className="text-xs px-3 py-1"
+                        >
+                          Open
+                        </Button>
+                        <Badge variant="info">Pinned</Badge>
+                      </motion.div>
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="text-center py-12">

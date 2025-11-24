@@ -8,7 +8,8 @@
 
   if (openPaths.includes(req.path)) return next();
 
-  const token = req.headers['x-api-key'];
+  // Verifică API key din header sau query string
+  const token = req.headers['x-api-key'] || req.query['api-key'];
   const expected = process.env.API_KEY || 'supersecret';
 
   if (!token || token !== expected) {

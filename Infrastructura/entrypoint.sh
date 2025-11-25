@@ -11,6 +11,8 @@ fi
 echo "Configuring IPFS for private network..."
 ipfs config --json AutoConf.Enabled false
 ipfs config --json Bootstrap '[]'
+ipfs config --json Discovery.MDNS.Enabled true
+ipfs config --json Swarm.AddrFilters '[]'
 ipfs config Addresses.API /ip4/0.0.0.0/tcp/5001
 
 # Pornește daemon-ul

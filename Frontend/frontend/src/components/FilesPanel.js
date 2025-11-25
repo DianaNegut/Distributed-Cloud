@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, Download, Trash2, FileText, RefreshCw, Info } from 'lucide-react';
+import { Upload, Download, Trash2, FileText, RefreshCw, Info, Activity, Network } from 'lucide-react';
 import axios from 'axios';
 import './FilesPanel.css';
 
@@ -15,9 +15,15 @@ function FilesPanel({ onLog }) {
   const [tags, setTags] = useState('');
   const [keepPrivate, setKeepPrivate] = useState(false);
   const [selectedFileInfo, setSelectedFileInfo] = useState(null);
+  const [transferStats, setTransferStats] = useState(null);
+  const [testing, setTesting] = useState(false);
 
   useEffect(() => {
     loadFiles();
+    loadTransferStats();
+    // Actualizează statistici la fiecare 30 secunde
+    const interval = setInterval(loadTransferStats, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   const loadFiles = async () => {
@@ -132,6 +138,43 @@ function FilesPanel({ onLog }) {
     }
   };
 
+  const loadTransferStats = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/files/transfer-stats`, {
+        headers: { 'x-api-key': API_KEY }
+      });
+      
+      if (response.data.success) {
+        setTransferStats(response.data.stats);
+      }
+    } catch (error) {
+      console.error('Eroare la încărcare statistici:', error);
+    }
+  };
+
+  const handleTestTransfer = async () => {
+    setTesting(true);
+    try {
+      onLog?.('Test transfer între noduri...', 'info');
+      
+      const response = await axios.post(`${API_URL}/files/test-transfer`, {}, {
+        headers: { 'x-api-key': API_KEY }
+      });
+
+      if (response.data.success) {
+        const test = response.data.test;
+        onLog?.(`✓ Test finalizat: ${test.peersConnected} peers, ${test.providersFound} provideri`, 'success');
+        onLog?.(`Status: ${test.status}`, test.canTransfer ? 'success' : 'warning');
+        await loadTransferStats();
+      }
+    } catch (error) {
+      console.error('Eroare la test:', error);
+      onLog?.(`Eroare la test: ${error.message}`, 'error');
+    } finally {
+      setTesting(false);
+    }
+  };
+
   const handleDelete = async (file) => {
     if (!window.confirm(`Sigur vrei să ștergi fișierul "${file.name}" din cluster?`)) {
       return;
@@ -195,6 +238,57 @@ function FilesPanel({ onLog }) {
           <FileText />
           Gestionare Fișiere Cluster (Persistente)
         </h2>
+
+        {/* Transfer Statistics */}
+        {transferStats && (
+          <div className="transfer-stats">
+            <div className="stats-grid">
+              <div className="stat-card">
+                <Network size={20} />
+                <div>
+                  <div className="stat-value">{transferStats.peersConnected}</div>
+                  <div className="stat-label">Peers Conectați</div>
+                </div>
+              </div>
+              <div className="stat-card">
+                <FileText size={20} />
+                <div>
+                  <div className="stat-value">{transferStats.totalFiles}</div>
+                  <div className="stat-label">Total Fișiere</div>
+                </div>
+              </div>
+              <div className="stat-card">
+                <Activity size={20} />
+                <div>
+                  <div className="stat-value">{transferStats.publicFiles}</div>
+                  <div className="stat-label">Publice</div>
+                </div>
+              </div>
+              <div className="stat-card">
+                <Upload size={20} />
+                <div>
+                  <div className="stat-value">{transferStats.totalSizeMB} MB</div>
+                  <div className="stat-label">Dimensiune Totală</div>
+                </div>
+              </div>
+            </div>
+            <div className="test-transfer-section">
+              <button
+                onClick={handleTestTransfer}
+                disabled={testing}
+                className="btn btn-test"
+              >
+                <Activity size={18} />
+                {testing ? 'Testare în curs...' : 'Test Transfer Între Noduri'}
+              </button>
+              {transferStats.networkActive ? (
+                <span className="status-badge success">Rețea Activă</span>
+              ) : (
+                <span className="status-badge warning">Fără Peers</span>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Upload Form */}
         <form onSubmit={handleUpload} className="upload-form">

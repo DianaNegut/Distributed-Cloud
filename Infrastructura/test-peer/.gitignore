@@ -1,8 +1,0 @@
-# Swarm key copiat
-swarm.key
-
-# Docker volumes
-*-data/
-
-# Logs
-*.log

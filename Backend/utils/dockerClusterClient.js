@@ -1,12 +1,8 @@
 const axios = require('axios');
 
-/**
- * Client pentru comunicare cu IPFS Cluster Docker
- * Oferă retry logic, health checking și failover între noduri
- */
 class DockerClusterClient {
   constructor() {
-    // Încarcă nodurile din variabilele de mediu
+  
     const nodesString = process.env.DOCKER_CLUSTER_NODES || 'http://localhost:9094';
     this.nodes = nodesString.split(',').map(n => n.trim());
     this.timeout = parseInt(process.env.DOCKER_CLUSTER_TIMEOUT) || 5000;
@@ -15,9 +11,7 @@ class DockerClusterClient {
     console.log(`[DOCKER-CLUSTER-CLIENT] Inițializat cu ${this.nodes.length} noduri`);
   }
 
-  /**
-   * Verifică health-ul unui nod
-   */
+ 
   async checkNodeHealth(nodeUrl) {
     try {
       const response = await axios.get(`${nodeUrl}/health`, { 
@@ -30,9 +24,6 @@ class DockerClusterClient {
     }
   }
 
-  /**
-   * Găsește un nod disponibil și sănătos
-   */
   async getAvailableNode() {
     for (const node of this.nodes) {
       const isHealthy = await this.checkNodeHealth(node);
@@ -44,9 +35,6 @@ class DockerClusterClient {
     throw new Error('Niciun nod din cluster nu este disponibil. Verifică că Docker Compose rulează.');
   }
 
-  /**
-   * Execută un request HTTP cu retry logic
-   */
   async executeWithRetry(requestFn, retries = this.maxRetries) {
     let lastError;
     
@@ -60,7 +48,7 @@ class DockerClusterClient {
         console.error(`[DOCKER-CLUSTER-CLIENT] Încercare ${attempt}/${retries} eșuată:`, error.message);
         
         if (attempt < retries) {
-          // Exponential backoff
+
           const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
           await new Promise(resolve => setTimeout(resolve, delay));
         }
@@ -70,9 +58,6 @@ class DockerClusterClient {
     throw new Error(`Request eșuat după ${retries} încercări: ${lastError.message}`);
   }
 
-  /**
-   * GET request către cluster
-   */
   async get(endpoint) {
     return this.executeWithRetry(async (node) => {
       const response = await axios.get(`${node}${endpoint}`, {
@@ -81,11 +66,9 @@ class DockerClusterClient {
           'Accept': 'application/json'
         },
         transformResponse: [(data) => {
-          // Dacă răspunsul este string, încearcă să-l parsezi
+      
           if (typeof data === 'string') {
             console.log(`[DOCKER-CLUSTER-CLIENT] Raw response for ${endpoint} (first 500 chars):`, data.substring(0, 500));
-            
-            // Pentru /pins și /peers, API-ul returnează NDJSON (multiple JSON-uri pe linii separate)
             if (endpoint === '/pins' || endpoint === '/peers') {
               try {
                 const lines = data.trim().split('\n').filter(line => line.trim());
@@ -126,8 +109,7 @@ class DockerClusterClient {
                 return endpoint === '/pins' ? {} : [];
               }
             }
-            
-            // Pentru alte endpoint-uri, încearcă parsare JSON standard
+       
             try {
               return JSON.parse(data);
             } catch (e) {
@@ -142,9 +124,7 @@ class DockerClusterClient {
     });
   }
 
-  /**
-   * POST request către cluster
-   */
+ 
   async post(endpoint, data, config = {}) {
     return this.executeWithRetry(async (node) => {
       const response = await axios.post(`${node}${endpoint}`, data, {
@@ -160,9 +140,7 @@ class DockerClusterClient {
     });
   }
 
-  /**
-   * DELETE request către cluster
-   */
+  
   async delete(endpoint) {
     return this.executeWithRetry(async (node) => {
       const response = await axios.delete(`${node}${endpoint}`, {
@@ -172,9 +150,7 @@ class DockerClusterClient {
     });
   }
 
-  /**
-   * Obține informații despre toată clusterul
-   */
+  
   async getClusterInfo() {
     try {
       const [peers, pins, health] = await Promise.allSettled([
@@ -199,9 +175,7 @@ class DockerClusterClient {
     }
   }
 
-  /**
-   * Verifică health-ul tuturor nodurilor
-   */
+ 
   async checkAllNodes() {
     const healthChecks = await Promise.all(
       this.nodes.map(async (node) => {
@@ -216,14 +190,11 @@ class DockerClusterClient {
     }, {});
   }
 
-  /**
-   * Extrage CID din răspunsul clusterului
-   * IPFS Cluster poate returna CID în mai multe formate
-   */
+ 
   extractCID(data) {
     if (!data) return null;
 
-    // Dacă data este string, caută pattern-ul de CID
+   
     if (typeof data === 'string') {
       const match = data.match(/Qm[a-zA-Z0-9]{44,}|baf[a-zA-Z0-9]{50,}/);
       return match ? match[0] : null;

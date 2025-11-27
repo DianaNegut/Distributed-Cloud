@@ -21,29 +21,29 @@ const networkInfoRoutes = require('./routes/networkInfo');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Middleware
+
 app.use(cors(corsConfig));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Middleware pentru upload fișiere
+
 const os = require('os');
 app.use(fileUpload({
   useTempFiles: true,
   tempFileDir: os.tmpdir(),
-  limits: { fileSize: 100 * 1024 * 1024 }, // 100MB
+  limits: { fileSize: 100 * 1024 * 1024 }, 
   abortOnLimit: true,
   debug: true
 }));
 
 app.use(logger);
 
-// Routes publice (fără autentificare)
+
 app.use('/api/health', healthRoutes);
 app.use('/api/bootstrap-info', bootstrapRoutes);
 app.use('/api/join-network', joinRoutes);
 
-// Routes cu autentificare
+
 app.use(auth);
 app.use('/api/status', statusRoutes);
 app.use('/api/peers', peersRoutes);
@@ -53,7 +53,7 @@ app.use('/api/cluster', clusterRoutes);
 app.use('/api/docker-cluster', dockerClusterRoutes);
 app.use('/api/network-info', networkInfoRoutes);
 
-// Error handling
+
 app.use((err, req, res, next) => {
   console.error('[ERROR]', err);
   res.status(500).json({ 
@@ -62,7 +62,7 @@ app.use((err, req, res, next) => {
   });
 });
 
-// 404 handler
+
 app.use((req, res) => {
   res.status(404).json({ 
     success: false, 

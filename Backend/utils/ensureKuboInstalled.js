@@ -7,11 +7,11 @@ const { IPFS_BIN, KUBO_PATH } = require('../config/paths');
 
 async function ensureKuboInstalled() {
   if (fs.existsSync(IPFS_BIN)) {
-    console.log(' Kubo este deja instalat.');
+    console.log('Kubo este deja instalat.');
     return;
   }
 
-  console.log('⬇️ Kubo lipsește — se descarcă automat...');
+  console.log('Kubo lipsește — se descarcă automat...');
   await fsp.mkdir(KUBO_PATH, { recursive: true });
 
   const version = 'v0.30.0';
@@ -22,7 +22,7 @@ async function ensureKuboInstalled() {
     const file = fs.createWriteStream(zipPath);
     https.get(url, (response) => {
       if (response.statusCode !== 200) {
-        console.error(` Eroare la descărcare Kubo: HTTP ${response.statusCode}`);
+        console.error(`Eroare la descărcare Kubo: HTTP ${response.statusCode}`);
         return reject(new Error(`HTTP ${response.statusCode}`));
       }
       response.pipe(file);
@@ -33,7 +33,7 @@ async function ensureKuboInstalled() {
     });
   });
 
-  console.log(' Extrahem arhiva...');
+  console.log('Extrag arhiva...');
   await fs.createReadStream(zipPath)
     .pipe(unzipper.Extract({ path: KUBO_PATH }))
     .promise();

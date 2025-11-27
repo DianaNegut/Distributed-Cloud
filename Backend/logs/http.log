@@ -1,0 +1,724 @@
+{"level":"info","message":"Server started on http://localhost:3001","timestamp":"2025-11-25 13:39:33"}
+{"level":"info","message":"API available at http://localhost:3001/api","timestamp":"2025-11-25 13:39:33"}
+{"level":"info","message":"Metrics available at http://localhost:3001/api/metrics","timestamp":"2025-11-25 13:39:33"}
+{"level":"info","message":"Health check at http://localhost:3001/api/health/detailed","timestamp":"2025-11-25 13:39:33"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:39:40"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.008s","timestamp":"2025-11-25 13:39:40"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:39:50"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.003s","timestamp":"2025-11-25 13:39:50"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:40:00"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.003s","timestamp":"2025-11-25 13:40:00"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:40:10"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.002s","timestamp":"2025-11-25 13:40:10"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:40:20"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.002s","timestamp":"2025-11-25 13:40:20"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:40:30"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.003s","timestamp":"2025-11-25 13:40:30"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:40:40"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.004s","timestamp":"2025-11-25 13:40:40"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:40:50"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.010s","timestamp":"2025-11-25 13:40:50"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:41:00"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.004s","timestamp":"2025-11-25 13:41:00"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:41:10"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.002s","timestamp":"2025-11-25 13:41:10"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:41:20"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.003s","timestamp":"2025-11-25 13:41:20"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:41:30"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.004s","timestamp":"2025-11-25 13:41:30"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:41:40"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.003s","timestamp":"2025-11-25 13:41:40"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:41:50"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.002s","timestamp":"2025-11-25 13:41:50"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:42:00"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.003s","timestamp":"2025-11-25 13:42:00"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:42:10"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.002s","timestamp":"2025-11-25 13:42:10"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:42:20"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.003s","timestamp":"2025-11-25 13:42:20"}
+{"level":"http","message":"POST /api/alerts/critical - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:42:24"}
+{"description":"IPFS node has no connected peers. Network is isolated.","labels":{"alertname":"NoPeersConnected","cluster":"ipfs-distributed-cloud","environment":"production","instance":"host.docker.internal:3001","job":"backend-api","severity":"critical"},"level":"error","message":"CRITICAL ALERT: NoPeersConnected","summary":"No peers connected","timestamp":"2025-11-25 13:42:24"}
+{"level":"http","message":"POST /api/alerts/critical - Status: 200 - Duration: 0.004s","timestamp":"2025-11-25 13:42:24"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:42:30"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.003s","timestamp":"2025-11-25 13:42:30"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:42:40"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.002s","timestamp":"2025-11-25 13:42:40"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:42:50"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.003s","timestamp":"2025-11-25 13:42:50"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:43:00"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.003s","timestamp":"2025-11-25 13:43:00"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:43:10"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.002s","timestamp":"2025-11-25 13:43:10"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:43:20"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.003s","timestamp":"2025-11-25 13:43:20"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:43:30"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.002s","timestamp":"2025-11-25 13:43:30"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:43:40"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.002s","timestamp":"2025-11-25 13:43:40"}
+{"level":"http","message":"GET /api/files/list - IP: ::1","timestamp":"2025-11-25 13:43:43"}
+{"level":"http","message":"GET /api/files/list - Status: 304 - Duration: 0.003s","timestamp":"2025-11-25 13:43:43"}
+{"level":"http","message":"GET /api/files/list - IP: ::1","timestamp":"2025-11-25 13:43:43"}
+{"level":"http","message":"GET /api/files/list - Status: 304 - Duration: 0.001s","timestamp":"2025-11-25 13:43:43"}
+{"level":"http","message":"GET /api/peers - IP: ::1","timestamp":"2025-11-25 13:43:43"}
+{"level":"http","message":"GET /api/peers - Status: 200 - Duration: 0.192s","timestamp":"2025-11-25 13:43:43"}
+{"level":"http","message":"GET /api/peers - IP: ::1","timestamp":"2025-11-25 13:43:43"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 13:43:44"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 200 - Duration: 0.078s","timestamp":"2025-11-25 13:43:44"}
+{"level":"http","message":"GET /api/peers - Status: 304 - Duration: 0.225s","timestamp":"2025-11-25 13:43:44"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 13:43:44"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 200 - Duration: 0.018s","timestamp":"2025-11-25 13:43:44"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 13:43:46"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 200 - Duration: 0.022s","timestamp":"2025-11-25 13:43:46"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 13:43:46"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 200 - Duration: 0.019s","timestamp":"2025-11-25 13:43:46"}
+{"level":"http","message":"GET /api/files/list - IP: ::1","timestamp":"2025-11-25 13:43:48"}
+{"level":"http","message":"GET /api/files/list - Status: 304 - Duration: 0.001s","timestamp":"2025-11-25 13:43:48"}
+{"level":"http","message":"GET /api/files/list - IP: ::1","timestamp":"2025-11-25 13:43:48"}
+{"level":"http","message":"GET /api/files/list - Status: 304 - Duration: 0.001s","timestamp":"2025-11-25 13:43:48"}
+{"level":"http","message":"GET /api/network-info - IP: ::1","timestamp":"2025-11-25 13:43:49"}
+{"level":"http","message":"GET /api/network-info - Status: 304 - Duration: 0.566s","timestamp":"2025-11-25 13:43:49"}
+{"level":"http","message":"GET /api/network-info - IP: ::1","timestamp":"2025-11-25 13:43:49"}
+{"level":"http","message":"GET /api/network-info - Status: 304 - Duration: 0.491s","timestamp":"2025-11-25 13:43:50"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:43:50"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.002s","timestamp":"2025-11-25 13:43:50"}
+{"level":"http","message":"GET /api/peers - IP: ::1","timestamp":"2025-11-25 13:43:52"}
+{"level":"http","message":"GET /api/peers - Status: 304 - Duration: 0.200s","timestamp":"2025-11-25 13:43:52"}
+{"level":"http","message":"GET /api/peers - IP: ::1","timestamp":"2025-11-25 13:43:54"}
+{"level":"http","message":"GET /api/peers - Status: 304 - Duration: 0.209s","timestamp":"2025-11-25 13:43:54"}
+{"level":"http","message":"GET /api/files/list - IP: ::1","timestamp":"2025-11-25 13:43:55"}
+{"level":"http","message":"GET /api/files/list - Status: 304 - Duration: 0.001s","timestamp":"2025-11-25 13:43:55"}
+{"level":"http","message":"GET /api/files/list - IP: ::1","timestamp":"2025-11-25 13:43:55"}
+{"level":"http","message":"GET /api/files/list - Status: 304 - Duration: 0.001s","timestamp":"2025-11-25 13:43:55"}
+{"level":"http","message":"GET /api/peers - IP: ::1","timestamp":"2025-11-25 13:43:55"}
+{"level":"http","message":"GET /api/peers - Status: 304 - Duration: 0.203s","timestamp":"2025-11-25 13:43:56"}
+{"level":"http","message":"GET /api/peers - IP: ::1","timestamp":"2025-11-25 13:43:56"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 13:43:56"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 200 - Duration: 0.026s","timestamp":"2025-11-25 13:43:56"}
+{"level":"http","message":"GET /api/peers - Status: 304 - Duration: 0.206s","timestamp":"2025-11-25 13:43:56"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 13:43:56"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 200 - Duration: 0.021s","timestamp":"2025-11-25 13:43:56"}
+{"level":"http","message":"GET /api/files/list - IP: ::1","timestamp":"2025-11-25 13:43:58"}
+{"level":"http","message":"GET /api/files/list - Status: 304 - Duration: 0.002s","timestamp":"2025-11-25 13:43:58"}
+{"level":"http","message":"GET /api/files/list - IP: ::1","timestamp":"2025-11-25 13:43:58"}
+{"level":"http","message":"GET /api/files/list - Status: 304 - Duration: 0.001s","timestamp":"2025-11-25 13:43:58"}
+{"level":"http","message":"GET /api/network-info - IP: ::1","timestamp":"2025-11-25 13:43:59"}
+{"level":"http","message":"GET /api/network-info - Status: 304 - Duration: 0.576s","timestamp":"2025-11-25 13:43:59"}
+{"level":"http","message":"GET /api/network-info - IP: ::1","timestamp":"2025-11-25 13:43:59"}
+{"level":"http","message":"GET /api/files/list - IP: ::1","timestamp":"2025-11-25 13:44:00"}
+{"level":"http","message":"GET /api/files/list - Status: 304 - Duration: 0.002s","timestamp":"2025-11-25 13:44:00"}
+{"level":"http","message":"GET /api/files/list - IP: ::1","timestamp":"2025-11-25 13:44:00"}
+{"level":"http","message":"GET /api/files/list - Status: 304 - Duration: 0.002s","timestamp":"2025-11-25 13:44:00"}
+{"level":"http","message":"GET /api/network-info - Status: 304 - Duration: 0.506s","timestamp":"2025-11-25 13:44:00"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:44:00"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.003s","timestamp":"2025-11-25 13:44:00"}
+{"level":"http","message":"GET /api/network-info - IP: ::1","timestamp":"2025-11-25 13:44:00"}
+{"level":"http","message":"GET /api/network-info - Status: 304 - Duration: 0.546s","timestamp":"2025-11-25 13:44:01"}
+{"level":"http","message":"GET /api/network-info - IP: ::1","timestamp":"2025-11-25 13:44:01"}
+{"level":"http","message":"GET /api/network-info - Status: 304 - Duration: 0.520s","timestamp":"2025-11-25 13:44:01"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:44:10"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.002s","timestamp":"2025-11-25 13:44:10"}
+{"level":"http","message":"GET /api/network-info - IP: ::1","timestamp":"2025-11-25 13:44:10"}
+{"level":"http","message":"GET /api/network-info - Status: 304 - Duration: 0.558s","timestamp":"2025-11-25 13:44:11"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:44:20"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.002s","timestamp":"2025-11-25 13:44:20"}
+{"level":"http","message":"GET /api/network-info - IP: ::1","timestamp":"2025-11-25 13:44:20"}
+{"level":"http","message":"GET /api/network-info - Status: 304 - Duration: 0.533s","timestamp":"2025-11-25 13:44:21"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:44:30"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.003s","timestamp":"2025-11-25 13:44:30"}
+{"level":"http","message":"GET /api/network-info - IP: ::1","timestamp":"2025-11-25 13:44:30"}
+{"level":"http","message":"GET /api/network-info - Status: 304 - Duration: 0.566s","timestamp":"2025-11-25 13:44:31"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:44:40"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.004s","timestamp":"2025-11-25 13:44:40"}
+{"level":"http","message":"GET /api/network-info - IP: ::1","timestamp":"2025-11-25 13:44:40"}
+{"level":"http","message":"GET /api/network-info - Status: 304 - Duration: 0.620s","timestamp":"2025-11-25 13:44:41"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:44:50"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.004s","timestamp":"2025-11-25 13:44:50"}
+{"level":"http","message":"GET /api/network-info - IP: ::1","timestamp":"2025-11-25 13:44:50"}
+{"level":"http","message":"GET /api/network-info - Status: 304 - Duration: 0.552s","timestamp":"2025-11-25 13:44:51"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:45:00"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.002s","timestamp":"2025-11-25 13:45:00"}
+{"level":"http","message":"GET /api/network-info - IP: ::1","timestamp":"2025-11-25 13:45:00"}
+{"level":"http","message":"GET /api/network-info - Status: 304 - Duration: 0.542s","timestamp":"2025-11-25 13:45:01"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:45:10"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.002s","timestamp":"2025-11-25 13:45:10"}
+{"level":"http","message":"GET /api/network-info - IP: ::1","timestamp":"2025-11-25 13:45:10"}
+{"level":"http","message":"GET /api/network-info - Status: 304 - Duration: 0.603s","timestamp":"2025-11-25 13:45:11"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:45:20"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.003s","timestamp":"2025-11-25 13:45:20"}
+{"level":"http","message":"GET /api/network-info - IP: ::1","timestamp":"2025-11-25 13:45:20"}
+{"level":"http","message":"GET /api/network-info - Status: 304 - Duration: 0.599s","timestamp":"2025-11-25 13:45:21"}
+{"level":"http","message":"POST /api/alerts/warning - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:45:24"}
+{"description":"Only 0 peers connected. Network connectivity may be limited.","labels":{"alertname":"LowPeerCount","cluster":"ipfs-distributed-cloud","environment":"production","instance":"host.docker.internal:3001","job":"backend-api","severity":"warning"},"level":"warn","message":"WARNING ALERT: LowPeerCount","summary":"Low peer count","timestamp":"2025-11-25 13:45:24"}
+{"level":"http","message":"POST /api/alerts/warning - Status: 200 - Duration: 0.001s","timestamp":"2025-11-25 13:45:24"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:45:30"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.006s","timestamp":"2025-11-25 13:45:30"}
+{"level":"http","message":"GET /api/network-info - IP: ::1","timestamp":"2025-11-25 13:45:30"}
+{"level":"http","message":"GET /api/network-info - Status: 304 - Duration: 0.597s","timestamp":"2025-11-25 13:45:31"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:45:40"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.006s","timestamp":"2025-11-25 13:45:40"}
+{"level":"http","message":"GET /api/network-info - IP: ::1","timestamp":"2025-11-25 13:45:40"}
+{"level":"http","message":"GET /api/network-info - Status: 304 - Duration: 0.686s","timestamp":"2025-11-25 13:45:41"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:45:50"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.002s","timestamp":"2025-11-25 13:45:50"}
+{"level":"http","message":"GET /api/network-info - IP: ::1","timestamp":"2025-11-25 13:45:50"}
+{"level":"http","message":"GET /api/network-info - Status: 304 - Duration: 0.561s","timestamp":"2025-11-25 13:45:51"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:46:00"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.002s","timestamp":"2025-11-25 13:46:00"}
+{"level":"http","message":"GET /api/network-info - IP: ::1","timestamp":"2025-11-25 13:46:00"}
+{"level":"http","message":"GET /api/network-info - Status: 304 - Duration: 0.544s","timestamp":"2025-11-25 13:46:01"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:46:10"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.001s","timestamp":"2025-11-25 13:46:10"}
+{"level":"http","message":"GET /api/network-info - IP: ::1","timestamp":"2025-11-25 13:46:10"}
+{"level":"http","message":"GET /api/network-info - Status: 304 - Duration: 0.538s","timestamp":"2025-11-25 13:46:11"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:46:20"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.003s","timestamp":"2025-11-25 13:46:20"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:46:30"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.002s","timestamp":"2025-11-25 13:46:30"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:46:40"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.003s","timestamp":"2025-11-25 13:46:40"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:46:50"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.003s","timestamp":"2025-11-25 13:46:50"}
+{"level":"http","message":"GET /api/network-info - IP: ::1","timestamp":"2025-11-25 13:46:58"}
+{"level":"http","message":"GET /api/network-info - Status: 304 - Duration: 0.518s","timestamp":"2025-11-25 13:46:59"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:47:00"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.002s","timestamp":"2025-11-25 13:47:00"}
+{"level":"http","message":"GET /api/network-info - IP: ::1","timestamp":"2025-11-25 13:47:00"}
+{"level":"http","message":"GET /api/network-info - Status: 304 - Duration: 0.581s","timestamp":"2025-11-25 13:47:01"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:47:10"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.002s","timestamp":"2025-11-25 13:47:10"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:47:20"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.002s","timestamp":"2025-11-25 13:47:20"}
+{"level":"http","message":"GET /api/files/list - IP: ::1","timestamp":"2025-11-25 13:47:24"}
+{"level":"http","message":"GET /api/files/list - Status: 304 - Duration: 0.001s","timestamp":"2025-11-25 13:47:24"}
+{"level":"http","message":"GET /api/files/list - IP: ::1","timestamp":"2025-11-25 13:47:24"}
+{"level":"http","message":"GET /api/files/list - Status: 304 - Duration: 0.001s","timestamp":"2025-11-25 13:47:24"}
+{"level":"http","message":"GET /api/peers - IP: ::1","timestamp":"2025-11-25 13:47:24"}
+{"level":"http","message":"GET /api/peers - Status: 304 - Duration: 0.223s","timestamp":"2025-11-25 13:47:24"}
+{"level":"http","message":"GET /api/peers - IP: ::1","timestamp":"2025-11-25 13:47:24"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 13:47:24"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 200 - Duration: 0.106s","timestamp":"2025-11-25 13:47:24"}
+{"level":"http","message":"GET /api/peers - Status: 304 - Duration: 0.191s","timestamp":"2025-11-25 13:47:24"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 13:47:24"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 200 - Duration: 0.016s","timestamp":"2025-11-25 13:47:24"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:47:30"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.001s","timestamp":"2025-11-25 13:47:30"}
+{"level":"http","message":"GET /api/files/list - IP: ::1","timestamp":"2025-11-25 13:47:34"}
+{"level":"http","message":"GET /api/files/list - Status: 304 - Duration: 0.001s","timestamp":"2025-11-25 13:47:34"}
+{"level":"http","message":"GET /api/peers - IP: ::1","timestamp":"2025-11-25 13:47:34"}
+{"level":"http","message":"GET /api/peers - Status: 304 - Duration: 0.184s","timestamp":"2025-11-25 13:47:34"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 13:47:34"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 200 - Duration: 0.021s","timestamp":"2025-11-25 13:47:35"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:47:40"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.001s","timestamp":"2025-11-25 13:47:40"}
+{"level":"http","message":"GET /api/files/list - IP: ::1","timestamp":"2025-11-25 13:47:44"}
+{"level":"http","message":"GET /api/files/list - Status: 304 - Duration: 0.003s","timestamp":"2025-11-25 13:47:44"}
+{"level":"http","message":"GET /api/peers - IP: ::1","timestamp":"2025-11-25 13:47:44"}
+{"level":"http","message":"GET /api/peers - Status: 304 - Duration: 0.179s","timestamp":"2025-11-25 13:47:44"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 13:47:44"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 200 - Duration: 0.018s","timestamp":"2025-11-25 13:47:45"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:47:50"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.001s","timestamp":"2025-11-25 13:47:50"}
+{"level":"http","message":"GET /api/files/list - IP: ::1","timestamp":"2025-11-25 13:47:54"}
+{"level":"http","message":"GET /api/files/list - Status: 304 - Duration: 0.002s","timestamp":"2025-11-25 13:47:54"}
+{"level":"http","message":"GET /api/peers - IP: ::1","timestamp":"2025-11-25 13:47:54"}
+{"level":"http","message":"GET /api/peers - Status: 304 - Duration: 0.193s","timestamp":"2025-11-25 13:47:54"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 13:47:54"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 200 - Duration: 0.020s","timestamp":"2025-11-25 13:47:55"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:48:00"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.002s","timestamp":"2025-11-25 13:48:00"}
+{"level":"http","message":"GET /api/files/list - IP: ::1","timestamp":"2025-11-25 13:48:04"}
+{"level":"http","message":"GET /api/files/list - Status: 304 - Duration: 0.001s","timestamp":"2025-11-25 13:48:04"}
+{"level":"http","message":"GET /api/peers - IP: ::1","timestamp":"2025-11-25 13:48:04"}
+{"level":"http","message":"GET /api/peers - Status: 304 - Duration: 0.193s","timestamp":"2025-11-25 13:48:04"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 13:48:05"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 200 - Duration: 0.021s","timestamp":"2025-11-25 13:48:05"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:48:10"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.002s","timestamp":"2025-11-25 13:48:10"}
+{"level":"http","message":"GET /api/files/list - IP: ::1","timestamp":"2025-11-25 13:48:14"}
+{"level":"http","message":"GET /api/files/list - Status: 304 - Duration: 0.003s","timestamp":"2025-11-25 13:48:14"}
+{"level":"http","message":"GET /api/peers - IP: ::1","timestamp":"2025-11-25 13:48:14"}
+{"level":"http","message":"GET /api/peers - Status: 304 - Duration: 0.341s","timestamp":"2025-11-25 13:48:15"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 13:48:15"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 200 - Duration: 0.043s","timestamp":"2025-11-25 13:48:15"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:48:20"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.003s","timestamp":"2025-11-25 13:48:20"}
+{"level":"http","message":"GET /api/files/list - IP: ::1","timestamp":"2025-11-25 13:48:24"}
+{"level":"http","message":"GET /api/files/list - Status: 304 - Duration: 0.002s","timestamp":"2025-11-25 13:48:24"}
+{"level":"http","message":"GET /api/peers - IP: ::1","timestamp":"2025-11-25 13:48:24"}
+{"level":"http","message":"GET /api/peers - Status: 304 - Duration: 0.625s","timestamp":"2025-11-25 13:48:25"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 13:48:25"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 200 - Duration: 0.042s","timestamp":"2025-11-25 13:48:25"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:48:30"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.003s","timestamp":"2025-11-25 13:48:30"}
+{"level":"http","message":"GET /api/files/list - IP: ::1","timestamp":"2025-11-25 13:48:34"}
+{"level":"http","message":"GET /api/files/list - Status: 304 - Duration: 0.003s","timestamp":"2025-11-25 13:48:34"}
+{"level":"http","message":"GET /api/peers - IP: ::1","timestamp":"2025-11-25 13:48:34"}
+{"level":"http","message":"GET /api/peers - Status: 304 - Duration: 0.394s","timestamp":"2025-11-25 13:48:35"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 13:48:35"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 200 - Duration: 0.078s","timestamp":"2025-11-25 13:48:35"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:48:40"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.002s","timestamp":"2025-11-25 13:48:40"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:48:50"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.001s","timestamp":"2025-11-25 13:48:50"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:49:00"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.003s","timestamp":"2025-11-25 13:49:00"}
+{"level":"http","message":"GET /api/files/list - IP: ::1","timestamp":"2025-11-25 13:49:01"}
+{"level":"http","message":"GET /api/files/list - Status: 304 - Duration: 0.001s","timestamp":"2025-11-25 13:49:01"}
+{"level":"http","message":"GET /api/peers - IP: ::1","timestamp":"2025-11-25 13:49:01"}
+{"level":"http","message":"GET /api/peers - Status: 304 - Duration: 0.224s","timestamp":"2025-11-25 13:49:02"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 13:49:02"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 200 - Duration: 0.028s","timestamp":"2025-11-25 13:49:02"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:49:10"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.003s","timestamp":"2025-11-25 13:49:10"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:49:20"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.001s","timestamp":"2025-11-25 13:49:20"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:49:30"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.004s","timestamp":"2025-11-25 13:49:30"}
+{"level":"http","message":"GET /api/files/list - IP: ::1","timestamp":"2025-11-25 13:49:36"}
+{"level":"http","message":"GET /api/files/list - Status: 304 - Duration: 0.001s","timestamp":"2025-11-25 13:49:36"}
+{"level":"http","message":"GET /api/peers - IP: ::1","timestamp":"2025-11-25 13:49:36"}
+{"level":"http","message":"GET /api/peers - Status: 304 - Duration: 0.206s","timestamp":"2025-11-25 13:49:36"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 13:49:36"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 200 - Duration: 0.022s","timestamp":"2025-11-25 13:49:36"}
+{"level":"http","message":"GET /api/files/list - IP: ::1","timestamp":"2025-11-25 13:49:37"}
+{"level":"http","message":"GET /api/files/list - Status: 304 - Duration: 0.002s","timestamp":"2025-11-25 13:49:37"}
+{"level":"http","message":"GET /api/files/list - IP: ::1","timestamp":"2025-11-25 13:49:37"}
+{"level":"http","message":"GET /api/files/list - Status: 304 - Duration: 0.002s","timestamp":"2025-11-25 13:49:37"}
+{"level":"http","message":"GET /api/peers - IP: ::1","timestamp":"2025-11-25 13:49:37"}
+{"level":"http","message":"GET /api/peers - Status: 304 - Duration: 0.210s","timestamp":"2025-11-25 13:49:37"}
+{"level":"http","message":"GET /api/peers - IP: ::1","timestamp":"2025-11-25 13:49:37"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 13:49:37"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 200 - Duration: 0.018s","timestamp":"2025-11-25 13:49:37"}
+{"level":"http","message":"GET /api/peers - Status: 304 - Duration: 0.191s","timestamp":"2025-11-25 13:49:37"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 13:49:37"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 200 - Duration: 0.015s","timestamp":"2025-11-25 13:49:37"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 13:49:38"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 200 - Duration: 0.024s","timestamp":"2025-11-25 13:49:38"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 13:49:38"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 200 - Duration: 0.019s","timestamp":"2025-11-25 13:49:38"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 13:49:38"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 200 - Duration: 0.017s","timestamp":"2025-11-25 13:49:38"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 13:49:38"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 200 - Duration: 0.018s","timestamp":"2025-11-25 13:49:38"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:49:40"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.003s","timestamp":"2025-11-25 13:49:40"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 13:49:44"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 200 - Duration: 0.024s","timestamp":"2025-11-25 13:49:44"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 13:49:49"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 200 - Duration: 0.032s","timestamp":"2025-11-25 13:49:49"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 13:49:50"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.002s","timestamp":"2025-11-25 13:49:50"}
+{"level":"info","message":"Server started on http://localhost:3001","timestamp":"2025-11-25 15:09:45"}
+{"level":"info","message":"API available at http://localhost:3001/api","timestamp":"2025-11-25 15:09:45"}
+{"level":"info","message":"Metrics available at http://localhost:3001/api/metrics","timestamp":"2025-11-25 15:09:45"}
+{"level":"info","message":"Health check at http://localhost:3001/api/health/detailed","timestamp":"2025-11-25 15:09:45"}
+{"level":"http","message":"POST /api/alerts/critical - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:09:45"}
+{"description":"Backend API has been unreachable for more than 1 minute.","labels":{"alertname":"BackendDown","cluster":"ipfs-distributed-cloud","environment":"production","instance":"host.docker.internal:3001","job":"backend-api","severity":"critical"},"level":"error","message":"CRITICAL ALERT: BackendDown","summary":"Backend API is down","timestamp":"2025-11-25 15:09:45"}
+{"level":"http","message":"POST /api/alerts/critical - Status: 200 - Duration: 0.014s","timestamp":"2025-11-25 15:09:45"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:09:50"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.011s","timestamp":"2025-11-25 15:09:50"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:10:00"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.007s","timestamp":"2025-11-25 15:10:00"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:10:10"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.003s","timestamp":"2025-11-25 15:10:10"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:10:20"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.004s","timestamp":"2025-11-25 15:10:20"}
+{"level":"http","message":"GET /api/files/list - IP: ::1","timestamp":"2025-11-25 15:10:21"}
+{"level":"http","message":"GET /api/files/list - Status: 304 - Duration: 0.003s","timestamp":"2025-11-25 15:10:21"}
+{"level":"http","message":"GET /api/files/list - IP: ::1","timestamp":"2025-11-25 15:10:21"}
+{"level":"http","message":"GET /api/files/list - Status: 304 - Duration: 0.003s","timestamp":"2025-11-25 15:10:21"}
+{"level":"http","message":"GET /api/peers - IP: ::1","timestamp":"2025-11-25 15:10:21"}
+{"level":"http","message":"GET /api/peers - Status: 500 - Duration: 0.120s","timestamp":"2025-11-25 15:10:21"}
+{"level":"http","message":"GET /api/peers - IP: ::1","timestamp":"2025-11-25 15:10:21"}
+{"level":"http","message":"GET /api/peers - Status: 500 - Duration: 0.116s","timestamp":"2025-11-25 15:10:21"}
+{"level":"http","message":"POST /api/alerts/critical - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:10:24"}
+{"level":"http","message":"POST /api/alerts/critical - Status: 200 - Duration: 0.002s","timestamp":"2025-11-25 15:10:24"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 15:10:25"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 200 - Duration: 3.627s","timestamp":"2025-11-25 15:10:29"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 15:10:29"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:10:30"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.004s","timestamp":"2025-11-25 15:10:30"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 304 - Duration: 2.631s","timestamp":"2025-11-25 15:10:32"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 15:10:32"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 304 - Duration: 3.013s","timestamp":"2025-11-25 15:10:35"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 15:10:36"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 304 - Duration: 1.777s","timestamp":"2025-11-25 15:10:38"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:10:40"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.004s","timestamp":"2025-11-25 15:10:40"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 15:10:41"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 304 - Duration: 3.569s","timestamp":"2025-11-25 15:10:45"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 15:10:46"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 304 - Duration: 2.112s","timestamp":"2025-11-25 15:10:48"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:10:50"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.003s","timestamp":"2025-11-25 15:10:50"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 15:10:51"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 304 - Duration: 3.540s","timestamp":"2025-11-25 15:10:55"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 15:10:56"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 304 - Duration: 2.130s","timestamp":"2025-11-25 15:10:58"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:11:00"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.002s","timestamp":"2025-11-25 15:11:00"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 15:11:01"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 304 - Duration: 3.566s","timestamp":"2025-11-25 15:11:05"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 15:11:06"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 304 - Duration: 2.104s","timestamp":"2025-11-25 15:11:08"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:11:10"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.007s","timestamp":"2025-11-25 15:11:10"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 15:11:11"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 304 - Duration: 3.576s","timestamp":"2025-11-25 15:11:15"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 15:11:16"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 304 - Duration: 2.130s","timestamp":"2025-11-25 15:11:18"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:11:20"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.004s","timestamp":"2025-11-25 15:11:20"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 15:11:21"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 304 - Duration: 3.607s","timestamp":"2025-11-25 15:11:25"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 15:11:25"}
+{"level":"http","message":"GET /api/files/list - IP: ::1","timestamp":"2025-11-25 15:11:27"}
+{"level":"http","message":"GET /api/files/list - Status: 304 - Duration: 0.002s","timestamp":"2025-11-25 15:11:27"}
+{"level":"http","message":"GET /api/files/list - IP: ::1","timestamp":"2025-11-25 15:11:27"}
+{"level":"http","message":"GET /api/files/list - Status: 304 - Duration: 0.002s","timestamp":"2025-11-25 15:11:27"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 304 - Duration: 2.578s","timestamp":"2025-11-25 15:11:28"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 15:11:28"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 15:11:29"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:11:30"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.004s","timestamp":"2025-11-25 15:11:30"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 200 - Duration: 4.898s","timestamp":"2025-11-25 15:11:34"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 15:11:34"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 304 - Duration: 2.990s","timestamp":"2025-11-25 15:11:37"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 15:11:37"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:11:40"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.004s","timestamp":"2025-11-25 15:11:40"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 304 - Duration: 3.019s","timestamp":"2025-11-25 15:11:40"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 15:11:40"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 304 - Duration: 3.051s","timestamp":"2025-11-25 15:11:43"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 15:11:44"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 304 - Duration: 2.160s","timestamp":"2025-11-25 15:11:46"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 15:11:49"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:11:50"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.005s","timestamp":"2025-11-25 15:11:50"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 304 - Duration: 3.570s","timestamp":"2025-11-25 15:11:53"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 15:11:54"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 304 - Duration: 2.121s","timestamp":"2025-11-25 15:11:56"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 15:11:59"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:12:00"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.003s","timestamp":"2025-11-25 15:12:00"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 304 - Duration: 3.555s","timestamp":"2025-11-25 15:12:03"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 15:12:04"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 304 - Duration: 2.107s","timestamp":"2025-11-25 15:12:06"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 15:12:09"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:12:10"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.007s","timestamp":"2025-11-25 15:12:10"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 304 - Duration: 3.555s","timestamp":"2025-11-25 15:12:13"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 15:12:14"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 304 - Duration: 2.164s","timestamp":"2025-11-25 15:12:16"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 15:12:19"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:12:20"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.002s","timestamp":"2025-11-25 15:12:20"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 304 - Duration: 3.572s","timestamp":"2025-11-25 15:12:23"}
+{"level":"http","message":"POST /api/alerts/critical - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:12:24"}
+{"description":"IPFS node has no connected peers. Network is isolated.","labels":{"alertname":"NoPeersConnected","cluster":"ipfs-distributed-cloud","environment":"production","instance":"host.docker.internal:3001","job":"backend-api","severity":"critical"},"level":"error","message":"CRITICAL ALERT: NoPeersConnected","summary":"No peers connected","timestamp":"2025-11-25 15:12:24"}
+{"level":"http","message":"POST /api/alerts/critical - Status: 200 - Duration: 0.008s","timestamp":"2025-11-25 15:12:24"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 15:12:24"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 304 - Duration: 2.077s","timestamp":"2025-11-25 15:12:26"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 15:12:29"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:12:30"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.003s","timestamp":"2025-11-25 15:12:30"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 304 - Duration: 3.571s","timestamp":"2025-11-25 15:12:33"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:12:40"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.006s","timestamp":"2025-11-25 15:12:40"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 15:12:48"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:12:50"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.007s","timestamp":"2025-11-25 15:12:50"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 304 - Duration: 2.283s","timestamp":"2025-11-25 15:12:51"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:13:00"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.004s","timestamp":"2025-11-25 15:13:00"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:13:10"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.005s","timestamp":"2025-11-25 15:13:10"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:13:20"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.007s","timestamp":"2025-11-25 15:13:20"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:13:30"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.007s","timestamp":"2025-11-25 15:13:30"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:13:40"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.004s","timestamp":"2025-11-25 15:13:40"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 15:13:46"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 200 - Duration: 0.027s","timestamp":"2025-11-25 15:13:46"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 15:13:49"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 200 - Duration: 0.032s","timestamp":"2025-11-25 15:13:49"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:13:50"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.004s","timestamp":"2025-11-25 15:13:50"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 15:13:54"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 200 - Duration: 0.054s","timestamp":"2025-11-25 15:13:54"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 15:13:59"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 200 - Duration: 0.023s","timestamp":"2025-11-25 15:13:59"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:14:00"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.002s","timestamp":"2025-11-25 15:14:00"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 15:14:04"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 200 - Duration: 0.029s","timestamp":"2025-11-25 15:14:04"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 15:14:09"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 200 - Duration: 0.029s","timestamp":"2025-11-25 15:14:09"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:14:10"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.004s","timestamp":"2025-11-25 15:14:10"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 15:14:14"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 200 - Duration: 0.029s","timestamp":"2025-11-25 15:14:14"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 15:14:19"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 200 - Duration: 0.023s","timestamp":"2025-11-25 15:14:19"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:14:20"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.005s","timestamp":"2025-11-25 15:14:20"}
+{"level":"http","message":"POST /api/alerts/warning - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:14:24"}
+{"description":"95th percentile API latency is 4.85s (threshold: 2s).","labels":{"alertname":"HighAPILatency","cluster":"ipfs-distributed-cloud","environment":"production","instance":"host.docker.internal:3001","job":"backend-api","method":"GET","route":"/status","severity":"warning","status":"304"},"level":"warn","message":"WARNING ALERT: HighAPILatency","summary":"High API latency detected","timestamp":"2025-11-25 15:14:24"}
+{"level":"http","message":"POST /api/alerts/warning - Status: 200 - Duration: 0.004s","timestamp":"2025-11-25 15:14:24"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 15:14:24"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 200 - Duration: 0.027s","timestamp":"2025-11-25 15:14:24"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 15:14:29"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 200 - Duration: 0.030s","timestamp":"2025-11-25 15:14:29"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:14:30"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.006s","timestamp":"2025-11-25 15:14:30"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 15:14:34"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 200 - Duration: 0.032s","timestamp":"2025-11-25 15:14:34"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 15:14:39"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 200 - Duration: 0.033s","timestamp":"2025-11-25 15:14:39"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:14:40"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.006s","timestamp":"2025-11-25 15:14:40"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 15:14:44"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 200 - Duration: 0.035s","timestamp":"2025-11-25 15:14:44"}
+{"level":"http","message":"GET /api/files/list - IP: ::1","timestamp":"2025-11-25 15:14:46"}
+{"level":"http","message":"GET /api/files/list - Status: 304 - Duration: 0.002s","timestamp":"2025-11-25 15:14:46"}
+{"level":"http","message":"GET /api/files/list - IP: ::1","timestamp":"2025-11-25 15:14:46"}
+{"level":"http","message":"GET /api/files/list - Status: 304 - Duration: 0.002s","timestamp":"2025-11-25 15:14:46"}
+{"level":"http","message":"GET /api/peers - IP: ::1","timestamp":"2025-11-25 15:14:46"}
+{"level":"http","message":"GET /api/peers - Status: 200 - Duration: 0.222s","timestamp":"2025-11-25 15:14:47"}
+{"level":"http","message":"GET /api/peers - IP: ::1","timestamp":"2025-11-25 15:14:47"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 15:14:47"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 200 - Duration: 0.021s","timestamp":"2025-11-25 15:14:47"}
+{"level":"http","message":"GET /api/peers - Status: 304 - Duration: 0.214s","timestamp":"2025-11-25 15:14:47"}
+{"level":"http","message":"GET /api/docker-cluster/status - IP: ::1","timestamp":"2025-11-25 15:14:47"}
+{"level":"http","message":"GET /api/docker-cluster/status - Status: 200 - Duration: 0.019s","timestamp":"2025-11-25 15:14:47"}
+{"level":"http","message":"GET /api/network-info - IP: ::1","timestamp":"2025-11-25 15:14:47"}
+{"level":"http","message":"GET /api/network-info - Status: 304 - Duration: 0.641s","timestamp":"2025-11-25 15:14:48"}
+{"level":"http","message":"GET /api/network-info - IP: ::1","timestamp":"2025-11-25 15:14:48"}
+{"level":"http","message":"GET /api/network-info - Status: 304 - Duration: 0.584s","timestamp":"2025-11-25 15:14:48"}
+{"level":"http","message":"GET /api/peers - IP: ::1","timestamp":"2025-11-25 15:14:49"}
+{"level":"http","message":"GET /api/peers - Status: 304 - Duration: 0.221s","timestamp":"2025-11-25 15:14:49"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:14:50"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.003s","timestamp":"2025-11-25 15:14:50"}
+{"level":"http","message":"GET /api/network-info - IP: ::1","timestamp":"2025-11-25 15:14:57"}
+{"level":"http","message":"GET /api/network-info - Status: 304 - Duration: 0.674s","timestamp":"2025-11-25 15:14:58"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:15:00"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.006s","timestamp":"2025-11-25 15:15:00"}
+{"level":"http","message":"GET /api/network-info - IP: ::1","timestamp":"2025-11-25 15:15:07"}
+{"level":"http","message":"GET /api/network-info - Status: 304 - Duration: 0.610s","timestamp":"2025-11-25 15:15:08"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:15:10"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.006s","timestamp":"2025-11-25 15:15:10"}
+{"level":"http","message":"GET /api/network-info - IP: ::1","timestamp":"2025-11-25 15:15:17"}
+{"level":"http","message":"GET /api/network-info - Status: 304 - Duration: 0.633s","timestamp":"2025-11-25 15:15:18"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:15:20"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.006s","timestamp":"2025-11-25 15:15:20"}
+{"level":"http","message":"POST /api/alerts/warning - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:15:24"}
+{"description":"Only 0 peers connected. Network connectivity may be limited.","labels":{"alertname":"LowPeerCount","cluster":"ipfs-distributed-cloud","environment":"production","instance":"host.docker.internal:3001","job":"backend-api","severity":"warning"},"level":"warn","message":"WARNING ALERT: LowPeerCount","summary":"Low peer count","timestamp":"2025-11-25 15:15:24"}
+{"level":"http","message":"POST /api/alerts/warning - Status: 200 - Duration: 0.002s","timestamp":"2025-11-25 15:15:24"}
+{"level":"http","message":"POST /api/alerts/warning - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:15:24"}
+{"description":"95th percentile API latency is 3.1224199912788944s (threshold: 2s).","labels":{"alertname":"HighAPILatency","cluster":"ipfs-distributed-cloud","environment":"production","instance":"host.docker.internal:3001","job":"backend-api","method":"GET","route":"/status","severity":"warning","status":"200"},"level":"warn","message":"WARNING ALERT: HighAPILatency","summary":"High API latency detected","timestamp":"2025-11-25 15:15:24"}
+{"description":"95th percentile API latency is 4.85s (threshold: 2s).","labels":{"alertname":"HighAPILatency","cluster":"ipfs-distributed-cloud","environment":"production","instance":"host.docker.internal:3001","job":"backend-api","method":"GET","route":"/status","severity":"warning","status":"304"},"level":"warn","message":"WARNING ALERT: HighAPILatency","summary":"High API latency detected","timestamp":"2025-11-25 15:15:24"}
+{"level":"http","message":"POST /api/alerts/warning - Status: 200 - Duration: 0.003s","timestamp":"2025-11-25 15:15:24"}
+{"level":"http","message":"GET /api/network-info - IP: ::1","timestamp":"2025-11-25 15:15:27"}
+{"level":"http","message":"GET /api/network-info - Status: 304 - Duration: 0.674s","timestamp":"2025-11-25 15:15:28"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:15:30"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.005s","timestamp":"2025-11-25 15:15:30"}
+{"level":"http","message":"GET /api/network-info - IP: ::1","timestamp":"2025-11-25 15:15:37"}
+{"level":"http","message":"GET /api/network-info - Status: 304 - Duration: 0.575s","timestamp":"2025-11-25 15:15:38"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:15:40"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.007s","timestamp":"2025-11-25 15:15:40"}
+{"level":"http","message":"GET /api/network-info - IP: ::1","timestamp":"2025-11-25 15:15:47"}
+{"level":"http","message":"GET /api/network-info - Status: 304 - Duration: 0.653s","timestamp":"2025-11-25 15:15:48"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:15:50"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.003s","timestamp":"2025-11-25 15:15:50"}
+{"level":"http","message":"GET /api/network-info - IP: ::1","timestamp":"2025-11-25 15:15:57"}
+{"level":"http","message":"GET /api/network-info - Status: 304 - Duration: 0.665s","timestamp":"2025-11-25 15:15:58"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:16:00"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.002s","timestamp":"2025-11-25 15:16:00"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:16:10"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.004s","timestamp":"2025-11-25 15:16:10"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:16:20"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.005s","timestamp":"2025-11-25 15:16:20"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:16:30"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.004s","timestamp":"2025-11-25 15:16:30"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:16:40"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.007s","timestamp":"2025-11-25 15:16:40"}
+{"level":"http","message":"GET /api/network-info - IP: ::1","timestamp":"2025-11-25 15:16:48"}
+{"level":"http","message":"GET /api/network-info - Status: 304 - Duration: 0.628s","timestamp":"2025-11-25 15:16:49"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:16:50"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.002s","timestamp":"2025-11-25 15:16:50"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:17:00"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.003s","timestamp":"2025-11-25 15:17:00"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:17:10"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.003s","timestamp":"2025-11-25 15:17:10"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:17:20"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.004s","timestamp":"2025-11-25 15:17:20"}
+{"level":"http","message":"POST /api/alerts/warning - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:17:24"}
+{"description":"95th percentile API latency is 4.85s (threshold: 2s).","labels":{"alertname":"HighAPILatency","cluster":"ipfs-distributed-cloud","environment":"production","instance":"host.docker.internal:3001","job":"backend-api","method":"GET","route":"/status","severity":"warning","status":"304"},"level":"warn","message":"WARNING ALERT: HighAPILatency","summary":"High API latency detected","timestamp":"2025-11-25 15:17:24"}
+{"level":"http","message":"POST /api/alerts/warning - Status: 200 - Duration: 0.002s","timestamp":"2025-11-25 15:17:24"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:17:30"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.003s","timestamp":"2025-11-25 15:17:30"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:17:40"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.005s","timestamp":"2025-11-25 15:17:40"}
+{"level":"http","message":"GET /api/network-info - IP: ::1","timestamp":"2025-11-25 15:17:48"}
+{"level":"http","message":"GET /api/network-info - Status: 304 - Duration: 0.652s","timestamp":"2025-11-25 15:17:49"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:17:50"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.003s","timestamp":"2025-11-25 15:17:50"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:18:00"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.004s","timestamp":"2025-11-25 15:18:00"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:18:10"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.005s","timestamp":"2025-11-25 15:18:10"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:18:20"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.004s","timestamp":"2025-11-25 15:18:20"}
+{"level":"http","message":"POST /api/alerts/warning - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:18:24"}
+{"level":"http","message":"POST /api/alerts/warning - Status: 200 - Duration: 0.001s","timestamp":"2025-11-25 15:18:24"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:18:30"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.003s","timestamp":"2025-11-25 15:18:30"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:18:40"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.005s","timestamp":"2025-11-25 15:18:40"}
+{"level":"http","message":"GET /api/network-info - IP: ::1","timestamp":"2025-11-25 15:18:48"}
+{"level":"http","message":"GET /api/network-info - Status: 304 - Duration: 0.675s","timestamp":"2025-11-25 15:18:49"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:18:50"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.003s","timestamp":"2025-11-25 15:18:50"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:19:00"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.004s","timestamp":"2025-11-25 15:19:00"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:19:10"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.004s","timestamp":"2025-11-25 15:19:10"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:19:20"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.004s","timestamp":"2025-11-25 15:19:20"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:19:30"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.004s","timestamp":"2025-11-25 15:19:30"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:19:40"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.005s","timestamp":"2025-11-25 15:19:40"}
+{"level":"http","message":"GET /api/network-info - IP: ::1","timestamp":"2025-11-25 15:19:48"}
+{"level":"http","message":"GET /api/network-info - Status: 304 - Duration: 0.631s","timestamp":"2025-11-25 15:19:49"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:19:50"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.003s","timestamp":"2025-11-25 15:19:50"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:20:00"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.004s","timestamp":"2025-11-25 15:20:00"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:20:10"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.003s","timestamp":"2025-11-25 15:20:10"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:20:20"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.003s","timestamp":"2025-11-25 15:20:20"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:20:30"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.005s","timestamp":"2025-11-25 15:20:30"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:20:40"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.004s","timestamp":"2025-11-25 15:20:40"}
+{"level":"http","message":"GET /api/network-info - IP: ::1","timestamp":"2025-11-25 15:20:48"}
+{"level":"http","message":"GET /api/network-info - Status: 304 - Duration: 0.628s","timestamp":"2025-11-25 15:20:49"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:20:50"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.002s","timestamp":"2025-11-25 15:20:50"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:21:00"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.006s","timestamp":"2025-11-25 15:21:00"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:21:10"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.002s","timestamp":"2025-11-25 15:21:10"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:21:20"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.002s","timestamp":"2025-11-25 15:21:20"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:21:30"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.005s","timestamp":"2025-11-25 15:21:30"}
+{"level":"http","message":"GET /api/network-info - IP: ::1","timestamp":"2025-11-25 15:21:31"}
+{"level":"http","message":"GET /api/network-info - Status: 304 - Duration: 0.600s","timestamp":"2025-11-25 15:21:31"}
+{"level":"http","message":"GET /api/peers - IP: ::1","timestamp":"2025-11-25 15:21:32"}
+{"level":"http","message":"GET /api/peers - Status: 304 - Duration: 0.206s","timestamp":"2025-11-25 15:21:32"}
+{"level":"http","message":"GET /api/network-info - IP: ::1","timestamp":"2025-11-25 15:21:37"}
+{"level":"http","message":"GET /api/network-info - Status: 304 - Duration: 0.723s","timestamp":"2025-11-25 15:21:38"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:21:40"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.004s","timestamp":"2025-11-25 15:21:40"}
+{"level":"http","message":"GET /api/network-info - IP: ::1","timestamp":"2025-11-25 15:21:47"}
+{"level":"http","message":"GET /api/network-info - Status: 304 - Duration: 0.773s","timestamp":"2025-11-25 15:21:48"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:21:50"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.008s","timestamp":"2025-11-25 15:21:50"}
+{"level":"http","message":"GET /api/network-info - IP: ::1","timestamp":"2025-11-25 15:21:57"}
+{"level":"http","message":"GET /api/network-info - Status: 304 - Duration: 0.733s","timestamp":"2025-11-25 15:21:58"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:22:00"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.003s","timestamp":"2025-11-25 15:22:00"}
+{"level":"http","message":"GET /api/network-info - IP: ::1","timestamp":"2025-11-25 15:22:07"}
+{"level":"http","message":"GET /api/network-info - Status: 304 - Duration: 0.713s","timestamp":"2025-11-25 15:22:08"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:22:10"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.003s","timestamp":"2025-11-25 15:22:10"}
+{"level":"http","message":"GET /api/network-info - IP: ::1","timestamp":"2025-11-25 15:22:17"}
+{"level":"http","message":"GET /api/network-info - Status: 304 - Duration: 0.649s","timestamp":"2025-11-25 15:22:18"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:22:20"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.005s","timestamp":"2025-11-25 15:22:20"}
+{"level":"http","message":"GET /api/network-info - IP: ::1","timestamp":"2025-11-25 15:22:27"}
+{"level":"http","message":"GET /api/network-info - Status: 304 - Duration: 0.572s","timestamp":"2025-11-25 15:22:28"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:22:30"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.004s","timestamp":"2025-11-25 15:22:30"}
+{"level":"http","message":"GET /api/network-info - IP: ::1","timestamp":"2025-11-25 15:22:37"}
+{"level":"http","message":"GET /api/network-info - Status: 304 - Duration: 0.714s","timestamp":"2025-11-25 15:22:38"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:22:40"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.006s","timestamp":"2025-11-25 15:22:40"}
+{"level":"http","message":"GET /api/network-info - IP: ::1","timestamp":"2025-11-25 15:22:47"}
+{"level":"http","message":"GET /api/network-info - Status: 304 - Duration: 0.697s","timestamp":"2025-11-25 15:22:48"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:22:50"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.004s","timestamp":"2025-11-25 15:22:50"}
+{"level":"http","message":"GET /api/network-info - IP: ::1","timestamp":"2025-11-25 15:22:57"}
+{"level":"http","message":"GET /api/network-info - Status: 304 - Duration: 0.634s","timestamp":"2025-11-25 15:22:58"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:23:00"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.004s","timestamp":"2025-11-25 15:23:00"}
+{"level":"http","message":"GET /api/network-info - IP: ::1","timestamp":"2025-11-25 15:23:07"}
+{"level":"http","message":"GET /api/network-info - Status: 304 - Duration: 0.741s","timestamp":"2025-11-25 15:23:08"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:23:10"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.004s","timestamp":"2025-11-25 15:23:10"}
+{"level":"http","message":"GET /api/peers - IP: ::1","timestamp":"2025-11-25 15:23:11"}
+{"level":"http","message":"GET /api/peers - Status: 304 - Duration: 0.214s","timestamp":"2025-11-25 15:23:11"}
+{"level":"http","message":"GET /api/network-info - IP: ::1","timestamp":"2025-11-25 15:23:17"}
+{"level":"http","message":"GET /api/network-info - Status: 304 - Duration: 0.589s","timestamp":"2025-11-25 15:23:18"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:23:20"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.006s","timestamp":"2025-11-25 15:23:20"}
+{"level":"http","message":"GET /api/network-info - IP: ::1","timestamp":"2025-11-25 15:23:27"}
+{"level":"http","message":"GET /api/network-info - Status: 304 - Duration: 0.627s","timestamp":"2025-11-25 15:23:28"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:23:30"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.008s","timestamp":"2025-11-25 15:23:30"}
+{"level":"http","message":"GET /api/network-info - IP: ::1","timestamp":"2025-11-25 15:23:37"}
+{"level":"http","message":"GET /api/network-info - Status: 304 - Duration: 0.668s","timestamp":"2025-11-25 15:23:38"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:23:40"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.003s","timestamp":"2025-11-25 15:23:40"}
+{"level":"http","message":"GET /api/network-info - IP: ::1","timestamp":"2025-11-25 15:23:47"}
+{"level":"http","message":"GET /api/network-info - Status: 304 - Duration: 0.605s","timestamp":"2025-11-25 15:23:48"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:23:50"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.002s","timestamp":"2025-11-25 15:23:50"}
+{"level":"http","message":"GET /api/network-info - IP: ::1","timestamp":"2025-11-25 15:23:57"}
+{"level":"http","message":"GET /api/network-info - Status: 304 - Duration: 0.674s","timestamp":"2025-11-25 15:23:58"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:24:00"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.006s","timestamp":"2025-11-25 15:24:00"}
+{"level":"http","message":"GET /api/network-info - IP: ::1","timestamp":"2025-11-25 15:24:07"}
+{"level":"http","message":"GET /api/network-info - Status: 304 - Duration: 0.649s","timestamp":"2025-11-25 15:24:08"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:24:10"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.003s","timestamp":"2025-11-25 15:24:10"}
+{"level":"http","message":"GET /api/network-info - IP: ::1","timestamp":"2025-11-25 15:24:17"}
+{"level":"http","message":"GET /api/network-info - Status: 200 - Duration: 1.287s","timestamp":"2025-11-25 15:24:18"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:24:20"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.005s","timestamp":"2025-11-25 15:24:20"}
+{"level":"http","message":"GET /api/network-info - IP: ::1","timestamp":"2025-11-25 15:24:27"}
+{"level":"http","message":"GET /api/network-info - Status: 200 - Duration: 0.657s","timestamp":"2025-11-25 15:24:28"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:24:30"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.004s","timestamp":"2025-11-25 15:24:30"}
+{"level":"http","message":"GET /api/network-info - IP: ::1","timestamp":"2025-11-25 15:24:37"}
+{"level":"http","message":"GET /api/network-info - Status: 304 - Duration: 0.610s","timestamp":"2025-11-25 15:24:38"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:24:40"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.008s","timestamp":"2025-11-25 15:24:40"}
+{"level":"http","message":"GET /api/peers - IP: ::1","timestamp":"2025-11-25 15:24:44"}
+{"level":"http","message":"GET /api/peers - Status: 304 - Duration: 0.206s","timestamp":"2025-11-25 15:24:44"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:24:50"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.004s","timestamp":"2025-11-25 15:24:50"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:25:00"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.002s","timestamp":"2025-11-25 15:25:00"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:25:10"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.003s","timestamp":"2025-11-25 15:25:10"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:25:20"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.004s","timestamp":"2025-11-25 15:25:20"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:25:30"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.007s","timestamp":"2025-11-25 15:25:30"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:25:40"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.004s","timestamp":"2025-11-25 15:25:40"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:25:50"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.004s","timestamp":"2025-11-25 15:25:50"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:26:00"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.003s","timestamp":"2025-11-25 15:26:00"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:26:10"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.004s","timestamp":"2025-11-25 15:26:10"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:26:20"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.003s","timestamp":"2025-11-25 15:26:20"}
+{"level":"http","message":"GET /api/metrics - IP: ::ffff:127.0.0.1","timestamp":"2025-11-25 15:26:30"}
+{"level":"http","message":"GET /api/metrics - Status: 200 - Duration: 0.006s","timestamp":"2025-11-25 15:26:30"}

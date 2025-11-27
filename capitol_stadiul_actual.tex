@@ -1,0 +1,617 @@
+\documentclass[../../main.tex]{subfiles}
+\begin{document}
+\chapter{Stadiul actual al implementării}
+
+\section{Introducere}
+
+Prezentul capitol oferă o analiză detaliată a stadiului actual al implementării sistemului de stocare cloud descentralizată, evidențiind arhitectura tehnică realizată, funcționalitățile operaționale și infrastructura de suport. Implementarea curentă reprezintă rezultatul unui proces iterativ de dezvoltare, în care au fost materializate conceptele fundamentale ale tehnologiilor IPFS (InterPlanetary File System) și ale arhitecturii distribuite peer-to-peer.
+
+Sistemul dezvoltat până în acest moment constituie o platformă funcțională care demonstrează fezabilitatea integrării IPFS Cluster pentru asigurarea redundanței și distribuției datelor în medii descentralizate. Arhitectura implementată pune bazele pentru extinderea ulterioară cu funcționalitățile avansate propuse în obiectivele lucrării, oferind o infrastructură solidă și extensibilă care poate fi îmbogățită cu mecanisme de control al accesului bazate pe Solid și sisteme de monetizare prin tehnologia blockchain Filecoin.
+
+\section{Arhitectura sistemului implementat}
+
+\subsection{Prezentare generală a arhitecturii}
+
+Arhitectura sistemului actual reflectă principiile de design ale sistemelor distribuite moderne, fiind structurată pe mai multe straturi independente care colaborează prin interfețe bine definite. Această abordare modulară facilitează nu doar dezvoltarea și testarea incrementală a fiecărei componente, ci și mentenabilitatea pe termen lung și capacitatea de evoluție a sistemului în conformitate cu cerințele în schimbare.
+
+Sistemul este organizat pe patru componente arhitecturale principale, fiecare responsabilă pentru aspecte specifice ale funcționalității globale. Stratul de backend asigură logica de business și orchestrarea operațiunilor între nodurile IPFS, stratul de prezentare oferă interfața utilizator prin care sunt expuse funcționalitățile sistemului, infrastructura containerizată furnizează mediul de execuție pentru nodurile distribuite, iar componenta de testare validează comportamentul rețelei private în condiții reale de utilizare.
+
+Această separare clară a responsabilităților respectă principiile arhitecturale consacrate precum separarea concernelor (separation of concerns) și coeziunea ridicată cu cuplaj redus (high cohesion, low coupling), ceea ce conferă sistemului flexibilitate în adaptarea la noi cerințe funcționale sau non-funcționale.
+
+\subsection{Stratul de backend și interfața REST}
+
+Stratul de backend al sistemului este implementat utilizând platforma Node.js în combinație cu framework-ul Express, alegere motivată de natura asincronă și orientată pe evenimente a runtime-ului JavaScript, caracteristici esențiale pentru gestionarea eficientă a operațiunilor I/O intensive specifice interacțiunilor cu nodurile IPFS distribuite. Serverul expune o interfață REST (Representational State Transfer) care respectă principiile arhitecturale REST, oferind o modalitate standardizată și stateless de comunicare între componenta de prezentare și logica de business.
+
+Architectura backend-ului este structurată în conformitate cu paradigma Model-View-Controller (MVC), adaptată pentru context API, unde rutele (routes) acționează ca controllere, utilitățile (utils) implementează logica de business reutilizabilă, iar middleware-ul asigură aspectele transversale ale procesării cererilor. Această organizare facilitează principiul responsabilității unice (Single Responsibility Principle) și promovează reutilizabilitatea codului.
+
+\subsubsection{Straturi de middleware și mecanisme de securitate}
+
+Securitatea și funcționalitatea sistemului sunt asigurate prin implementarea unui pipeline de middleware-uri care procesează secvențial fiecare cerere HTTP înainte ca aceasta să ajungă la handler-ele de rute. Această arhitectură stratificată permite separarea concernelor legate de securitate, logging, procesare date și gestionarea erorilor.
+
+Primul strat de securitate este reprezentat de configurarea CORS (Cross-Origin Resource Sharing), mecanism esențial pentru controlul accesului la resurse din domenii diferite. Configurația implementată permite cererilor provenite de la interfața web să acceseze API-ul, respectând în același timp principiile de securitate ale browserelor moderne prin restricționarea originilor autorizate și metodelor HTTP permise.
+
+Autentificarea este realizată prin intermediul unui mecanism bazat pe API key, transmis în header-ul HTTP \texttt{x-api-key}. Deși această abordare nu oferă nivelul de securitate al token-urilor JWT (JSON Web Tokens) sau OAuth 2.0, ea constituie o soluție adecvată pentru stadiul actual de dezvoltare, oferind un nivel de bază de protecție împotriva accesului neautorizat. Toate rutele sensibile sunt protejate prin middleware-ul de autentificare, care validează prezența și corectitudinea cheii înainte de a permite execuția logicii de business.
+
+Logging-ul structurat este implementat pentru a asigura observabilitatea sistemului și pentru a facilita debugging-ul și auditarea operațiunilor. Fiecare cerere este înregistrată cu timestamp, metodă HTTP, rută accesată și status code de răspuns, creând astfel un audit trail complet al activităților din sistem.
+
+Gestionarea încărcării fișierelor este realizată prin middleware-ul \texttt{express-fileupload}, configurat pentru a gestiona fișiere de dimensiuni mari (până la 100MB) prin utilizarea sistemului de fișiere temporare. Această abordare previne consumul excesiv de memorie prin evitarea încărcării complete a fișierelor în RAM, utilizând în schimb streaming-ul către directoare temporare de pe disc.
+
+\subsubsection{Interfața REST și taxonomia endpoint-urilor}
+
+Interfața REST expusă de backend acoperă spectrul complet al operațiunilor necesare pentru managementul unui sistem de stocare descentralizată bazat pe IPFS, fiind organizată în mai multe categorii funcționale care reflectă domeniile de responsabilitate ale sistemului.
+
+\paragraph{Monitorizare și diagnosticare}
+
+Categoria de endpoint-uri dedicate monitorizării și diagnosticării stării sistemului permite verificarea disponibilității serviciilor și obținerea de metrici despre starea de funcționare. Endpoint-ul \texttt{GET /api/health} oferă un mecanism simplu de health check, esențial pentru sistemele de orchestrare și load balancing, fiind accesibil fără autentificare pentru a permite verificări externe. Complementar, endpoint-ul \texttt{GET /api/status} furnizează informații detaliate despre starea nodului IPFS local, incluzând versiunea daemon-ului, configurația curentă și statistici despre utilizarea resurselor.
+
+\paragraph{Administrarea rețelei private}
+
+Configurarea și managementul rețelei private IPFS reprezintă o funcționalitate fundamentală a sistemului, materializată prin mai multe endpoint-uri specializate. Operațiunea \texttt{POST /api/configure-network} permite configurarea parametrilor critici ai rețelei private, incluzând swarm key-ul (cheia pre-partajată necesară pentru autentificarea nodurilor) și adresele multiaddress ale nodurilor bootstrap. Această operațiune modifică configurația IPFS și necesită repornirea daemon-ului pentru aplicarea setărilor.
+
+Endpoint-ul \texttt{GET /api/network-info} oferă vizibilitate asupra configurației curente a rețelei private, permiţând verificarea că izolarea de rețeaua publică IPFS este efectiv activă prin prezența swarm key-ului și dezactivarea configurării automate. Pentru facilitarea procesului de conectare a unor noduri noi la rețea, sistemul expune \texttt{GET /api/bootstrap-info} care furnizează informațiile necesare pentru configurarea unui peer nou, precum peer ID-ul nodului bootstrap și adresele de conexiune. Operațiunea \texttt{POST /api/join-network} automatizează procesul de aderare la rețea, executând secvențial toți pașii necesari configurării.
+
+\paragraph{Managementul topologiei peer-to-peer}
+
+Vizibilitatea asupra topologiei rețelei peer-to-peer este asigurată prin endpoint-ul \texttt{GET /api/peers}, care returnează lista completă a peers-ilor conectați direct la nodul local, incluzând identificatorii lor unici (Peer ID) și adresele multiaddress prin care sunt accesibili. Aceste informații sunt esențiale pentru diagnosticarea problemelor de conectivitate și pentru înțelegerea structurii rețelei la un moment dat.
+
+\paragraph{Operațiuni asupra fișierelor}
+
+Gestionarea ciclului de viață al fișierelor în sistemul IPFS este realizată prin mai multe operațiuni REST care acoperă toate etapele de la încărcare până la ștergere. Operațiunea \texttt{POST /api/files/upload} acceptă fișiere prin HTTP multipart/form-data și le adaugă în IPFS, returnând Content Identifier-ul (CID) generat prin funcția de hash criptografic. Această operațiune permite asocierea de metadata extinsă, incluzând nume descriptiv, descriere textuală, etichete (tags) pentru categorizare, și un flag care indică dacă fișierul trebuie menținut privat (doar pe nodul local) sau distribuit în rețea.
+
+Recuperarea listei de fișiere se realizează prin \texttt{GET /api/files/list}, care agregează informațiile din sistemul de metadata persistent cu statusul actual din IPFS, oferind o vizualizare completă asupra fișierelor gestionate. Descărcarea efectivă a conținutului se face prin \texttt{GET /api/files/download/:hash}, care recuperează datele asociate unui CID și le transmite clientului cu header-ele HTTP corespunzătoare pentru descărcare.
+
+Persistența fișierelor în IPFS este controlată prin mecanismul de pinning, care previne colectarea lor de către garbage collector. Operațiunile \texttt{POST /api/files/pin/:hash} și \texttt{DELETE /api/files/:hash} permit controlul explicit al acestui mecanism, permiţând utilizatorilor să decidă ce fișiere trebuie păstrate permanent pe nod.
+
+\paragraph{Orchestrarea clusterului}
+
+IPFS Cluster introduce un strat de coordonare peste nodurile IPFS individuale, asigurând replicarea automată și distribuția datelor. Interfața REST include operațiuni specifice pentru interacțiunea cu acest strat: \texttt{POST /api/cluster/init} inițializează configurația locală a clusterului, \texttt{POST /api/cluster/add} adaugă fișiere cu replicare automată conform factorului de replicare configurat, iar \texttt{GET /api/cluster/status/:hash} permite monitorizarea statusului de replicare al unui fișier specific, indicând pe câte noduri este prezent și dacă replicarea este completă.
+
+\paragraph{Integrare cu infrastructura Docker}
+
+Pentru sistemul actual care utilizează o infrastructură Docker compusă din cinci noduri, un set de endpoint-uri dedicate facilitează interacțiunea cu clusterul containerizat. Acestea oferă funcționalități similare cu cele pentru cluster-ul local, dar sunt optimizate pentru comunicarea cu API-urile REST expuse de nodurile IPFS Cluster care rulează în containere. Endpoint-ul \texttt{GET /api/docker-cluster/status} agregează informațiile de la toate cele cinci noduri, oferind o vizualizare centralizată asupra stării clusterului, în timp ce \texttt{GET /api/docker-cluster/health} execută verificări de sănătate pe fiecare nod individual pentru detectarea problemelor de disponibilitate.
+
+\subsubsection{Stratul de persistență pentru metadata}
+
+Una dintre limitările fundamentale ale sistemului IPFS este natura imutabilă a adresării bazate pe conținut (content-addressed storage), în care orice modificare a unui fișier rezultă în generarea unui nou Content Identifier. Această caracteristică, deși esențială pentru integritatea și verificabilitatea datelor, face imposibilă asocierea directă de metadata mutabile cu fișierele stocate. Pentru a depăși această limitare arhitecturală, sistemul implementat introduce un strat de persistență dedicat metadata, care menține o mapare între CID-urile IPFS și informații descriptive adiționale.
+
+Implementarea curentă utilizează un sistem de stocare bazat pe fișiere JSON pentru persistența metadata, abordare justificată de simplitatea implementării în stadiul de prototip și de dimensiunea redusă a datelor de metadata comparativ cu conținutul efectiv al fișierelor. Două structuri principale de metadata sunt gestionate:
+
+Fișierul \texttt{files-metadata.json} conține informații descriptive despre fișierele adăugate în sistem, incluzând hash-ul IPFS (CID), numele original al fișierului, dimensiunea în bytes, tipul MIME pentru identificarea naturii conținutului, o descriere textuală furnizată de utilizator, etichete pentru categorizare și căutare, timestamp-ul momentului încărcării pentru auditare temporală, și statusul de pinning care indică dacă fișierul este persistent pe nod. Această structură permite reconstruirea contextului asociat fiecărui fișier, oferind utilizatorilor capacitatea de a naviga și căuta prin colecția lor de date folosind criterii semantice, nu doar hash-uri criptografice.
+
+Complementar, fișierul \texttt{cluster-metadata.json} gestionează informații specifice mecanismului de replicare în cluster, incluzând factorul de replicare configurat pentru fiecare fișier, lista identificatorilor nodurilor pe care există replici, timestamp-uri ale operațiunilor de replicare, și indicatori de disponibilitate care semnalează dacă replicarea este completă conform politicii configurate. Aceste informații sunt esențiale pentru monitorizarea conformității cu politicile de redundanță și pentru detectarea situațiilor în care numărul de replici scade sub pragul minim din cauza indisponibilității unor noduri.
+
+Deși această abordare bazată pe fișiere JSON este adecvată pentru stadiul actual de dezvoltare și pentru scenarii cu volume moderate de date, o evoluție naturală a sistemului ar presupune migrarea către o bază de date relațională sau NoSQL pentru a beneficia de capabilități avansate de indexare, căutare complexă și tranzacții atomice.
+
+\subsubsection{Client pentru Docker Cluster}
+
+Un modul dedicat (\texttt{dockerClusterClient.js}) gestionează comunicarea cu cele 5 noduri IPFS Cluster din infrastructură:
+
+\begin{itemize}
+    \item \textbf{Load balancing}: Distribuie cererile între noduri pentru optimizare
+    \item \textbf{Failover automat}: Dacă un nod este indisponibil, încearcă automat următorul
+    \item \textbf{Retry logic}: Reîncearcă operațiunile eșuate cu backoff exponențial
+    \item \textbf{Health monitoring}: Monitorizează starea fiecărui nod și rutează traficul către nodurile sănătoase
+\end{itemize}
+
+\subsection{Infrastructura - Docker Cluster}
+
+Infrastructura curentă este complet containerizată folosind Docker Compose și constă într-un cluster IPFS de 5 noduri, fiecare pereche fiind formată dintr-un nod IPFS (Kubo) și un nod IPFS Cluster.
+
+\subsubsection{Configurația clusterului}
+
+Fișierul \texttt{docker-compose.yml} definește 5 perechi de containere:
+
+\begin{enumerate}
+    \item \textbf{ipfs-1 + cluster-1} (Bootstrap Node):
+    \begin{itemize}
+        \item Porturile: 4001 (swarm), 5001 (API), 8080 (gateway)
+        \item Cluster API: 9094, Cluster swarm: 9096
+        \item Rol: Nod principal pentru bootstrap
+    \end{itemize}
+    
+    \item \textbf{ipfs-2 + cluster-2}:
+    \begin{itemize}
+        \item Porturile: 4002, 5002, 8081
+        \item Cluster API: 9194, Cluster swarm: 9196
+        \item Se conectează automat la cluster-1
+    \end{itemize}
+    
+    \item \textbf{ipfs-3 + cluster-3}:
+    \begin{itemize}
+        \item Porturile: 4003, 5003, 8082
+        \item Cluster API: 9294, Cluster swarm: 9296
+    \end{itemize}
+    
+    \item \textbf{ipfs-4 + cluster-4}:
+    \begin{itemize}
+        \item Porturile: 4004, 5004, 8083
+        \item Cluster API: 9394, Cluster swarm: 9396
+    \end{itemize}
+    
+    \item \textbf{ipfs-5 + cluster-5}:
+    \begin{itemize}
+        \item Porturile: 4005, 5005, 8084
+        \item Cluster API: 9494, Cluster swarm: 9496
+    \end{itemize}
+\end{enumerate}
+
+\subsubsection{Rețea privată IPFS}
+
+Clusterul funcționează ca o rețea privată complet izolată de IPFS public prin următoarele mecanisme:
+
+\begin{itemize}
+    \item \textbf{Swarm Key}: Fișierul \texttt{swarm.key} partajat între toate nodurile conține o cheie PSK (Pre-Shared Key) de 256 biți
+    \item \textbf{Variabila de mediu}: \texttt{LIBP2P\_FORCE\_PNET=1} forțează toate nodurile să accepte doar conexiuni autentificate
+    \item \textbf{Bootstrap nodes}: Configurați manual, fără conexiuni la IPFS public
+    \item \textbf{Profil server}: Fiecare nod rulează cu \texttt{IPFS\_PROFILE=server} pentru optimizare server-side
+\end{itemize}
+
+\subsubsection{Configurația IPFS Cluster}
+
+IPFS Cluster asigură replicarea automată a datelor cu următoarele setări:
+
+\begin{itemize}
+    \item \textbf{CLUSTER\_SECRET}: Secret partajat pentru autentificarea nodurilor în cluster
+    \item \textbf{Replication Factor}: Minim 2 copii, maxim 3 copii pentru fiecare fișier
+    \item \textbf{Monitor Ping Interval}: 10 secunde pentru detectarea rapidă a nodurilor offline
+    \item \textbf{CORS permisiv}: Permite accesul API-ului din interfața web
+\end{itemize}
+
+\subsubsection{Health checks și resilience}
+
+Fiecare nod cluster are configurat un health check care:
+\begin{itemize}
+    \item Verifică endpoint-ul \texttt{/health} la fiecare 10 secunde
+    \item Timeout de 5 secunde pentru răspuns
+    \item 3 reîncercări înainte de a marca nodul ca unhealthy
+    \item Restart automat cu politica \texttt{unless-stopped}
+\end{itemize}
+
+\subsubsection{Persistență date}
+
+Datele sunt persistate folosind Docker volumes:
+\begin{itemize}
+    \item 5 volume pentru nodurile IPFS (\texttt{ipfs-X-data})
+    \item 5 volume pentru nodurile cluster (\texttt{cluster-X-data})
+    \item Volume-urile supraviețuiesc restart-ului containerelor
+\end{itemize}
+
+\subsection{Frontend - Interfața web}
+
+Frontend-ul este o aplicație Single Page Application (SPA) construită cu React 19, oferind o interfață modernă și responsivă pentru managementul sistemului.
+
+\subsubsection{Tehnologii utilizate}
+
+\begin{itemize}
+    \item \textbf{React 19}: Ultima versiune a framework-ului React
+    \item \textbf{React Router DOM 7}: Navigare între pagini cu routing modern
+    \item \textbf{Tailwind CSS 3.4}: Styling utility-first pentru design responsiv
+    \item \textbf{Framer Motion 12}: Animații fluide și tranziții
+    \item \textbf{Lucide React}: Iconuri moderne și consistente
+    \item \textbf{React Hot Toast}: Notificări user-friendly
+    \item \textbf{Axios}: Client HTTP pentru comunicare cu backend-ul
+\end{itemize}
+
+\subsubsection{Structura aplicației}
+
+Aplicația este organizată modular:
+
+\begin{itemize}
+    \item \texttt{src/pages/} - Pagini principale ale aplicației
+    \item \texttt{src/components/} - Componente reutilizabile (panels, UI components)
+    \item \texttt{src/components/ui/} - Design system (Button, Card, Input, Badge, Sidebar, StatCard)
+    \item \texttt{src/api/} - Comunicare cu backend-ul
+    \item \texttt{src/hooks/} - Custom hooks (useLogs pentru streaming logs)
+\end{itemize}
+
+\subsubsection{Pagini implementate}
+
+\paragraph{Dashboard (\texttt{Dashboard.jsx})}
+Pagina principală oferă o privire de ansamblu asupra sistemului:
+\begin{itemize}
+    \item \textbf{Statistici în timp real}: Număr total fișiere, peers conectați, noduri cluster active, status rețea
+    \item \textbf{Refresh automat}: Date actualizate la fiecare 10 secunde
+    \item \textbf{Design modern}: Card-uri colorate cu iconuri, animații Framer Motion
+    \item \textbf{Indicatori vizuali}: Trend-uri pentru fiecare metrică
+\end{itemize}
+
+\paragraph{Network Page (\texttt{NetworkPage.jsx})}
+Gestionarea rețelei private IPFS:
+\begin{itemize}
+    \item \textbf{Configurare swarm key}: Input pentru cheia rețelei private
+    \item \textbf{Bootstrap nodes}: Configurare multiaddress pentru nodul principal
+    \item \textbf{Status rețea}: Indicator vizual (activ/inactiv) cu verificare automată
+    \item \textbf{Lista peers}: Afișare peers conectați cu detalii (ID, addresses, latency estimate)
+    \item \textbf{Copy to clipboard}: Funcție pentru copierea swarm key
+    \item \textbf{Logs în timp real}: Panoul de log-uri afișează operațiile de configurare
+    \item \textbf{Refresh manual}: Buton pentru reîmprospătarea listei de peers
+\end{itemize}
+
+\paragraph{Files Page (\texttt{FilesPage.jsx})}
+Managementul complet al fișierelor:
+\begin{itemize}
+    \item \textbf{Upload drag \& drop}: Interfață intuitivă pentru încărcare fișiere
+    \item \textbf{Metadata}: Adăugare descriere și tag-uri la fiecare fișier
+    \item \textbf{Preview fișiere}: Iconuri diferite în funcție de tip (imagine, video, audio, arhivă)
+    \item \textbf{Lista fișiere}: Grid responsiv cu card-uri pentru fiecare fișier
+    \item \textbf{Informații detaliate}: Modal cu metadata completă pentru fiecare fișier
+    \item \textbf{Acțiuni}: Download, ștergere, pin/unpin
+    \item \textbf{Filtrare}: Căutare după nume sau tag-uri
+    \item \textbf{Refresh automat}: Listă actualizată după fiecare operație
+\end{itemize}
+
+\paragraph{Cluster Page (\texttt{ClusterPage.jsx})}
+Monitorizare și management cluster Docker:
+\begin{itemize}
+    \item \textbf{Status noduri}: Card pentru fiecare nod din cluster cu status (online/offline)
+    \item \textbf{Health metrics}: Indicator vizual pentru starea fiecărui nod
+    \item \textbf{Pins distribution}: Vizualizare distribuția fișierelor pe noduri
+    \item \textbf{Upload în cluster}: Încărcare fișiere direct în cluster cu replicare automată
+    \item \textbf{Replication status}: Verificare pe câte noduri este replicat fiecare fișier
+\end{itemize}
+
+\subsubsection{Design System}
+
+Interfața folosește un design system consistent:
+
+\begin{itemize}
+    \item \textbf{Paleta de culori}: Gradient dark (900-800) cu accent colors pentru stări
+    \item \textbf{Componente reutilizabile}: Button, Card, Input, Badge cu variante multiple
+    \item \textbf{Animații}: Tranziții smooth folosind Framer Motion
+    \item \textbf{Responsive design}: Funcționează perfect pe desktop, tabletă și mobil
+    \item \textbf{Sidebar persistent}: Navigare rapidă între secțiuni cu iconuri și labels
+\end{itemize}
+
+\subsection{Test Peer - Scripturi de testare}
+
+Pentru validarea funcționalității rețelei private, au fost dezvoltate mai multe scripturi PowerShell în directorul \texttt{test-peer/}:
+
+\subsubsection{start-test-peer.ps1}
+
+Script pentru inițializarea unui peer de test care se conectează la rețeaua privată:
+
+\begin{itemize}
+    \item Verifică existența IPFS (kubo) instalat local
+    \item Creează un director IPFS separat (\texttt{.ipfs-test}) pentru izolare
+    \item Inițializează IPFS cu profil server
+    \item Copiază \texttt{swarm.key} din infrastructură
+    \item Obține Peer ID al nodului bootstrap din Docker
+    \item Configurează bootstrap nodes pentru conectare
+    \item Pornește daemon-ul IPFS cu \texttt{LIBP2P\_FORCE\_PNET=1}
+\end{itemize}
+
+\subsubsection{check-connection.ps1}
+
+Script pentru verificarea conectivității:
+
+\begin{itemize}
+    \item Verifică peers conectați folosind \texttt{ipfs swarm peers}
+    \item Testează conectivitatea la fiecare nod din cluster
+    \item Afișează statistici despre latență și bandwidth
+    \item Validează că toate cele 5 noduri sunt vizibile
+\end{itemize}
+
+\subsubsection{test-file-transfer.ps1}
+
+Script pentru testarea transferului de fișiere:
+
+\begin{itemize}
+    \item Creează un fișier de test cu conținut aleatoriu
+    \item Adaugă fișierul în IPFS și obține CID
+    \item Verifică că fișierul poate fi descărcat de la fiecare gateway
+    \item Testează pin-ul pe nodurile din cluster
+    \item Măsoară viteza de transfer și timpul de replicare
+\end{itemize}
+
+\section{Funcționalități implementate}
+
+\subsection{Rețea privată IPFS cu izolare completă}
+
+Sistemul actual oferă o rețea IPFS complet privată și izolată de rețeaua publică prin:
+
+\begin{itemize}
+    \item \textbf{Pre-Shared Key (PSK)}: Autentificare criptografică între noduri
+    \item \textbf{Bootstrap controlat}: Doar noduri autorizate pot face parte din rețea
+    \item \textbf{Configurare automată}: Backend-ul poate configura nodul local pentru conectare
+    \item \textbf{Validare}: Verificare că nodurile sunt efectiv în rețea privată
+\end{itemize}
+
+\subsection{Cluster IPFS cu replicare automată}
+
+Implementarea IPFS Cluster oferă:
+
+\begin{itemize}
+    \item \textbf{Replicare configurabilă}: Factor de replicare între 2-3 copii
+    \item \textbf{Distribuție automată}: Fișierele sunt automat distribuite pe noduri
+    \item \textbf{Failover}: Dacă un nod cade, clusterul rebalansează datele
+    \item \textbf{Consistency checks}: Verificare periodică a integrității datelor
+    \item \textbf{Pinning coordonat}: Cluster gestionează pin-urile pe toate nodurile
+\end{itemize}
+
+\subsection{Upload și management fișiere}
+
+Sistemul permite operații complete cu fișiere:
+
+\begin{itemize}
+    \item \textbf{Upload securizat}: Validare tip fișier, limită dimensiune (100MB)
+    \item \textbf{Metadata extinsă}: Nume, descriere, tag-uri, MIME type, dimensiune
+    \item \textbf{Flag privat/public}: Utilizatorul decide dacă fișierul se distribuie în rețea
+    \item \textbf{Download}: Recuperare fișiere după CID de la oricare gateway
+    \item \textbf{Pin management}: Pin/unpin manual pentru control persistență
+    \item \textbf{Bulk operations}: Operații pe mai multe fișiere simultan
+\end{itemize}
+
+\subsection{Monitoring și observabilitate}
+
+Sistemul oferă vizibilitate completă asupra stării infrastructurii:
+
+\begin{itemize}
+    \item \textbf{Health checks}: Verificare automată stare noduri la fiecare 10s
+    \item \textbf{Metrics collection}: Prometheus configurat pentru colectare metrici
+    \item \textbf{Logs structurate}: Backend logger cu timestamp și nivele de severitate
+    \item \textbf{Dashboard real-time}: Statistici actualizate în timp real în interfață
+    \item \textbf{Alerting}: Prometheus Alertmanager pentru notificări (configurat, nu activat)
+\end{itemize}
+
+\subsection{API REST complet documentat}
+
+Backend-ul expune un API REST complet cu:
+
+\begin{itemize}
+    \item \textbf{24 endpoints}: Acoperire completă pentru toate operațiunile
+    \item \textbf{Documentație}: README detaliat cu exemple de cereri/răspunsuri
+    \item \textbf{Autentificare}: API key pentru securitate
+    \item \textbf{CORS configurat}: Permite accesul din interfața web
+    \item \textbf{Error handling}: Răspunsuri structurate cu coduri HTTP corecte
+    \item \textbf{Validare input}: Verificare parametri obligatorii și formate
+\end{itemize}
+
+\section{Fluxuri funcționale implementate}
+
+\subsection{Fluxul de conectare la rețeaua privată}
+
+\begin{enumerate}
+    \item Utilizatorul accesează Network Page din interfață
+    \item Introduce swarm key și bootstrap node multiaddress
+    \item Frontend trimite \texttt{POST /api/configure-network} cu datele
+    \item Backend:
+    \begin{itemize}
+        \item Scrie \texttt{swarm.key} în directorul IPFS
+        \item Setează \texttt{AutoConf.Enabled = false}
+        \item Configurează bootstrap nodes
+        \item Restart daemon IPFS cu \texttt{LIBP2P\_FORCE\_PNET=1}
+    \end{itemize}
+    \item Backend returnează logs detaliate despre proces
+    \item Frontend afișează logs în timp real
+    \item Utilizatorul vede status "Active" când conectarea reușește
+    \item Lista de peers se populează automat
+\end{enumerate}
+
+\subsection{Fluxul de upload fișier cu distribuție în cluster}
+
+\begin{enumerate}
+    \item Utilizatorul selectează fișier prin drag\&drop sau file picker în Files Page
+    \item Completează metadata opțională (descriere, tag-uri)
+    \item Alege flag "Keep Private" sau lasă implicit pentru distribuție
+    \item Click pe "Upload to IPFS"
+    \item Frontend trimite \texttt{POST /api/files/upload} cu FormData
+    \item Backend:
+    \begin{itemize}
+        \item Salvează fișierul temporar
+        \item Adaugă fișierul în IPFS local cu \texttt{ipfs add}
+        \item Extrage CID din output
+        \item Pin-uiește fișierul cu \texttt{ipfs pin add}
+        \item Salvează metadata în \texttt{files-metadata.json}
+        \item Dacă nu e privat, trimite către Docker Cluster:
+        \begin{itemize}
+            \item Client Docker Cluster alege un nod sănătos
+            \item Face \texttt{POST /add} la API-ul Cluster
+            \item Cluster replicează automat pe 2-3 noduri
+            \item Verifică status replicare
+        \end{itemize}
+        \item Șterge fișierul temporar
+    \end{itemize}
+    \item Backend returnează CID, metadata și URL-uri gateway
+    \item Frontend:
+    \begin{itemize}
+        \item Afișează toast de succes
+        \item Reîmprospătează lista de fișiere
+        \item Afișează noul fișier în grid
+    \end{itemize}
+\end{enumerate}
+
+\subsection{Fluxul de monitorizare cluster}
+
+\begin{enumerate}
+    \item Utilizatorul accesează Cluster Page
+    \item Frontend face polling la fiecare 10s:
+    \begin{itemize}
+        \item \texttt{GET /api/docker-cluster/status}
+        \item \texttt{GET /api/docker-cluster/health}
+    \end{itemize}
+    \item Backend Docker Cluster Client:
+    \begin{itemize}
+        \item Iterează prin cele 5 URL-uri de noduri cluster
+        \item Face \texttt{GET /peers} la fiecare nod
+        \item Face \texttt{GET /pins} pentru lista fișiere pinuite
+        \item Agregă informațiile de la toate nodurile
+        \item Calculează health percentage
+        \item Returnează status complet
+    \end{itemize}
+    \item Frontend afișează:
+    \begin{itemize}
+        \item Card pentru fiecare nod cu status indicator
+        \item Număr total peers în cluster
+        \item Număr fișiere pinuite
+        \item Health percentage cu progress bar
+        \item Lista detaliată pins cu distribuție pe noduri
+    \end{itemize}
+\end{enumerate}
+
+\section{Tehnologii și dependențe}
+
+\subsection{Backend}
+
+\textbf{Core dependencies:}
+\begin{itemize}
+    \item \texttt{express@4.21.2} - Web framework
+    \item \texttt{axios@1.13.2} - HTTP client pentru Docker Cluster
+    \item \texttt{express-fileupload@1.5.2} - Middleware upload fișiere
+    \item \texttt{cors@2.8.5} - Cross-Origin Resource Sharing
+    \item \texttt{dotenv@16.6.1} - Configurare variabile de mediu
+    \item \texttt{form-data@4.0.5} - Construire FormData pentru IPFS Cluster
+    \item \texttt{file-type@16.5.4} - Detectare MIME type
+\end{itemize}
+
+\textbf{Development:}
+\begin{itemize}
+    \item \texttt{nodemon@3.0.1} - Auto-restart la modificări cod
+\end{itemize}
+
+\subsection{Frontend}
+
+\textbf{Core dependencies:}
+\begin{itemize}
+    \item \texttt{react@19.2.0} \& \texttt{react-dom@19.2.0} - Framework UI
+    \item \texttt{react-router-dom@7.9.6} - Routing
+    \item \texttt{axios@1.12.2} - HTTP client
+    \item \texttt{framer-motion@12.23.24} - Animații
+    \item \texttt{lucide-react@0.548.0} - Iconuri
+    \item \texttt{react-hot-toast@2.6.0} - Notificări
+\end{itemize}
+
+\textbf{Styling:}
+\begin{itemize}
+    \item \texttt{tailwindcss@3.4.18} - Utility-first CSS
+    \item \texttt{postcss@8.5.6} \& \texttt{autoprefixer@10.4.22} - CSS processing
+\end{itemize}
+
+\subsection{Infrastructură}
+
+\textbf{Container images:}
+\begin{itemize}
+    \item \texttt{ipfs/kubo:latest} - IPFS daemon oficial
+    \item \texttt{ipfs/ipfs-cluster:latest} - IPFS Cluster service
+\end{itemize}
+
+\textbf{Monitoring (configurate, neutilizate încă):}
+\begin{itemize}
+    \item \texttt{prom/prometheus} - Time-series database pentru metrici
+    \item \texttt{grafana/grafana} - Vizualizare metrici
+    \item \texttt{prom/alertmanager} - Gestiune alerte
+\end{itemize}
+
+\section{Configurare și deployment}
+
+\subsection{Cerințe sistem}
+
+Pentru rularea completă a sistemului sunt necesare:
+
+\begin{itemize}
+    \item \textbf{Docker Desktop}: Pentru infrastructura containerizată
+    \item \textbf{Node.js 16+}: Pentru backend și frontend
+    \item \textbf{IPFS (Kubo)}: Pentru nodul local (opțional, pentru test-peer)
+    \item \textbf{PowerShell 5.1+}: Pentru scripturi management (Windows)
+    \item \textbf{Resurse minime}: 4GB RAM, 20GB spațiu disc
+\end{itemize}
+
+\subsection{Procedura de pornire}
+
+\subsubsection{Pas 1: Infrastructura Docker}
+
+\begin{verbatim}
+cd Infrastructura
+docker-compose up -d
+\end{verbatim}
+
+Acest comanda pornește cele 10 containere (5 IPFS + 5 Cluster) și creează volumele necesare.
+
+\subsubsection{Pas 2: Backend}
+
+\begin{verbatim}
+cd Backend
+npm install
+npm start
+\end{verbatim}
+
+Backend-ul pornește pe \texttt{http://localhost:3001} și se conectează automat la Docker Cluster.
+
+\subsubsection{Pas 3: Frontend}
+
+\begin{verbatim}
+cd Frontend/frontend
+npm install
+npm start
+\end{verbatim}
+
+Interfața web pornește pe \texttt{http://localhost:3000} și se conectează la backend.
+
+\subsection{Variabile de configurare}
+
+\subsubsection{Backend (.env)}
+
+\begin{verbatim}
+PORT=3001
+DOCKER_CLUSTER_NODES=http://localhost:9094,
+    http://localhost:9194,http://localhost:9294,
+    http://localhost:9394,http://localhost:9494
+DOCKER_CLUSTER_TIMEOUT=5000
+DOCKER_CLUSTER_MAX_RETRIES=3
+API_KEY=supersecret
+\end{verbatim}
+
+\subsubsection{Frontend (.env)}
+
+\begin{verbatim}
+REACT_APP_API_URL=http://localhost:3001/api
+REACT_APP_API_KEY=supersecret
+\end{verbatim}
+
+\subsubsection{Infrastructura (.env)}
+
+\begin{verbatim}
+CLUSTER_SECRET=<secret-generat>
+BOOTSTRAP_PEER_ID=<peer-id-cluster-1>
+\end{verbatim}
+
+\section{Limitări și aspecte de îmbunătățit}
+
+\subsection{Limitări curente}
+
+\begin{enumerate}
+    \item \textbf{Lipsă integrare Solid}: Sistemul actual nu implementează încă pod-urile Solid și mecanismele de control al accesului
+    \item \textbf{Lipsă sistem monetizare}: Integrarea cu Filecoin și mecanismul de partajare spațiu contra cost nu sunt implementate
+    \item \textbf{Criptare limitată}: Nu există criptare end-to-end; fișierele sunt stocate în plaintext în IPFS
+    \item \textbf{Autentificare simplă}: Sistemul folosește doar API key static, fără gestionare utilizatori
+    \item \textbf{Monitoring parțial}: Prometheus și Grafana sunt configurate dar nu active
+    \item \textbf{Scalabilitate}: Cluster-ul este fix la 5 noduri, fără adăugare dinamică
+    \item \textbf{Persistență metadata}: Folosește fișiere JSON locale în loc de bază de date
+\end{enumerate}
+
+\subsection{Provocări tehnice întâmpinate}
+
+\begin{enumerate}
+    \item \textbf{Debugging rețea privată}: Configurarea corectă a swarm key și verificarea izolării complete
+    \item \textbf{CORS în Docker Cluster}: Configurarea corectă pentru acces cross-origin din browser
+    \item \textbf{Upload fișiere mari}: Gestionarea timeout-urilor și buffer-elor pentru fișiere de 100MB
+    \item \textbf{Sincronizare cluster}: Asigurarea că toate nodurile primesc pin-urile în timpul util
+    \item \textbf{Health checking}: Implementarea logicii de failover când un nod devine indisponibil
+\end{enumerate}
+
+\section{Concluzii}
+
+Stadiul actual al implementării reprezintă o fundație solidă pentru un sistem de stocare cloud descentralizată. Sistemul oferă:
+
+\begin{itemize}
+    \item \textbf{Infrastructură funcțională}: Cluster IPFS de 5 noduri cu replicare automată
+    \item \textbf{Backend robust}: API REST complet cu 24 endpoints și integrare cluster
+    \item \textbf{Interfață modernă}: SPA React cu design responsiv și experiență utilizator fluidă
+    \item \textbf{Rețea privată}: Izolare completă de IPFS public prin PSK
+    \item \textbf{Operații complete}: Upload, download, pin management, monitoring
+\end{itemize}
+
+Deși lipsesc încă componentele esențiale (Solid, Filecoin, criptare E2E, gestionare utilizatori), arhitectura modulară implementată permite extinderea facilă cu aceste funcționalități. Codul este organizat, documentat și folosește best practices din industrie (separare concerns, error handling, logging, health checks).
+
+Următoarele capitole vor detalia implementarea funcționalităților rămase pentru atingerea obiectivelor complete ale lucrării: integrarea Solid pentru control granular al accesului, adăugarea Filecoin pentru monetizare, implementarea criptării end-to-end și crearea sistemului de gestionare utilizatori cu autentificare robustă.
+
+\end{document}

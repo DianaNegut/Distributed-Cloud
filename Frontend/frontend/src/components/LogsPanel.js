@@ -4,7 +4,7 @@ export default function LogsPanel({ logs }) {
   return (
     <div className="panel" style={{ marginTop: '24px' }}>
       <h2 className="panel-title">
-        <AlertCircle /> Log Execuție
+        <AlertCircle /> Log Executie
       </h2>
       <div className="logs-container">
         {logs.map((log, index) => (

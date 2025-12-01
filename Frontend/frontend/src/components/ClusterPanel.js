@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import ipfsApi from '../api/ipfsApi'; 
+import ipfsApi from '../api/ipfsApi';
 
 function ClusterPanel() {
   const [peers, setPeers] = useState([]);
@@ -7,41 +7,35 @@ function ClusterPanel() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  
   const fetchPeers = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const clusterPeers = await ipfsApi.getClusterPeers();
-    
       setPeers(Array.isArray(clusterPeers) ? clusterPeers : []);
     } catch (err) {
       setError('Failed to fetch cluster peers.');
-      console.error(err);
-      setPeers([]); 
+      setPeers([]);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  
   useEffect(() => {
     fetchPeers();
   }, [fetchPeers]);
 
   const handleAddPeer = async (e) => {
-    e.preventDefault(); 
-    if (!newPeerId.trim()) return; 
-
+    e.preventDefault();
+    if (!newPeerId.trim()) return;
     setLoading(true);
     setError(null);
     try {
       await ipfsApi.addClusterPeer(newPeerId);
-      setNewPeerId(''); 
-      fetchPeers(); 
+      setNewPeerId('');
+      fetchPeers();
     } catch (err) {
       setError(`Failed to add peer ${newPeerId}.`);
-      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -52,10 +46,9 @@ function ClusterPanel() {
     setError(null);
     try {
       await ipfsApi.removeClusterPeer(peerIdToRemove);
-      fetchPeers(); 
+      fetchPeers();
     } catch (err) {
       setError(`Failed to remove peer ${peerIdToRemove}.`);
-      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -100,9 +93,9 @@ function ClusterPanel() {
         !loading && <p>No peers found in the cluster.</p>
       )}
 
-       <button onClick={fetchPeers} disabled={loading} style={{ marginTop: '10px' }}>
-          Refresh List
-       </button>
+      <button onClick={fetchPeers} disabled={loading} style={{ marginTop: '10px' }}>
+        Refresh List
+      </button>
     </div>
   );
 }

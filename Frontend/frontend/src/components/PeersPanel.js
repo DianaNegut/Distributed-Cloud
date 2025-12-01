@@ -4,7 +4,7 @@ export default function PeersPanel({ peers }) {
   return (
     <div className="panel" style={{ marginTop: '24px' }}>
       <h2 className="panel-title">
-        <Users /> Peers Conectați ({peers.length})
+        <Users /> Peers Conectati ({peers.length})
       </h2>
       <div className="peers-container">
         {peers.map((peer, index) => (

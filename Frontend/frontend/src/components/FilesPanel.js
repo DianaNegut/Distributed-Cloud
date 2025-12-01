@@ -21,7 +21,6 @@ function FilesPanel({ onLog }) {
   useEffect(() => {
     loadFiles();
     loadTransferStats();
-    // Actualizează statistici la fiecare 30 secunde
     const interval = setInterval(loadTransferStats, 30000);
     return () => clearInterval(interval);
   }, []);
@@ -29,16 +28,13 @@ function FilesPanel({ onLog }) {
   const loadFiles = async () => {
     setLoading(true);
     try {
-      // Folosește API-ul Docker Cluster pentru persistență
       const response = await axios.get(`${API_URL}/docker-cluster/pins`, {
         headers: { 'x-api-key': API_KEY }
       });
-      
       if (response.data.success) {
         const pinsData = response.data.pins || [];
-        // Convertește pins în format array dacă e obiect
-        const filesArray = Array.isArray(pinsData) 
-          ? pinsData 
+        const filesArray = Array.isArray(pinsData)
+          ? pinsData
           : Object.entries(pinsData).map(([cid, info]) => ({
               hash: cid,
               name: info.name || `file-${cid.substring(0, 8)}`,
@@ -48,11 +44,10 @@ function FilesPanel({ onLog }) {
               ...info
             }));
         setFiles(filesArray);
-        onLog?.(`✓ ${filesArray.length} fișiere găsite în cluster`, 'success');
+        onLog?.(`${filesArray.length} fisiere gasite in cluster`, 'success');
       }
     } catch (error) {
-      console.error('Eroare la încărcare fișiere:', error);
-      onLog?.(`Eroare la încărcare fișiere: ${error.message}`, 'error');
+      onLog?.(`Eroare la incarcare fisiere: ${error.message}`, 'error');
       setFiles([]);
     } finally {
       setLoading(false);
@@ -63,26 +58,21 @@ function FilesPanel({ onLog }) {
     const file = e.target.files[0];
     if (file) {
       setSelectedFile(file);
-      onLog?.(`Fișier selectat: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`, 'info');
+      onLog?.(`Fisier selectat: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`, 'info');
     }
   };
 
   const handleUpload = async (e) => {
     e.preventDefault();
-    
     if (!selectedFile) {
-      onLog?.('Selectează un fișier mai întâi', 'error');
+      onLog?.('Selecteaza un fisier mai intai', 'error');
       return;
     }
-
     setUploading(true);
     const formData = new FormData();
     formData.append('file', selectedFile);
-
     try {
-      onLog?.(`Încărcare fișier în cluster: ${selectedFile.name}...`, 'info');
-      
-      // Folosește API-ul Docker Cluster pentru persistență
+      onLog?.(`Incarcare fisier in cluster: ${selectedFile.name}...`, 'info');
       const response = await axios.post(`${API_URL}/docker-cluster/add`, formData, {
         headers: {
           'x-api-key': API_KEY,
@@ -90,20 +80,17 @@ function FilesPanel({ onLog }) {
         },
         timeout: 60000
       });
-
       if (response.data.success) {
         const fileData = response.data.file;
-        onLog?.(`✓ Fișier adăugat în cluster: ${fileData.cid}`, 'success');
-        onLog?.(`✓ Replicat pe ${fileData.pinnedOn} noduri`, 'success');
+        onLog?.(`Fisier adaugat in cluster: ${fileData.cid}`, 'success');
+        onLog?.(`Replicat pe ${fileData.pinnedOn} noduri`, 'success');
         setSelectedFile(null);
         setDescription('');
         setTags('');
         document.getElementById('file-input').value = '';
-        // Așteaptă 2 secunde pentru replicare completă
         setTimeout(() => loadFiles(), 2000);
       }
     } catch (error) {
-      console.error('Eroare la upload:', error);
       onLog?.(`Eroare la upload: ${error.response?.data?.error || error.message}`, 'error');
     } finally {
       setUploading(false);
@@ -112,16 +99,12 @@ function FilesPanel({ onLog }) {
 
   const handleDownload = async (file) => {
     try {
-      onLog?.(`Descărcare fișier: ${file.name}...`, 'info');
-      
-      // Folosește API-ul Docker Cluster
+      onLog?.(`Descarca fisier: ${file.name}...`, 'info');
       const response = await axios.get(`${API_URL}/docker-cluster/download/${file.hash}`, {
         headers: { 'x-api-key': API_KEY },
         responseType: 'blob',
         timeout: 30000
       });
-
-      // Creează link de download
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
@@ -130,10 +113,8 @@ function FilesPanel({ onLog }) {
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-
-      onLog?.(`✓ Fișier descărcat: ${file.name}`, 'success');
+      onLog?.(`Fisier descarcat: ${file.name}`, 'success');
     } catch (error) {
-      console.error('Eroare la download:', error);
       onLog?.(`Eroare la download: ${error.message}`, 'error');
     }
   };
@@ -143,32 +124,26 @@ function FilesPanel({ onLog }) {
       const response = await axios.get(`${API_URL}/files/transfer-stats`, {
         headers: { 'x-api-key': API_KEY }
       });
-      
       if (response.data.success) {
         setTransferStats(response.data.stats);
       }
-    } catch (error) {
-      console.error('Eroare la încărcare statistici:', error);
-    }
+    } catch (error) {}
   };
 
   const handleTestTransfer = async () => {
     setTesting(true);
     try {
-      onLog?.('Test transfer între noduri...', 'info');
-      
+      onLog?.('Test transfer intre noduri...', 'info');
       const response = await axios.post(`${API_URL}/files/test-transfer`, {}, {
         headers: { 'x-api-key': API_KEY }
       });
-
       if (response.data.success) {
         const test = response.data.test;
-        onLog?.(`✓ Test finalizat: ${test.peersConnected} peers, ${test.providersFound} provideri`, 'success');
+        onLog?.(`Test finalizat: ${test.peersConnected} peers, ${test.providersFound} provideri`, 'success');
         onLog?.(`Status: ${test.status}`, test.canTransfer ? 'success' : 'warning');
         await loadTransferStats();
       }
     } catch (error) {
-      console.error('Eroare la test:', error);
       onLog?.(`Eroare la test: ${error.message}`, 'error');
     } finally {
       setTesting(false);
@@ -176,35 +151,28 @@ function FilesPanel({ onLog }) {
   };
 
   const handleDelete = async (file) => {
-    if (!window.confirm(`Sigur vrei să ștergi fișierul "${file.name}" din cluster?`)) {
+    if (!window.confirm(`Sigur vrei sa stergi fisierul "${file.name}" din cluster?`)) {
       return;
     }
-
     try {
-      onLog?.(`Ștergere fișier din cluster: ${file.name}...`, 'info');
-      
-      // Folosește API-ul Docker Cluster
+      onLog?.(`Stergere fisier din cluster: ${file.name}...`, 'info');
       const response = await axios.delete(`${API_URL}/docker-cluster/pin/${file.hash}`, {
         headers: { 'x-api-key': API_KEY }
       });
-
       if (response.data.success) {
-        onLog?.(`✓ Fișier șters din cluster: ${file.name}`, 'success');
+        onLog?.(`Fisier sters din cluster: ${file.name}`, 'success');
         setTimeout(() => loadFiles(), 1000);
       }
     } catch (error) {
-      console.error('Eroare la ștergere:', error);
-      onLog?.(`Eroare la ștergere: ${error.message}`, 'error');
+      onLog?.(`Eroare la stergere: ${error.message}`, 'error');
     }
   };
 
   const handleShowInfo = async (file) => {
     try {
-      // Folosește API-ul Docker Cluster
       const response = await axios.get(`${API_URL}/docker-cluster/pin/${file.hash}`, {
         headers: { 'x-api-key': API_KEY }
       });
-
       if (response.data.success) {
         setSelectedFileInfo({
           ...file,
@@ -214,8 +182,7 @@ function FilesPanel({ onLog }) {
         });
       }
     } catch (error) {
-      console.error('Eroare la info:', error);
-      onLog?.(`Eroare la obținere info: ${error.message}`, 'error');
+      onLog?.(`Eroare la obtinere info: ${error.message}`, 'error');
     }
   };
 
@@ -228,7 +195,7 @@ function FilesPanel({ onLog }) {
   };
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleString('ro-RO');
+    return new Date(dateString).toLocaleString('en-US');
   };
 
   return (

@@ -8,7 +8,7 @@ export default function Header() {
         <div>
           <h1 className="header-title">IPFS Private Network Manager</h1>
           <p className="header-subtitle">
-            Configurează și gestionează rețeaua ta privată IPFS
+            Configureaza si gestioneaza reteaua ta privata IPFS
           </p>
         </div>
       </div>

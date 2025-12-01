@@ -2,11 +2,11 @@ import { Shield, CheckCircle } from 'lucide-react';
 
 export default function InfoPanel() {
   const steps = [
-    ['Copiere swarm.key', 'Cheia secretă pentru rețeaua privată'],
-    ['Dezactivare AutoConf & AutoTLS', 'Izolare de rețeaua publică IPFS'],
-    ['Activare DHT Routing', 'Descoperire peer-uri în rețea'],
-    ['Ștergere servicii externe', 'Routing și publishing doar intern'],
-    ['Configurare Bootstrap', 'Adaugă doar nodurile tale'],
+    ['Copiere swarm.key', 'Cheia secreta pentru reteaua privata'],
+    ['Dezactivare AutoConf & AutoTLS', 'Izolare de reteaua publica IPFS'],
+    ['Activare DHT Routing', 'Descoperire peer-uri in retea'],
+    ['Stergere servicii externe', 'Routing si publishing doar intern'],
+    ['Configurare Bootstrap', 'Adauga doar nodurile tale'],
   ];
 
   return (

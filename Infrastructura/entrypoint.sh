@@ -14,6 +14,17 @@ ipfs config --json Bootstrap '[]'
 ipfs config --json Discovery.MDNS.Enabled true
 ipfs config --json Swarm.AddrFilters '[]'
 ipfs config Addresses.API /ip4/0.0.0.0/tcp/5001
+ipfs config Addresses.Gateway /ip4/0.0.0.0/tcp/8080
+
+# Configurare gateway pentru path-based access (nu subdomain)
+echo "Configuring gateway..."
+ipfs config --json Gateway.PublicGateways '{
+  "localhost": {
+    "UseSubdomains": false,
+    "Paths": ["/ipfs", "/ipns"]
+  }
+}'
+ipfs config --json Gateway.NoFetch false
 
 # Pornește daemon-ul
 echo "Starting IPFS daemon..."

@@ -3,7 +3,6 @@ const router = express.Router();
 const { execPromise } = require('../utils/execPromise');
 const { ensureKuboInstalled } = require('../utils/ensureKuboInstalled');
 const { KUBO_PATH, IPFS_PATH } = require('../config/paths');
-// modul fisiere pentru scriere / citire
 const fs = require('fs');
 const path = require('path');
 
@@ -30,13 +29,9 @@ function saveMetadata(data) {
 
 
 router.post('/init', async (req, res) => {
-  console.log('[CLUSTER] Inițializare IPFS Cluster...');
   try {
     await ensureKuboInstalled();
-
     const { clusterName = 'ipfs-cluster', replicationFactor = 3 } = req.body;
-    
-    
     const clusterConfigPath = path.join(IPFS_PATH, 'cluster-config.json');
     const clusterConfig = {
       cluster: {
@@ -51,17 +46,13 @@ router.post('/init', async (req, res) => {
       },
       created: new Date().toISOString()
     };
-
     fs.writeFileSync(clusterConfigPath, JSON.stringify(clusterConfig, null, 2));
-    console.log(`[CLUSTER] Config scris la: ${clusterConfigPath}`);
-
     res.json({ 
       success: true, 
-      message: 'Cluster IPFS inițializat cu succes',
+      message: 'Cluster IPFS initializat cu succes',
       config: clusterConfig
     });
   } catch (error) {
-    console.error('[CLUSTER] Eroare la inițializare:', error.message);
     res.status(500).json({ success: false, error: error.message });
   }
 });

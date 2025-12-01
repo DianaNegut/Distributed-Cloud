@@ -2,57 +2,33 @@ const express = require('express');
 const router = express.Router();
 const { execPromise } = require('../utils/execPromise');
 
-/**
- * GET /api/network-info
- * Returnează configurația rețelei private pentru ca utilizatorii să se poată alătura
- */
 router.get('/', async (req, res) => {
-  console.log('[NETWORK-INFO] Cerere pentru informații rețea privată...');
-  
   try {
-    // Swarm key din variabilă de mediu
     const swarmKey = process.env.SWARM_KEY || 'ddd244b4b304dca4d8947b4444a1d76223334cfdafd674263b0b600feae39cbe';
-    
-    // Verifică dacă rețeaua privată este activă
     let isPrivateNetworkActive = false;
     let swarmKeyExists = false;
     let autoConfDisabled = false;
     
     try {
-      // Verifică dacă swarm.key există în container
       await execPromise('docker exec ipfs-node-1 test -f /data/ipfs/swarm.key');
       swarmKeyExists = true;
-      console.log('[NETWORK-INFO] ✓ swarm.key există în container');
-      
-      // Verifică dacă AutoConf.Enabled este false
       const autoConfResult = await execPromise('docker exec ipfs-node-1 ipfs config AutoConf.Enabled');
       autoConfDisabled = autoConfResult.stdout.trim() === 'false';
-      console.log(`[NETWORK-INFO] AutoConf.Enabled = ${autoConfResult.stdout.trim()}`);
-      
-      // Rețeaua privată este activă dacă ambele condiții sunt îndeplinite
       isPrivateNetworkActive = swarmKeyExists && autoConfDisabled;
-      console.log(`[NETWORK-INFO] Private network active: ${isPrivateNetworkActive}`);
     } catch (error) {
-      console.log('[NETWORK-INFO] Verificare private network eșuată:', error.message);
+      // Swarm key doesn't exist or docker not running
     }
     
-    // Obține peer ID de la primul nod Docker IPFS
     let bootstrapNode = '';
     try {
       const result = await execPromise('docker exec ipfs-node-1 ipfs id -f="<id>"');
       const peerId = result.stdout.trim();
-      
-      // Detectează IP-ul public sau folosește localhost
       const publicIP = process.env.PUBLIC_IP || 'localhost';
       bootstrapNode = `/ip4/${publicIP}/tcp/4001/p2p/${peerId}`;
-      
-      console.log(`[NETWORK-INFO] Bootstrap node: ${bootstrapNode}`);
     } catch (error) {
-      console.error('[NETWORK-INFO] Nu s-a putut obține peer ID din container:', error.message);
-      // Fallback la valoare default
       bootstrapNode = process.env.BOOTSTRAP_NODE || '/ip4/localhost/tcp/4001/p2p/12D3KooWQWwEb4DrNcW85vsp5brhxQaRk6bennUHYqMbMVDnABXV';
     }
-
+    
     const networkConfig = {
       swarmKey,
       bootstrapNode,
@@ -64,22 +40,21 @@ router.get('/', async (req, res) => {
         autoConfDisabled
       },
       instructions: [
-        '1. Asigură-te că ai IPFS (kubo) instalat',
-        '2. Creează fișierul swarm.key în ~/.ipfs/',
-        '3. Configurează bootstrap node-ul',
-        '4. Repornește daemon-ul IPFS'
+        '1. Asigura-te ca ai IPFS (kubo) instalat',
+        '2. Creeaza fisierul swarm.key in ~/.ipfs/',
+        '3. Configureaza bootstrap node-ul',
+        '4. Reporneste daemon-ul IPFS'
       ]
     };
-
+    
     res.json({
       success: true,
       network: networkConfig
     });
   } catch (error) {
-    console.error('[NETWORK-INFO] Eroare:', error.message);
     res.status(500).json({
       success: false,
-      error: 'Nu s-au putut obține informațiile rețelei',
+      error: 'Nu s-au putut obtine informatiile retelei',
       details: error.message
     });
   }

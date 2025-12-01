@@ -5,7 +5,7 @@ import InfoPanel from '../components/InfoPanel';
 import PeersPanel from '../components/PeersPanel';
 import LogsPanel from '../components/LogsPanel';
 import FilesPanel from '../components/FilesPanel';
-import DockerClusterPanel from '../components/DockerClusterPanel'; // COMPONENTĂ NOUĂ
+import DockerClusterPanel from '../components/DockerClusterPanel';
 import { configureNetwork, getPeers } from '../api/ipfsApi';
 import { useLogs } from '../hooks/useLogs';
 import { Server, RefreshCw, Users } from 'lucide-react';
@@ -17,7 +17,7 @@ export default function Principal() {
   const [bootstrapNode, setBootstrapNode] = useState('/ip4/192.168.1.104/tcp/4001/p2p/12D3KooWQWwEb4DrNcW85vsp5brhxQaRk6bennUHYqMbMVDnABXV');
   const [isConfiguring, setIsConfiguring] = useState(false);
   const [peers, setPeers] = useState([]);
-  const [activeTab, setActiveTab] = useState('private'); // 'private' sau 'docker'
+  const [activeTab, setActiveTab] = useState('private');
   const { logs, addLog, clearLogs } = useLogs();
 
   const handleConfigureNetwork = async () => {
@@ -28,7 +28,7 @@ export default function Principal() {
       if (res?.data?.logs) {
         res.data.logs.forEach((log) => addLog(log.message, log.type));
       } else {
-        addLog('Configurare finalizată (fără logs de la server)', 'success');
+        addLog('Configurare finalizata (fara logs de la server)', 'success');
       }
     } catch (err) {
       addLog(`Eroare: ${err.message}`, 'error');
@@ -42,7 +42,7 @@ export default function Principal() {
       const res = await getPeers();
       const fetchedPeers = res?.data?.peers || [];
       setPeers(fetchedPeers);
-      addLog(`✓ ${fetchedPeers.length} peers conectați`, 'success');
+      addLog(`${fetchedPeers.length} peers conectati`, 'success');
     } catch (err) {
       addLog(`Eroare la peers: ${err.message}`, 'error');
     }
@@ -52,7 +52,7 @@ export default function Principal() {
     const keyContent = `/key/swarm/psk/1.0.0/\n/base16/\n${swarmKey}`;
     try {
       navigator.clipboard.writeText(keyContent);
-      addLog('Swarm key copiat în clipboard', 'success');
+      addLog('Swarm key copiat in clipboard', 'success');
     } catch (err) {
       addLog(`Eroare la copiere: ${err.message}`, 'error');
     }
@@ -62,13 +62,12 @@ export default function Principal() {
     <div className="app-container">
       <Header />
 
-      {/* Tab Selector */}
       <div className="tabs-container">
         <button
           className={`tab-button ${activeTab === 'private' ? 'active' : ''}`}
           onClick={() => setActiveTab('private')}
         >
-          🔒 Rețea Privată IPFS
+          🔒 Retea Privata IPFS
         </button>
         <button
           className={`tab-button ${activeTab === 'docker' ? 'active' : ''}`}
@@ -78,7 +77,6 @@ export default function Principal() {
         </button>
       </div>
 
-      {/* Private Network Tab */}
       {activeTab === 'private' && (
         <>
           <div className="grid-2">
@@ -101,26 +99,24 @@ export default function Principal() {
               {isConfiguring ? (
                 <>
                   <RefreshCw className="spinning" />
-                  Se configurează...
+                  Se configureaza...
                 </>
               ) : (
                 <>
-                  <Server /> Configurează Rețeaua Privată
+                  <Server /> Configureaza Reteaua Privata
                 </>
               )}
             </button>
 
             <button onClick={loadPeers} className="btn btn-info">
-              <Users /> Verifică Peers Conectați
+              <Users /> Verifica Peers Conectati
             </button>
           </div>
 
-          {/* Secțiune pentru Fișiere */}
           <div style={{ marginTop: '24px' }}>
             <FilesPanel onLog={addLog} />
           </div>
 
-          {/* Panouri existente */}
           <div className="panels-container" style={{ marginTop: '24px' }}>
             <div className="left-panels">
               <ClusterPanel />

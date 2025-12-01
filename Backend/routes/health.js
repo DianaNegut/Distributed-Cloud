@@ -4,7 +4,6 @@ const fs = require('fs');
 const { IPFS_PATH, KUBO_PATH, IPFS_BIN } = require('../config/paths');
 
 router.get('/', (req, res) => {
-  console.log('[API] Procesare cerere /api/health...');
   res.json({
     success: true,
     message: 'Server is running',

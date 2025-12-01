@@ -200,11 +200,11 @@ class DockerClusterClient {
       return match ? match[0] : null;
     }
     
-    // Dacă data este obiect
+
     if (typeof data === 'object') {
-      // Caută în proprietățile comune
+      
       if (data.cid) {
-        // CID poate fi string sau obiect {'/': 'Qm...'}
+       
         return typeof data.cid === 'string' ? data.cid : (data.cid['/'] || data.cid);
       }
       if (data.hash) return data.hash;
@@ -212,12 +212,12 @@ class DockerClusterClient {
       if (data.key) return data.key;
       if (data.Key) return data.Key;
       
-      // Caută în structuri nested
+      
       if (data.data && data.data.cid) {
         return typeof data.data.cid === 'string' ? data.data.cid : data.data.cid['/'];
       }
       
-      // Ultimă încercare: caută pattern în JSON stringificat
+    
       try {
         const jsonStr = JSON.stringify(data);
         const match = jsonStr.match(/Qm[a-zA-Z0-9]{44,}|baf[a-zA-Z0-9]{50,}/);
@@ -230,9 +230,7 @@ class DockerClusterClient {
     return null;
   }
 
-  /**
-   * Obține gateway-uri IPFS pentru descărcare fișiere
-   */
+
   getIPFSGateways() {
     return [
       'http://localhost:8080',
@@ -244,5 +242,4 @@ class DockerClusterClient {
   }
 }
 
-// Export singleton instance
 module.exports = new DockerClusterClient();

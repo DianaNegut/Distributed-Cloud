@@ -45,27 +45,15 @@ export default function ClusterPage() {
       if (response.data.success && response.data.cluster) {
         setClusterInfo(response.data.cluster);
         
-        // Asigură-te că peers este array
         const peersList = response.data.cluster.peersList || [];
         setPeers(Array.isArray(peersList) ? peersList : []);
-        
-        // Convertește pins din obiect în array dacă e nevoie
         const pinsList = response.data.cluster.pinsList || [];
-        console.log('Pins list received:', pinsList);
-        console.log('Pins list type:', typeof pinsList);
-        console.log('Pins list is array:', Array.isArray(pinsList));
-        console.log('Pins list length:', Array.isArray(pinsList) ? pinsList.length : 'N/A');
-        
         if (Array.isArray(pinsList)) {
-          console.log('Setting pins array:', pinsList);
           setPins(pinsList);
         } else if (typeof pinsList === 'object' && pinsList !== null) {
-          // Convertește obiectul în array
           const pinsArray = Object.values(pinsList);
-          console.log('Converting object to array:', pinsArray);
           setPins(pinsArray);
         } else {
-          console.log('No valid pins data, setting empty array');
           setPins([]);
         }
       }
@@ -332,12 +320,7 @@ export default function ClusterPage() {
                       console.log('Opening file with CID:', cid);
                       console.log('Full pin object:', pin);
                       
-                      // Folosește endpoint-ul de proxy din backend cu inline pentru a putea deschide în browser
                       const proxyUrl = `${API_URL}/docker-cluster/file/${cid}?api-key=${API_KEY}&inline=true`;
-                      
-                      console.log('Opening file through proxy:', proxyUrl);
-                      
-                      // Deschide fișierul în tab nou - browserul va decide dacă să-l afișeze sau să-l descarce
                       window.open(proxyUrl, '_blank');
                     };
                     

@@ -10,8 +10,6 @@ const api = axios.create({
   },
 });
 
-// ============ IPFS Local Network ============
-
 export const configureNetwork = (swarmKey, bootstrapNode) =>
   api.post('/configure-network', { swarmKey, bootstrapNode });
 
@@ -30,44 +28,30 @@ export const getStatus = () =>
 export const getNetworkInfo = () =>
   api.get('/network-info');
 
-// ============ Docker Cluster API ============
-
 export const dockerCluster = {
-  // Get cluster health
   getHealth: async () => {
     const response = await api.get('/docker-cluster/health');
     return response.data;
   },
-
-  // Get cluster status
   getStatus: async () => {
     const response = await api.get('/docker-cluster/status');
     return response.data;
   },
-
-  // Get cluster peers
   getPeers: async () => {
     const response = await api.get('/docker-cluster/peers');
     return response.data;
   },
-
-  // Get all pins
   getPins: async () => {
     const response = await api.get('/docker-cluster/pins');
     return response.data;
   },
-
-  // Get pin status for specific CID
   getPinStatus: async (cid) => {
     const response = await api.get(`/docker-cluster/pin/${cid}`);
     return response.data;
   },
-
-  // Upload file to cluster
   uploadFile: async (file, onProgress) => {
     const formData = new FormData();
     formData.append('file', file);
-
     const response = await api.post('/docker-cluster/add', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
@@ -77,8 +61,6 @@ export const dockerCluster = {
     });
     return response.data;
   },
-
-  // Download file from cluster
   downloadFile: async (cid) => {
     const response = await api.get(`/docker-cluster/download/${cid}`, {
       responseType: 'blob',
@@ -86,15 +68,11 @@ export const dockerCluster = {
     });
     return response.data;
   },
-
-  // Delete pin from cluster
   deletePin: async (cid) => {
     const response = await api.delete(`/docker-cluster/pin/${cid}`);
     return response.data;
   },
 };
-
-// ============ Local IPFS Cluster ============
 
 export const getClusterPeers = async () => {
   const response = await api.get('/cluster/peers');
@@ -111,7 +89,6 @@ export const removeClusterPeer = async (peerId) => {
   return response.data;
 };
 
-// Default export
 const ipfsApi = {
   configureNetwork,
   getPeers,

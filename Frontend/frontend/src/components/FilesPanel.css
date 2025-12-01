@@ -172,7 +172,6 @@
   border: 1px solid rgba(168, 85, 247, 0.4);
 }
 
-/* Privacy Toggle */
 .privacy-toggle {
   display: flex;
   align-items: center;
@@ -226,7 +225,6 @@
   border-radius: 6px;
 }
 
-/* Privacy Badge */
 .privacy-badge {
   display: inline-block;
   background: rgba(251, 191, 36, 0.2);
@@ -275,7 +273,6 @@
   border-color: rgba(239, 68, 68, 0.6);
 }
 
-/* Modal */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -330,18 +327,15 @@
   margin-right: 8px;
 }
 
-/* Responsive */
 @media (max-width: 768px) {
   .file-item {
     flex-direction: column;
     align-items: flex-start;
   }
-
   .file-actions {
     width: 100%;
     justify-content: flex-end;
   }
-
   .modal-content {
     padding: 20px;
   }

@@ -69,20 +69,20 @@ const Dashboard = () => {
           className="mb-8"
         >
           <h1 className="text-4xl font-bold text-white mb-2">Dashboard</h1>
-          <p className="text-gray-400">Monitorizează și gestionează rețeaua ta IPFS distribuită</p>
+          <p className="text-gray-400">Monitorizeaza si gestioneaza reteaua ta IPFS distribuita</p>
         </motion.div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
-          title="Fișiere în IPFS"
+          title="Fisiere in IPFS"
           value={stats.totalFiles}
           icon={HardDrive}
           trend={12}
           color="primary"
         />
         <StatCard
-          title="Peers Conectați"
+          title="Peers Conectati"
           value={stats.totalPeers}
           icon={Users}
           trend={8}
@@ -95,7 +95,7 @@ const Dashboard = () => {
           color="warning"
         />
         <StatCard
-          title="Status Rețea"
+          title="Status Retea"
           value={stats.networkStatus === 'active' ? 'Activ' : 'Inactiv'}
           icon={Activity}
           color={stats.networkStatus === 'active' ? 'success' : 'danger'}
@@ -110,7 +110,7 @@ const Dashboard = () => {
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-bold text-white flex items-center gap-2">
               <Activity className="w-6 h-6 text-primary-400" />
-              Sănătate Rețea
+              Sanatate Retea
             </h2>
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
@@ -126,7 +126,7 @@ const Dashboard = () => {
                 </div>
                 <div>
                   <p className="text-white font-medium">IPFS Node</p>
-                  <p className="text-gray-400 text-sm">Configurare privată</p>
+                  <p className="text-gray-400 text-sm">Configurare privata</p>
                 </div>
               </div>
               <div className="w-16 h-2 bg-dark-700 rounded-full overflow-hidden">
@@ -165,8 +165,8 @@ const Dashboard = () => {
                   <Zap className="w-5 h-5 text-purple-400" />
                 </div>
                 <div>
-                  <p className="text-white font-medium">Performanță</p>
-                  <p className="text-gray-400 text-sm">Optimă</p>
+                  <p className="text-white font-medium">Performanta</p>
+                  <p className="text-gray-400 text-sm">Optima</p>
                 </div>
               </div>
               <div className="w-16 h-2 bg-dark-700 rounded-full overflow-hidden">
@@ -187,7 +187,7 @@ const Dashboard = () => {
           <CardContent className="pt-6">
           <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
             <Zap className="w-6 h-6 text-yellow-400" />
-            Acțiuni Rapide
+            Actiuni Rapide
           </h2>
 
           <div className="grid grid-cols-2 gap-4">
@@ -198,7 +198,7 @@ const Dashboard = () => {
               className="p-4 bg-gradient-to-br from-primary-600 to-primary-500 rounded-xl text-white text-center shadow-lg shadow-primary-500/30 cursor-pointer"
             >
               <HardDrive className="w-8 h-8 mx-auto mb-2" />
-              <p className="font-medium">Încarcă Fișier</p>
+              <p className="font-medium">Incarca Fisier</p>
             </motion.a>
 
             <motion.a
@@ -218,7 +218,7 @@ const Dashboard = () => {
               className="p-4 bg-gradient-to-br from-purple-600 to-purple-500 rounded-xl text-white text-center shadow-lg shadow-purple-500/30 cursor-pointer"
             >
               <Server className="w-8 h-8 mx-auto mb-2" />
-              <p className="font-medium">Gestionează Cluster</p>
+              <p className="font-medium">Gestioneaza Cluster</p>
             </motion.a>
 
             <motion.a
@@ -242,15 +242,15 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="text-center">
             <div className="text-4xl font-bold text-primary-400 mb-2">{stats.totalFiles}</div>
-            <p className="text-gray-400">Fișiere totale</p>
+            <p className="text-gray-400">Fisiere totale</p>
           </div>
           <div className="text-center">
             <div className="text-4xl font-bold text-green-400 mb-2">{(stats.totalFiles * 2.5).toFixed(1)} MB</div>
-            <p className="text-gray-400">Spațiu utilizat (estimat)</p>
+            <p className="text-gray-400">Spatiu utilizat (estimat)</p>
           </div>
           <div className="text-center">
             <div className="text-4xl font-bold text-purple-400 mb-2">{stats.totalPeers + stats.clusterNodes}</div>
-            <p className="text-gray-400">Noduri total în rețea</p>
+            <p className="text-gray-400">Noduri total in retea</p>
           </div>
         </div>
         </CardContent>

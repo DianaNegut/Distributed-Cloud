@@ -14,7 +14,6 @@ export default function ConfigPanel({ swarmKey, bootstrapNode, onCopy }) {
           value={swarmKey}
           className="form-input"
           readOnly
-         
         />
       </div>
 
@@ -24,13 +23,12 @@ export default function ConfigPanel({ swarmKey, bootstrapNode, onCopy }) {
           type="text"
           value={bootstrapNode}
           className="form-input"
-          readOnly 
-     
+          readOnly
         />
       </div>
 
       <button onClick={onCopy} className="btn btn-secondary">
-        Copiază Swarm Key
+        Copiaza Swarm Key
       </button>
     </div>
   );

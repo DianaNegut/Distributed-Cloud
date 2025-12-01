@@ -230,7 +230,9 @@ const checkHealth = async () => {
 };
 ```
 
----
 
-**Proiect educațional - Lucrare de Licență**  
-Noiembrie 2025
+http://localhost:8080/ipfs/QmTNoJrhSU1p7juqveZwroQAf3TrSXb3gRY5boUAf7ALwy
+http://localhost:8081/ipfs/QmTNoJrhSU1p7juqveZwroQAf3TrSXb3gRY5boUAf7ALwy
+http://localhost:8082/ipfs/QmTNoJrhSU1p7juqveZwroQAf3TrSXb3gRY5boUAf7ALwy
+http://localhost:8083/ipfs/QmTNoJrhSU1p7juqveZwroQAf3TrSXb3gRY5boUAf7ALwy
+http://localhost:8084/ipfs/QmTNoJrhSU1p7juqveZwroQAf3TrSXb3gRY5boUAf7ALwy

@@ -17,6 +17,8 @@ const filesRoutes = require('./routes/files');
 const clusterRoutes = require('./routes/cluster');
 const dockerClusterRoutes = require('./routes/dockerCluster');
 const networkInfoRoutes = require('./routes/networkInfo');
+const storageProvidersRoutes = require('./routes/storageProviders');
+const storageContractsRoutes = require('./routes/storageContracts');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -52,6 +54,8 @@ app.use('/api/files', filesRoutes);
 app.use('/api/cluster', clusterRoutes);
 app.use('/api/docker-cluster', dockerClusterRoutes);
 app.use('/api/network-info', networkInfoRoutes);
+app.use('/api/storage-providers', storageProvidersRoutes);
+app.use('/api/storage-contracts', storageContractsRoutes);
 
 
 app.use((err, req, res, next) => {

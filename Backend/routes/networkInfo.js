@@ -16,7 +16,6 @@ router.get('/', async (req, res) => {
       autoConfDisabled = autoConfResult.stdout.trim() === 'false';
       isPrivateNetworkActive = swarmKeyExists && autoConfDisabled;
     } catch (error) {
-      // Swarm key doesn't exist or docker not running
     }
     
     let bootstrapNode = '';

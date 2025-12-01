@@ -22,7 +22,11 @@ const Dashboard = () => {
     totalFiles: 0,
     totalPeers: 0,
     networkStatus: 'checking',
-    clusterNodes: 0
+    clusterNodes: 0,
+    totalProviders: 0,
+    activeContracts: 0,
+    totalStorageGB: 0,
+    availableStorageGB: 0
   });
 
   useEffect(() => {
@@ -33,26 +37,42 @@ const Dashboard = () => {
 
   const loadDashboardData = async () => {
     try {
-      // Load files
       const filesRes = await axios.get(`${API_URL}/files/list`, {
         headers: { 'x-api-key': API_KEY }
       });
 
-      // Load peers
       const peersRes = await axios.get(`${API_URL}/peers`, {
         headers: { 'x-api-key': API_KEY }
       });
 
-      // Load cluster status
       const clusterRes = await axios.get(`${API_URL}/docker-cluster/status`, {
         headers: { 'x-api-key': API_KEY }
       }).catch(() => ({ data: { nodes: [] } }));
+
+      const providersRes = await axios.get(`${API_URL}/storage-providers`, {
+        headers: { 'x-api-key': API_KEY }
+      }).catch(() => ({ data: { providers: [] } }));
+
+      const contractsRes = await axios.get(`${API_URL}/storage-contracts`, {
+        headers: { 'x-api-key': API_KEY }
+      }).catch(() => ({ data: { contracts: [] } }));
+
+      const providers = providersRes.data?.providers || [];
+      const contracts = contractsRes.data?.contracts || [];
+      
+      const totalStorage = providers.reduce((sum, p) => sum + p.capacity.totalGB, 0);
+      const availableStorage = providers.reduce((sum, p) => sum + p.capacity.availableGB, 0);
+      const activeContracts = contracts.filter(c => c.status === 'active').length;
 
       setStats({
         totalFiles: filesRes.data?.totalFiles || 0,
         totalPeers: peersRes.data?.peers?.length || 0,
         networkStatus: 'active',
-        clusterNodes: clusterRes.data?.nodes?.filter(n => n.running)?.length || 0
+        clusterNodes: clusterRes.data?.nodes?.filter(n => n.running)?.length || 0,
+        totalProviders: providers.length,
+        activeContracts: activeContracts,
+        totalStorageGB: totalStorage,
+        availableStorageGB: availableStorage
       });
     } catch (error) {
       console.error('Error loading dashboard:', error);
@@ -62,7 +82,6 @@ const Dashboard = () => {
   return (
     <div className="flex-1 overflow-auto">
       <div className="max-w-7xl mx-auto p-8">
-        {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -72,7 +91,6 @@ const Dashboard = () => {
           <p className="text-gray-400">Monitorizeaza si gestioneaza reteaua ta IPFS distribuita</p>
         </motion.div>
 
-      {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
           title="Fisiere in IPFS"
@@ -102,9 +120,34 @@ const Dashboard = () => {
         />
       </div>
 
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Network Health */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6">
+        <StatCard
+          title="Provideri Activi"
+          value={stats.totalProviders}
+          icon={Database}
+          color="info"
+        />
+        <StatCard
+          title="Contracte Active"
+          value={stats.activeContracts}
+          icon={TrendingUp}
+          color="success"
+        />
+        <StatCard
+          title="Storage Total"
+          value={`${stats.totalStorageGB.toFixed(0)} GB`}
+          icon={HardDrive}
+          color="primary"
+        />
+        <StatCard
+          title="Storage Disponibil"
+          value={`${stats.availableStorageGB.toFixed(0)} GB`}
+          icon={Cloud}
+          color="warning"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
         <Card>
           <CardContent className="pt-6">
           <div className="flex items-center justify-between mb-6">
@@ -182,7 +225,6 @@ const Dashboard = () => {
           </CardContent>
         </Card>
 
-        {/* Quick Actions */}
         <Card>
           <CardContent className="pt-6">
           <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
@@ -239,7 +281,7 @@ const Dashboard = () => {
       <Card>
         <CardContent className="pt-6">
         <h2 className="text-xl font-bold text-white mb-6">Statistici Stocare</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="text-center">
             <div className="text-4xl font-bold text-primary-400 mb-2">{stats.totalFiles}</div>
             <p className="text-gray-400">Fisiere totale</p>
@@ -251,6 +293,12 @@ const Dashboard = () => {
           <div className="text-center">
             <div className="text-4xl font-bold text-purple-400 mb-2">{stats.totalPeers + stats.clusterNodes}</div>
             <p className="text-gray-400">Noduri total in retea</p>
+          </div>
+          <div className="text-center">
+            <div className="text-4xl font-bold text-blue-400 mb-2">
+              {stats.totalStorageGB > 0 ? ((stats.totalStorageGB - stats.availableStorageGB) / stats.totalStorageGB * 100).toFixed(1) : 0}%
+            </div>
+            <p className="text-gray-400">Utilizare marketplace</p>
           </div>
         </div>
         </CardContent>

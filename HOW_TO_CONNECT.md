@@ -1,23 +1,23 @@
-# Conectare la Rețeaua IPFS Privată
+# Conectare la Reteaua IPFS Privata
 
-## Ce ai nevoie
+## Cerinte
 - IPFS (kubo) instalat pe computer
-- Fișierul `swarm.key` din folder-ul `Infrastructura/`
+- Fisierul `swarm.key` din folder-ul `Infrastructura/`
 
-## Pași de conectare
+## Pasi de conectare
 
-### 1. Obține informațiile rețelei
+### 1. Obtine informatiile retelei
 
 Pentru setup-ul local cu Docker:
 - **Swarm Key**: `Infrastructura/swarm.key`
-- **Nod bootstrap**: `ipfs-node-1` (rulează în Docker)
+- **Nod bootstrap**: `ipfs-node-1` (ruleaza in Docker)
 
 Pentru a vedea ID-ul nodului bootstrap:
 ```powershell
 docker exec ipfs-node-1 ipfs id
 ```
 
-### 2. Copiază fișierul swarm.key
+### 2. Copiaza fisierul swarm.key
 
 **Windows:**
 ```powershell
@@ -29,7 +29,7 @@ Copy-Item "Infrastructura\swarm.key" "$env:USERPROFILE\.ipfs\swarm.key"
 cp Infrastructura/swarm.key ~/.ipfs/swarm.key
 ```
 
-### 3. Configurează nodul bootstrap
+### 3. Configureaza nodul bootstrap
 
 **Windows:**
 ```powershell
@@ -45,7 +45,7 @@ ipfs bootstrap rm --all
 ipfs bootstrap add "/ip4/127.0.0.1/tcp/4001/p2p/$PEER_ID"
 ```
 
-### 4. Activează modul rețea privată
+### 4. Activeaza modul retea privata
 
 **Windows:**
 ```powershell
@@ -59,13 +59,13 @@ ipfs config --json AutoConf.Enabled false
 export LIBP2P_FORCE_PNET=1
 ```
 
-Opțional, poți schimba porturile pentru a evita conflicte:
+Optional, poti schimba porturile pentru a evita conflicte:
 ```powershell
 ipfs config Addresses.API /ip4/127.0.0.1/tcp/5010
 ipfs config Addresses.Gateway /ip4/127.0.0.1/tcp/8090
 ```
 
-### 5. Pornește IPFS
+### 5. Porneste IPFS
 
 **Windows:**
 ```powershell
@@ -78,13 +78,13 @@ ipfs daemon
 LIBP2P_FORCE_PNET=1 ipfs daemon
 ```
 
-### 6. Verifică conexiunea
+### 6. Verifica conexiunea
 
 ```powershell
 ipfs swarm peers
 ```
 
-Dacă totul e ok, vei vedea lista cu cei 5 peers din Docker cluster.
+Daca totul functioneaza corect, vei vedea lista cu cei 5 peers din Docker cluster.
 
 ## Probleme frecvente
 
@@ -123,23 +123,23 @@ Proiectul include 5 noduri IPFS + 5 noduri Cluster.
 ```powershell
 cd Infrastructura
 docker-compose up -d
-Start-Sleep -Seconds 45  # așteaptă inițializarea
+Start-Sleep -Seconds 45
 docker-compose ps
 ```
 
 **Configurare noduri:**
-- IPFS: `ipfs-node-1` până la `ipfs-node-5`
-- Cluster: `cluster-1` până la `cluster-5`
+- IPFS: `ipfs-node-1` pana la `ipfs-node-5`
+- Cluster: `cluster-1` pana la `cluster-5`
 - Porturi API: 5001-5005 (IPFS), 9094-9494 (Cluster)
 - Porturi Gateway: 8080-8084
 
 ## Securitate
 
-**Important:** Păstrează `swarm.key` privat! Oricine are cheia poate intra în rețea.
+**Important:** Pastreaza `swarm.key` privat! Oricine are cheia poate intra in retea.
 
 ## Script-uri rapide
 
-**Pornire completă:**
+**Pornire completa:**
 ```powershell
 cd Backend
 .\start-infrastructure.ps1
@@ -151,7 +151,7 @@ cd Backend
 .\test-cluster-integration.ps1
 ```
 
-## Documentație adițională
+## Documentatie aditionale
 
 - `Backend/DOCKER_CLUSTER_INTEGRATION.md` - API complet
 - `Backend/QUICK_COMMANDS.md` - Comenzi utile
@@ -159,7 +159,7 @@ cd Backend
 
 ## Ajutor
 
-Dacă ai probleme:
-1. Verifică documentația din `Backend/`
-2. Rulează testele: `Backend/test-cluster-integration.ps1`
-3. Verifică logs: `docker-compose logs`
+Daca ai probleme:
+1. Verifica documentatia din `Backend/`
+2. Ruleaza testele: `Backend/test-cluster-integration.ps1`
+3. Verifica logs: `docker-compose logs`

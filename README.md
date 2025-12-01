@@ -2,9 +2,9 @@
 
 Sistem distribuit de stocare bazat pe IPFS cu cluster Docker.
 
-## Ce face?
+## Functionalitati
 
-Oferă o infrastructură completă pentru stocare descentralizată folosind:
+Oferta o infrastructura completa pentru stocare descentralizata folosind:
 - 5 noduri IPFS pentru stocare
 - 5 noduri Cluster pentru coordonare
 - Backend REST API (Express.js)
@@ -14,67 +14,64 @@ Oferă o infrastructură completă pentru stocare descentralizată folosind:
 
 ```
 Distributed-Cloud/
-├── Backend/              # API Server (Express.js)
-│   ├── routes/          # Endpoints
-│   ├── middleware/      # Auth, CORS, Logger
-│   └── utils/           # Utilitare
+├── Backend/
+│   ├── routes/
+│   ├── middleware/
+│   └── utils/
 │
-├── Frontend/            # Web App (React)
+├── Frontend/
 │   └── frontend/src/
 │
-├── Infrastructura/      # Docker Cluster
+├── Infrastructura/
 │   └── docker-compose.yml
 │
-└── Diagrame/           # Arhitectură
+└── Diagrame/
 
 ```
 
-## Pornire rapidă
+## Pornire rapida
 
-**Pornire automată:**
+**Pornire automata:**
 
 ```powershell
 cd Backend
 .\start-infrastructure.ps1
 ```
 
-Script-ul pornește:
+Script-ul porneste:
 1. Docker Cluster (5 noduri IPFS + 5 Cluster)
 2. Backend API (port 3001)
 3. Teste de verificare
 
-**Pornire manuală:**
+**Pornire manuala:**
 
 ```powershell
-# Pornește Docker
 cd Infrastructura
 docker-compose up -d
 Start-Sleep -Seconds 45
 
-# Pornește Backend
 cd ..\Backend
-npm install  # doar prima dată
+npm install
 npm start
 
-# Pornește Frontend
 cd ..\Frontend\frontend
-npm install  # doar prima dată
+npm install
 npm start
 ```
 
-## Documentație
+## Documentatie
 
 **Ghiduri disponibile:**
 
-- `Backend/INTEGRATION_SUMMARY.md` - Prezentare generală
-- `Backend/DOCKER_CLUSTER_INTEGRATION.md` - Arhitectură completă
-- `Backend/TEST_DOCKER_CLUSTER.md` - Cum să testezi
+- `Backend/INTEGRATION_SUMMARY.md` - Prezentare generala
+- `Backend/DOCKER_CLUSTER_INTEGRATION.md` - Arhitectura completa
+- `Backend/TEST_DOCKER_CLUSTER.md` - Cum sa testezi
 - `Backend/QUICK_COMMANDS.md` - Comenzi utile
 
 **Script-uri:**
 
-- `Backend/start-infrastructure.ps1` - Pornește totul
-- `Backend/test-cluster-integration.ps1` - Testează sistemul
+- `Backend/start-infrastructure.ps1` - Porneste totul
+- `Backend/test-cluster-integration.ps1` - Testeaza sistemul
 
 ## Configurare
 
@@ -85,7 +82,6 @@ PORT=3001
 IPFS_PATH=C:\Users\Diana\.ipfs
 KUBO_PATH=C:\ATM\LICENTA\kubo_v0.38.1_windows-amd64\kubo
 
-# Noduri cluster
 DOCKER_CLUSTER_NODES=http://localhost:9094,http://localhost:9194,http://localhost:9294,http://localhost:9394,http://localhost:9494
 DOCKER_CLUSTER_TIMEOUT=5000
 
@@ -106,14 +102,14 @@ BOOTSTRAP_PEER_ID=12D3KooWF98F4bkJbzxKiza9nAKUrpXZai7nciXkunnVq42LWDVV
 - `GET /api/docker-cluster/health` - Verifică starea cluster-ului
 - `GET /api/docker-cluster/status` - Status complet (peers, pins, nodes)
 - `GET /api/docker-cluster/peers` - Lista peers conectați
-- `GET /api/docker-cluster/pins` - Fișiere stocate
+- `GET /api/docker-cluster/pins` - Fisiere stocate
 
 **File Operations:**
 
-- `POST /api/docker-cluster/add` - Upload fișier
-- `GET /api/docker-cluster/download/:cid` - Descarcă fișier
-- `DELETE /api/docker-cluster/pin/:cid` - Șterge fișier
-- `GET /api/docker-cluster/pin/:cid` - Status fișier
+- `POST /api/docker-cluster/add` - Upload fisier
+- `GET /api/docker-cluster/download/:cid` - Descarca fisier
+- `DELETE /api/docker-cluster/pin/:cid` - Sterge fisier
+- `GET /api/docker-cluster/pin/:cid` - Status fisier
 
 **General:**
 
@@ -134,17 +130,17 @@ Cluster-1...5 (:9094-9494)
 IPFS-1...5 (:5001-5005, :8080-8084)
 ```
 
-## Funcționalități
+## Functionalitati
 
 **Backend:**
 - Retry logic cu fallback automat
 - Health monitoring pentru noduri
-- Extragere automată CID
-- Configurare flexibilă
+- Extragere automata CID
+- Configurare flexibila
 
 **Docker Cluster:**
 - 5 noduri IPFS + 5 Cluster
-- Replicare automată (2-3 copii)
+- Replicare automata (2-3 copii)
 - Auto-restart la probleme
 - Volume persistente
 
@@ -198,13 +194,12 @@ docker stats
 cd Infrastructura
 docker-compose down
 
-# Cu ștergere date (ATENȚIE!)
 docker-compose down -v
 ```
 
 ## Exemple cod
 
-**Upload fișier:**
+**Upload fisier:**
 
 ```javascript
 const uploadFile = async (file) => {
@@ -220,7 +215,7 @@ const uploadFile = async (file) => {
 };
 ```
 
-**Verifică health:**
+**Verifica health:**
 
 ```javascript
 const checkHealth = async () => {
@@ -229,7 +224,6 @@ const checkHealth = async () => {
   console.log('Status:', data.health.status);
 };
 ```
-
 
 http://localhost:8080/ipfs/QmTNoJrhSU1p7juqveZwroQAf3TrSXb3gRY5boUAf7ALwy
 http://localhost:8081/ipfs/QmTNoJrhSU1p7juqveZwroQAf3TrSXb3gRY5boUAf7ALwy

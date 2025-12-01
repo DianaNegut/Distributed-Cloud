@@ -22,29 +22,23 @@ const storageContractsRoutes = require('./routes/storageContracts');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-
+const os = require('os');
 
 app.use(cors(corsConfig));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-
-const os = require('os');
 app.use(fileUpload({
   useTempFiles: true,
   tempFileDir: os.tmpdir(),
-  limits: { fileSize: 100 * 1024 * 1024 }, 
+  limits: { fileSize: 100 * 1024 * 1024 },
   abortOnLimit: true,
   debug: true
 }));
-
 app.use(logger);
-
 
 app.use('/api/health', healthRoutes);
 app.use('/api/bootstrap-info', bootstrapRoutes);
 app.use('/api/join-network', joinRoutes);
-
 
 app.use(auth);
 app.use('/api/status', statusRoutes);
@@ -57,7 +51,6 @@ app.use('/api/network-info', networkInfoRoutes);
 app.use('/api/storage-providers', storageProvidersRoutes);
 app.use('/api/storage-contracts', storageContractsRoutes);
 
-
 app.use((err, req, res, next) => {
   console.error('[ERROR]', err);
   res.status(500).json({ 
@@ -65,7 +58,6 @@ app.use((err, req, res, next) => {
     error: err.message || 'Internal server error' 
   });
 });
-
 
 app.use((req, res) => {
   res.status(404).json({ 

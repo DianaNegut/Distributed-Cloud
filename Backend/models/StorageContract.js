@@ -30,6 +30,7 @@ class StorageContract {
   static createContract(contractData) {
     const data = this.loadContracts();
     const durationDays = contractData.durationMonths ? contractData.durationMonths * 30 : 30;
+    const durationMonths = contractData.durationMonths || 1;
     const startDate = new Date();
     const endDate = new Date(startDate.getTime() + durationDays * 24 * 60 * 60 * 1000);
     const contract = {
@@ -44,15 +45,31 @@ class StorageContract {
         files: [],
         fileDetails: {}
       },
+      pricing: {
+        pricePerGBPerMonth: contractData.pricePerGBPerMonth || 0.10,
+        totalPrice: contractData.totalPrice || 0,
+        currency: contractData.currency || 'USD',
+        basePrice: contractData.basePrice || 0,
+        discount: contractData.discount || 0,
+        discountAmount: contractData.discountAmount || 0
+      },
+      payment: {
+        status: 'pending',
+        paidAmount: 0,
+        paymentDate: null,
+        paymentMethod: 'credits',
+        transactionId: null
+      },
       terms: {
         startDate: startDate.toISOString(),
         endDate: endDate.toISOString(),
         durationDays: durationDays,
+        durationMonths: durationMonths,
         replicationFactor: contractData.replicationFactor || 3,
         slaUptimeMin: contractData.slaUptimeMin || 95.0,
         autoRenew: contractData.autoRenew || false
       },
-      status: 'active',
+      status: 'pending_payment',
       metadata: {
         description: contractData.description || '',
         tags: contractData.tags || []
@@ -255,6 +272,31 @@ class StorageContract {
     return { success: true };
   }
 
+  static processPayment(contractId, paymentData) {
+    const data = this.loadContracts();
+    const contract = data.contracts.find(c => c.id === contractId);
+    
+    if (!contract) return { success: false, error: 'Contract not found' };
+    if (contract.payment.status === 'paid') {
+      return { success: false, error: 'Contract already paid' };
+    }
+
+    contract.payment = {
+      ...contract.payment,
+      status: 'paid',
+      paidAmount: paymentData.amount || contract.pricing.totalPrice,
+      paymentDate: new Date().toISOString(),
+      paymentMethod: paymentData.method || 'credits',
+      transactionId: paymentData.transactionId || `tx-${Date.now()}`
+    };
+    contract.status = 'active';
+    contract.updatedAt = new Date().toISOString();
+
+    this.saveContracts(data);
+    console.log(`[CONTRACT] Payment processed for contract ${contractId}`);
+    return { success: true, contract };
+  }
+
   static getContractStats(contractId) {
     const contract = this.getContract(contractId);
     if (!contract) return null;
@@ -269,7 +311,9 @@ class StorageContract {
       storageUsedPercent: (contract.storage.usedGB / contract.storage.allocatedGB * 100).toFixed(2),
       filesStored: contract.storage.files.length,
       daysRemaining: daysRemaining,
-      isExpiringSoon: daysRemaining <= 7 && daysRemaining > 0
+      isExpiringSoon: daysRemaining <= 7 && daysRemaining > 0,
+      totalPrice: contract.pricing.totalPrice,
+      paymentStatus: contract.payment.status
     };
   }
 }

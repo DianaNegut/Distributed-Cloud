@@ -44,7 +44,23 @@ class StorageProvider {
         totalGB: providerData.totalCapacityGB || 0,
         usedGB: 0,
         availableGB: providerData.totalCapacityGB || 0,
-        reservedGB: 0 // Allocated to contracts but not yet used
+        reservedGB: 0
+      },
+      pricing: {
+        pricePerGBPerMonth: providerData.pricePerGBPerMonth || 0.10,
+        currency: 'USD',
+        minimumContract: providerData.minimumContract || 1,
+        discounts: {
+          threeMonths: providerData.discountThreeMonths || 5,
+          sixMonths: providerData.discountSixMonths || 10,
+          twelveMonths: providerData.discountTwelveMonths || 20
+        }
+      },
+      earnings: {
+        totalEarned: 0,
+        pendingPayment: 0,
+        lastPaymentDate: null,
+        monthlyRevenue: 0
       },
       sla: {
         uptimeGuarantee: providerData.uptimeGuarantee || 95.0,
@@ -58,7 +74,7 @@ class StorageProvider {
         uptimePercentage: 100.0,
         lastUptime: new Date().toISOString()
       },
-      status: 'active', // active, paused, offline
+      status: 'active',
       metadata: {
         location: providerData.location || 'Unknown',
         nodeVersion: providerData.nodeVersion || 'Unknown',
@@ -206,6 +222,63 @@ class StorageProvider {
     };
 
     return this.updateProvider(providerId, updates);
+  }
+
+  static updateEarnings(providerId, amount) {
+    const provider = this.getProvider(providerId);
+    if (!provider) return null;
+
+    const earnings = provider.earnings || {
+      totalEarned: 0,
+      pendingPayment: 0,
+      lastPaymentDate: null,
+      monthlyRevenue: 0
+    };
+
+    const updates = {
+      earnings: {
+        ...earnings,
+        totalEarned: earnings.totalEarned + amount,
+        pendingPayment: earnings.pendingPayment + amount,
+        monthlyRevenue: earnings.monthlyRevenue + amount
+      }
+    };
+
+    return this.updateProvider(providerId, updates);
+  }
+
+  static calculatePrice(providerId, sizeGB, durationMonths) {
+    const provider = this.getProvider(providerId);
+    if (!provider) return null;
+
+    const pricing = provider.pricing || {
+      pricePerGBPerMonth: 0.10,
+      currency: 'USD',
+      discounts: { threeMonths: 5, sixMonths: 10, twelveMonths: 20 }
+    };
+
+    let basePrice = pricing.pricePerGBPerMonth * sizeGB * durationMonths;
+    let discount = 0;
+
+    if (durationMonths >= 12) {
+      discount = pricing.discounts?.twelveMonths || 20;
+    } else if (durationMonths >= 6) {
+      discount = pricing.discounts?.sixMonths || 10;
+    } else if (durationMonths >= 3) {
+      discount = pricing.discounts?.threeMonths || 5;
+    }
+
+    const discountAmount = (basePrice * discount) / 100;
+    const finalPrice = basePrice - discountAmount;
+
+    return {
+      basePrice: parseFloat(basePrice.toFixed(2)),
+      discount: discount,
+      discountAmount: parseFloat(discountAmount.toFixed(2)),
+      finalPrice: parseFloat(finalPrice.toFixed(2)),
+      currency: pricing.currency,
+      pricePerGBPerMonth: pricing.pricePerGBPerMonth
+    };
   }
 
   static deleteProvider(providerId) {

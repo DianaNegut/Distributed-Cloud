@@ -206,7 +206,6 @@ function FilesPanel({ onLog }) {
           Gestionare Fișiere Cluster (Persistente)
         </h2>
 
-        {/* Transfer Statistics */}
         {transferStats && (
           <div className="transfer-stats">
             <div className="stats-grid">
@@ -257,7 +256,6 @@ function FilesPanel({ onLog }) {
           </div>
         )}
 
-        {/* Upload Form */}
         <form onSubmit={handleUpload} className="upload-form">
           <div className="form-group">
             <label className="form-label">Selectează fișier</label>
@@ -318,7 +316,6 @@ function FilesPanel({ onLog }) {
         </form>
       </div>
 
-      {/* Files List */}
       <div className="panel" style={{ marginTop: '24px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
           <h2 className="panel-title" style={{ marginBottom: 0 }}>
@@ -396,7 +393,6 @@ function FilesPanel({ onLog }) {
         )}
       </div>
 
-      {/* File Info Modal */}
       {selectedFileInfo && (
         <div className="modal-overlay" onClick={() => setSelectedFileInfo(null)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>

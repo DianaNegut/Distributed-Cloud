@@ -36,7 +36,6 @@ router.get('/:id', (req, res) => {
   }
 });
 
-// POST /api/storage-providers/register - Înregistrare ca provider
 router.post('/register', async (req, res) => {
   try {
     const { peerId, name, description, totalCapacityGB, location, uptimeGuarantee, replicationFactor } = req.body;
@@ -62,7 +61,6 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// PUT /api/storage-providers/:id - Actualizare provider
 router.put('/:id', (req, res) => {
   try {
     const { name, description, totalCapacityGB, location, status } = req.body;
@@ -93,7 +91,6 @@ router.put('/:id', (req, res) => {
   }
 });
 
-// POST /api/storage-providers/:id/heartbeat - Provider heartbeat
 router.post('/:id/heartbeat', (req, res) => {
   try {
     const provider = StorageProvider.heartbeat(req.params.id);
@@ -106,7 +103,6 @@ router.post('/:id/heartbeat', (req, res) => {
   }
 });
 
-// DELETE /api/storage-providers/:id - Ștergere provider
 router.delete('/:id', (req, res) => {
   try {
     const result = StorageProvider.deleteProvider(req.params.id);

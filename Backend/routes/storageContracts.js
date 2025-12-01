@@ -38,7 +38,6 @@ router.get('/:id', (req, res) => {
   }
 });
 
-// POST /api/storage-contracts/create - Creare contract nou
 router.post('/create', (req, res) => {
   console.log('[STORAGE-CONTRACTS] Creare contract nou...');
   try {
@@ -61,7 +60,6 @@ router.post('/create', (req, res) => {
       });
     }
 
-    // Verifică provider-ul
     const provider = StorageProvider.getProvider(providerId);
     if (!provider) {
       return res.status(404).json({ success: false, error: 'Provider not found' });
@@ -71,8 +69,9 @@ router.post('/create', (req, res) => {
       return res.status(400).json({ success: false, error: 'Provider is not active' });
     }
 
-    // Verifică disponibilitatea storage-ului
     const requestedGB = parseFloat(allocatedGB);
+    const months = durationMonths ? parseInt(durationMonths) : 1;
+
     if (provider.capacity.availableGB < requestedGB) {
       return res.status(400).json({ 
         success: false, 
@@ -80,30 +79,42 @@ router.post('/create', (req, res) => {
       });
     }
 
-    // Alocă storage-ul la provider
+    const pricing = StorageProvider.calculatePrice(providerId, requestedGB, months);
+    if (!pricing) {
+      return res.status(500).json({ success: false, error: 'Failed to calculate pricing' });
+    }
+
+    console.log('[STORAGE-CONTRACTS] Pricing calculated:', pricing);
+
     const allocationResult = StorageProvider.allocateStorage(providerId, requestedGB);
     if (!allocationResult.success) {
       return res.status(400).json(allocationResult);
     }
 
-    // Creează contractul
     const contract = StorageContract.createContract({
       renterId,
       renterName,
       providerId,
       providerName: provider.name,
       allocatedGB: requestedGB,
-      durationMonths: durationMonths ? parseInt(durationMonths) : 1,
+      durationMonths: months,
       description,
       replicationFactor,
       slaUptimeMin,
-      autoRenew: autoRenew === true
+      autoRenew: autoRenew === true,
+      pricePerGBPerMonth: pricing?.pricePerGBPerMonth || 0.10,
+      totalPrice: pricing?.finalPrice || 0,
+      basePrice: pricing?.basePrice || 0,
+      discount: pricing?.discount || 0,
+      discountAmount: pricing?.discountAmount || 0,
+      currency: pricing?.currency || 'USD'
     });
 
     res.json({
       success: true,
       message: 'Contract created successfully',
-      contract: contract
+      contract: contract,
+      pricing: pricing
     });
   } catch (error) {
     console.error('[STORAGE-CONTRACTS] Error:', error.message);
@@ -111,7 +122,6 @@ router.post('/create', (req, res) => {
   }
 });
 
-// POST /api/storage-contracts/:id/add-file - Adaugă fișier în contract
 router.post('/:id/add-file', (req, res) => {
   console.log(`[STORAGE-CONTRACTS] Adăugare fișier în contract ${req.params.id}...`);
   try {
@@ -135,7 +145,6 @@ router.post('/:id/add-file', (req, res) => {
       return res.status(400).json(result);
     }
 
-    // Actualizează used storage la provider
     const contract = result.contract;
     StorageProvider.updateUsedStorage(contract.providerId, contract.storage.usedGB);
 
@@ -150,7 +159,6 @@ router.post('/:id/add-file', (req, res) => {
   }
 });
 
-// DELETE /api/storage-contracts/:id/remove-file/:cid - Șterge fișier din contract
 router.delete('/:id/remove-file/:cid', (req, res) => {
   console.log(`[STORAGE-CONTRACTS] Ștergere fișier ${req.params.cid} din contract ${req.params.id}...`);
   try {
@@ -160,7 +168,6 @@ router.delete('/:id/remove-file/:cid', (req, res) => {
       return res.status(400).json(result);
     }
 
-    // Actualizează used storage la provider
     const contract = result.contract;
     StorageProvider.updateUsedStorage(contract.providerId, contract.storage.usedGB);
 
@@ -175,7 +182,6 @@ router.delete('/:id/remove-file/:cid', (req, res) => {
   }
 });
 
-// POST /api/storage-contracts/:id/renew - Reînnoiește contract
 router.post('/:id/renew', (req, res) => {
   console.log(`[STORAGE-CONTRACTS] Reînnoire contract ${req.params.id}...`);
   try {
@@ -205,7 +211,6 @@ router.post('/:id/renew', (req, res) => {
   }
 });
 
-// POST /api/storage-contracts/:id/cancel - Anulează contract
 router.post('/:id/cancel', (req, res) => {
   console.log(`[STORAGE-CONTRACTS] Anulare contract ${req.params.id}...`);
   try {
@@ -222,7 +227,6 @@ router.post('/:id/cancel', (req, res) => {
       return res.status(400).json(result);
     }
 
-    // Eliberează storage-ul de la provider
     StorageProvider.releaseStorage(contract.providerId, contract.storage.allocatedGB);
 
     res.json({
@@ -236,13 +240,75 @@ router.post('/:id/cancel', (req, res) => {
   }
 });
 
-// GET /api/storage-contracts/check-expired - Verifică contracte expirate
+router.post('/:id/pay', (req, res) => {
+  console.log(`[STORAGE-CONTRACTS] Procesare plată pentru contract ${req.params.id}...`);
+  try {
+    const { paymentMethod, transactionId } = req.body;
+
+    const contract = StorageContract.getContract(req.params.id);
+    if (!contract) {
+      return res.status(404).json({ success: false, error: 'Contract not found' });
+    }
+
+    const result = StorageContract.processPayment(req.params.id, {
+      amount: contract.pricing.totalPrice,
+      method: paymentMethod || 'credits',
+      transactionId: transactionId
+    });
+
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+
+    StorageProvider.updateEarnings(contract.providerId, contract.pricing.totalPrice);
+
+    res.json({
+      success: true,
+      message: 'Payment processed successfully',
+      contract: result.contract
+    });
+  } catch (error) {
+    console.error('[STORAGE-CONTRACTS] Error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.get('/calculate-price', (req, res) => {
+  try {
+    const { providerId, sizeGB, durationMonths } = req.query;
+
+    if (!providerId || !sizeGB || !durationMonths) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'providerId, sizeGB, and durationMonths are required' 
+      });
+    }
+
+    const pricing = StorageProvider.calculatePrice(
+      providerId, 
+      parseFloat(sizeGB), 
+      parseInt(durationMonths)
+    );
+
+    if (!pricing) {
+      return res.status(404).json({ success: false, error: 'Provider not found' });
+    }
+
+    res.json({
+      success: true,
+      pricing: pricing
+    });
+  } catch (error) {
+    console.error('[STORAGE-CONTRACTS] Error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 router.get('/maintenance/check-expired', (req, res) => {
   console.log('[STORAGE-CONTRACTS] Verificare contracte expirate...');
   try {
     const expiredContracts = StorageContract.checkExpiredContracts();
     
-    // Eliberează storage pentru contractele expirate (non-renewed)
     expiredContracts.forEach(contract => {
       StorageProvider.releaseStorage(contract.providerId, contract.storage.allocatedGB);
     });

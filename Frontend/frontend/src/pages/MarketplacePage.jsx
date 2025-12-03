@@ -175,8 +175,8 @@ const MarketplacePage = () => {
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
-          <h1 className="text-4xl font-bold text-white mb-2">Storage Marketplace</h1>
-          <p className="text-gray-400">Rentă spațiu de stocare de la provideri verificați</p>
+          <h1 className="text-4xl font-bold text-white mb-2">Piață de Stocare</h1>
+          <p className="text-gray-400">Rentează spațiu de stocare de la provideri verificați</p>
         </motion.div>
 
         <Card className="mb-6">
@@ -204,7 +204,7 @@ const MarketplacePage = () => {
                   onClick={() => setSortBy('uptime')}
                 >
                   <Award className="w-4 h-4 mr-2" />
-                  Uptime
+                  Disponibilitate
                 </Button>
                 <Button
                   variant={sortBy === 'name' ? 'primary' : 'secondary'}
@@ -271,7 +271,7 @@ const MarketplacePage = () => {
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-400">Uptime:</span>
+                      <span className="text-gray-400">Disponibilitate:</span>
                       <span className="text-white font-medium">
                         {provider.statistics.uptimePercentage.toFixed(1)}%
                       </span>
@@ -337,7 +337,7 @@ const MarketplacePage = () => {
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-gray-400 mb-2">Renter ID * (auto-completat cu Peer ID)</label>
+                  <label className="block text-gray-400 mb-2">ID Chiriaș * (auto-completat cu Peer ID)</label>
                   <Input
                     placeholder="Ex: user-123"
                     value={rentForm.renterId}
@@ -351,7 +351,7 @@ const MarketplacePage = () => {
                 <div>
                   <label className="block text-gray-400 mb-2">Numele tău *</label>
                   <Input
-                    placeholder="Ex: John Doe"
+                    placeholder="Ex: Ion Popescu"
                     value={rentForm.renterName}
                     onChange={(e) => setRentForm({ ...rentForm, renterName: e.target.value })}
                   />

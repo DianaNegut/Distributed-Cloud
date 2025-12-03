@@ -1,4 +1,4 @@
-const fs = require('fs');
+﻿const fs = require('fs');
 const path = require('path');
 const StorageProvider = require('./models/StorageProvider');
 const StorageContract = require('./models/StorageContract');

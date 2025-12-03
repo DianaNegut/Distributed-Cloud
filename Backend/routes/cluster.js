@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const router = express.Router();
 const { execPromise } = require('../utils/execPromise');
 const { ensureKuboInstalled } = require('../utils/ensureKuboInstalled');
@@ -26,7 +26,6 @@ function saveMetadata(data) {
     console.error('[METADATA] Eroare la salvare:', error.message);
   }
 }
-
 
 router.post('/init', async (req, res) => {
   try {
@@ -57,9 +56,8 @@ router.post('/init', async (req, res) => {
   }
 });
 
-
 router.post('/add', async (req, res) => {
-  console.log('[CLUSTER] Procesare cerere de adăugare în cluster...');
+  console.log('[CLUSTER] Procesare cerere de adaugare in cluster...');
   try {
     await ensureKuboInstalled();
 
@@ -68,13 +66,10 @@ router.post('/add', async (req, res) => {
       return res.status(400).json({ success: false, error: 'fileHash obligatoriu' });
     }
 
-  
     const fileInfo = await execPromise(`ipfs files stat /ipfs/${fileHash}`, { cwd: KUBO_PATH });
     const hashData = JSON.parse(fileInfo.stdout);
 
-   
     const pinResult = await execPromise(`ipfs pin add ${fileHash}`, { cwd: KUBO_PATH });
-    
 
     const metadata = loadMetadata();
     metadata[fileHash] = {
@@ -89,11 +84,11 @@ router.post('/add', async (req, res) => {
     };
     saveMetadata(metadata);
 
-    console.log(`[CLUSTER] Fișier pinuit și înregistrat: ${fileHash}`);
+    console.log(`[CLUSTER] Fisier pinuit si inregistrat: ${fileHash}`);
 
     res.json({
       success: true,
-      message: 'Fișier adăugat în cluster cu replicare',
+      message: 'Fisier adaugat in cluster cu replicare',
       file: metadata[fileHash]
     });
   } catch (error) {
@@ -102,28 +97,23 @@ router.post('/add', async (req, res) => {
   }
 });
 
-
 router.get('/status', async (req, res) => {
   console.log('[CLUSTER] Procesare cerere status cluster...');
   try {
     await ensureKuboInstalled();
 
-   
     const pinsResult = await execPromise('ipfs pin ls --type recursive', { cwd: KUBO_PATH });
     const pins = pinsResult.stdout.split('\n').filter(p => p.trim()).map(p => {
       const [hash, type] = p.split(' ');
       return { hash, type };
     });
 
-  
     const peersResult = await execPromise('ipfs swarm peers', { cwd: KUBO_PATH });
     const peers = peersResult.stdout.split('\n').filter(p => p.trim());
 
-   
     const idResult = await execPromise('ipfs id', { cwd: KUBO_PATH });
     const nodeData = JSON.parse(idResult.stdout);
 
-  
     const metadata = loadMetadata();
     const filesList = Object.values(metadata).map(f => ({
       ...f,
@@ -149,23 +139,19 @@ router.get('/status', async (req, res) => {
   }
 });
 
-
 router.get('/availability/:fileHash', async (req, res) => {
   console.log(`[CLUSTER] Verificare disponibilitate: ${req.params.fileHash}`);
   try {
     await ensureKuboInstalled();
 
     const { fileHash } = req.params;
-    
-    
+
     const localPinsResult = await execPromise('ipfs pin ls --type recursive', { cwd: KUBO_PATH });
     const isPinned = localPinsResult.stdout.includes(fileHash);
 
-    
     const findProvidersResult = await execPromise(`ipfs dht findprovs ${fileHash}`, { cwd: KUBO_PATH });
     const providers = findProvidersResult.stdout.split('\n').filter(p => p.trim());
 
-    
     const metadata = loadMetadata();
     const fileMetadata = metadata[fileHash];
 
@@ -188,7 +174,6 @@ router.get('/availability/:fileHash', async (req, res) => {
   }
 });
 
-
 router.post('/set-replication', async (req, res) => {
   console.log('[CLUSTER] Setare replication factor...');
   try {
@@ -197,17 +182,15 @@ router.post('/set-replication', async (req, res) => {
     const { fileHash, replicationFactor } = req.body;
     
     if (!fileHash || !replicationFactor) {
-      return res.status(400).json({ success: false, error: 'fileHash și replicationFactor obligatorii' });
+      return res.status(400).json({ success: false, error: 'fileHash si replicationFactor obligatorii' });
     }
 
     if (replicationFactor < 1 || replicationFactor > 10) {
-      return res.status(400).json({ success: false, error: 'replicationFactor trebuie să fie între 1 și 10' });
+      return res.status(400).json({ success: false, error: 'replicationFactor trebuie sa fie intre 1 si 10' });
     }
 
- 
     await execPromise(`ipfs pin add ${fileHash}`, { cwd: KUBO_PATH });
 
-    
     const metadata = loadMetadata();
     if (metadata[fileHash]) {
       metadata[fileHash].replicationFactor = replicationFactor;
@@ -227,9 +210,8 @@ router.post('/set-replication', async (req, res) => {
   }
 });
 
-
 router.get('/files', async (req, res) => {
-  console.log('[CLUSTER] Lista fișiere din cluster...');
+  console.log('[CLUSTER] Lista fisiere din cluster...');
   try {
     const metadata = loadMetadata();
     const files = Object.entries(metadata).map(([hash, data]) => ({
@@ -248,27 +230,24 @@ router.get('/files', async (req, res) => {
   }
 });
 
-
 router.delete('/files/:fileHash', async (req, res) => {
-  console.log(`[CLUSTER] Ștergere fișier: ${req.params.fileHash}`);
+  console.log(`[CLUSTER] stergere fisier: ${req.params.fileHash}`);
   try {
     await ensureKuboInstalled();
 
     const { fileHash } = req.params;
 
-  
     await execPromise(`ipfs pin rm ${fileHash}`, { cwd: KUBO_PATH });
 
-    
     const metadata = loadMetadata();
     delete metadata[fileHash];
     saveMetadata(metadata);
 
-    console.log(`[CLUSTER] Fișier șters: ${fileHash}`);
+    console.log(`[CLUSTER] Fisier sters: ${fileHash}`);
 
     res.json({
       success: true,
-      message: 'Fișier șters din cluster',
+      message: 'Fisier sters din cluster',
       fileHash: fileHash.substring(0, 12) + '...'
     });
   } catch (error) {
@@ -276,7 +255,6 @@ router.delete('/files/:fileHash', async (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 });
-
 
 router.get('/health', async (req, res) => {
   console.log('[CLUSTER] Health check...');
@@ -296,21 +274,21 @@ router.get('/health', async (req, res) => {
       if (numMatch) repoStats.NumObjects = parseInt(numMatch[1]);
       if (sizeMatch) repoStats.RepoSize = parseInt(sizeMatch[1]);
     } catch (e) {
-      console.warn('[CLUSTER] Nu pot obține repo stats:', e.message);
+      console.warn('[CLUSTER] Nu pot obtine repo stats:', e.message);
     }
 
     try {
       const peersResult = await execPromise('ipfs swarm peers', { cwd: KUBO_PATH });
       peersCount = peersResult.stdout.split('\n').filter(p => p.trim()).length;
     } catch (e) {
-      console.warn('[CLUSTER] Nu pot obține peers:', e.message);
+      console.warn('[CLUSTER] Nu pot obtine peers:', e.message);
     }
 
     try {
       const pinsResult = await execPromise('ipfs pin ls --type recursive', { cwd: KUBO_PATH });
       pinsCount = pinsResult.stdout.split('\n').filter(p => p.trim()).length;
     } catch (e) {
-      console.warn('[CLUSTER] Nu pot obține pins:', e.message);
+      console.warn('[CLUSTER] Nu pot obtine pins:', e.message);
     }
 
     const health = {
@@ -332,9 +310,8 @@ router.get('/health', async (req, res) => {
   }
 });
 
-
 router.get('/peers', async (req, res) => {
-  console.log('[CLUSTER] Obținere listă peers...');
+  console.log('[CLUSTER] Obtinere lista peers...');
   try {
     await ensureKuboInstalled();
 
@@ -357,14 +334,13 @@ router.get('/peers', async (req, res) => {
       peers
     });
   } catch (error) {
-    console.error('[CLUSTER] Eroare la obținere peers:', error.message);
+    console.error('[CLUSTER] Eroare la obtinere peers:', error.message);
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-
 router.post('/add-peer', async (req, res) => {
-  console.log('[CLUSTER] Adăugare peer...');
+  console.log('[CLUSTER] Adaugare peer...');
   try {
     await ensureKuboInstalled();
 
@@ -380,15 +356,14 @@ router.post('/add-peer', async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Peer adăugat cu succes',
+      message: 'Peer adaugat cu succes',
       peerId: peerId?.substring(0, 12) + '...' || 'unknown'
     });
   } catch (error) {
-    console.error('[CLUSTER] Eroare la adăugare peer:', error.message);
+    console.error('[CLUSTER] Eroare la adaugare peer:', error.message);
     res.status(500).json({ success: false, error: error.message });
   }
 });
-
 
 router.delete('/remove/:peerId', async (req, res) => {
   console.log(`[CLUSTER] Deconectare peer: ${req.params.peerId}`);

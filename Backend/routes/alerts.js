@@ -1,7 +1,6 @@
-const express = require('express');
+﻿const express = require('express');
 const router = express.Router();
 const logger = require('../config/logger');
-
 
 router.post('/webhook', (req, res) => {
   const alerts = req.body.alerts || [];
@@ -26,7 +25,6 @@ router.post('/webhook', (req, res) => {
   res.json({ received: true });
 });
 
-
 router.post('/critical', (req, res) => {
   const alerts = req.body.alerts || [];
   alerts.forEach(alert => {
@@ -41,7 +39,6 @@ router.post('/critical', (req, res) => {
   res.json({ received: true });
 });
 
-
 router.post('/warning', (req, res) => {
   const alerts = req.body.alerts || [];
   alerts.forEach(alert => {
@@ -55,7 +52,6 @@ router.post('/warning', (req, res) => {
   });
   res.json({ received: true });
 });
-
 
 router.get('/status', async (req, res) => {
   try {

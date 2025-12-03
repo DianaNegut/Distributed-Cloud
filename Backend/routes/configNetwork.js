@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const router = express.Router();
 const fs = require('fs');
 const fsp = fs.promises;
@@ -33,23 +33,23 @@ router.post('/', async (req, res) => {
         await execPromise(cmd, { cwd: KUBO_PATH });
         logs.push({ message: `✓ Executat: ${cmd}`, type: 'info' });
       } catch (cmdError) {
-        const errorMsg = cmdError.stderr || cmdError.message || 'Eroare necunoscută';
-        logs.push({ message: `✗ Eșuat: ${cmd} - ${errorMsg}`, type: 'error' });
+        const errorMsg = cmdError.stderr || cmdError.message || 'Eroare necunoscuta';
+        logs.push({ message: `✗ Esuat: ${cmd} - ${errorMsg}`, type: 'error' });
         console.error(`[CONFIGURE-NETWORK] Eroare la: ${cmd}`, errorMsg);
-        throw new Error(`Comanda eșuată: ${cmd} - ${errorMsg}`);
+        throw new Error(`Comanda esuata: ${cmd} - ${errorMsg}`);
       }
     }
     logs.push({ message: 'Retea IPFS configurata cu succes!', type: 'success' });
     res.json({ success: true, logs });
   } catch (error) {
-    const errorDetails = error.stderr || error.message || 'Eroare necunoscută';
+    const errorDetails = error.stderr || error.message || 'Eroare necunoscuta';
     logs.push({ message: `Eroare: ${errorDetails}`, type: 'error' });
-    console.error('[CONFIGURE-NETWORK] Eroare generală:', errorDetails);
+    console.error('[CONFIGURE-NETWORK] Eroare generala:', errorDetails);
     res.status(500).json({ 
       success: false, 
       logs,
       error: errorDetails,
-      suggestion: 'Verifică că daemon-ul IPFS rulează: ipfs daemon'
+      suggestion: 'Verifica ca daemon-ul IPFS ruleaza: ipfs daemon'
     });
   }
 });

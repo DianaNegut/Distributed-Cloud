@@ -198,7 +198,7 @@ const ContractsPage = () => {
             color="primary"
           />
           <StatCard
-            title="Storage Total"
+            title="Stocare Totală"
             value={`${totalStorage} GB`}
             icon={HardDrive}
             color="info"
@@ -214,14 +214,14 @@ const ContractsPage = () => {
                   onClick={() => setViewMode('renter')}
                 >
                   <User className="w-4 h-4 mr-2" />
-                  Ca Renter
+                  Ca Chiriaș
                 </Button>
                 <Button
                   variant={viewMode === 'provider' ? 'primary' : 'secondary'}
                   onClick={() => setViewMode('provider')}
                 >
                   <Server className="w-4 h-4 mr-2" />
-                  Ca Provider
+                  Ca Furnizor
                 </Button>
               </div>
               <div className="flex gap-2">
@@ -286,8 +286,8 @@ const ContractsPage = () => {
                               </h3>
                               <p className="text-gray-400 text-sm">
                                 {viewMode === 'renter' 
-                                  ? `Provider: ${contract.providerName}`
-                                  : `Renter: ${contract.renterName}`
+                                  ? `Furnizor: ${contract.providerName}`
+                                  : `Chiriaș: ${contract.renterName}`
                                 }
                               </p>
                             </div>
@@ -326,10 +326,10 @@ const ContractsPage = () => {
                         </div>
 
                         <div className="mb-4">
-                          <div className="flex justify-between text-sm mb-1">
-                            <span className="text-gray-400">Utilizare storage</span>
-                            <span className="text-white">{usagePercent}%</span>
-                          </div>
+                        <div className="flex justify-between text-sm mb-1">
+                          <span className="text-gray-400">Utilizare stocare</span>
+                          <span className="text-white">{usagePercent}%</span>
+                        </div>
                           <div className="w-full bg-dark-700 rounded-full h-2">
                             <div
                               className="bg-gradient-to-r from-primary-500 to-primary-400 h-2 rounded-full"
@@ -343,10 +343,10 @@ const ContractsPage = () => {
                         <div className="p-4 bg-dark-800/50 rounded-lg">
                           <div className="flex items-center gap-2 mb-3">
                             <Calendar className="w-4 h-4 text-gray-400" />
-                            <p className="text-gray-400 text-sm">Perioada</p>
+                            <p className="text-gray-400 text-sm">Perioadă</p>
                           </div>
                           <p className="text-white text-sm mb-1">
-                            Start: {formatDate(contract.terms.startDate)}
+                            Început: {formatDate(contract.terms.startDate)}
                           </p>
                           <p className="text-white text-sm mb-2">
                             Sfârșit: {formatDate(contract.terms.endDate)}
@@ -414,12 +414,12 @@ const ContractsPage = () => {
                 <h3 className="text-xl font-bold text-white mb-2">Nu ai contracte</h3>
                 <p className="text-gray-400 mb-6">
                   {viewMode === 'renter' 
-                    ? 'Mergi la Marketplace pentru a închiria spațiu de stocare'
-                    : 'Înregistrează-te ca provider pentru a oferi spațiu de stocare'
+                    ? 'Mergi la Piață pentru a închiria spațiu de stocare'
+                    : 'Înregistrează-te ca furnizor pentru a oferi spațiu de stocare'
                   }
                 </p>
                 <Button variant="primary" onClick={() => window.location.href = viewMode === 'renter' ? '/marketplace' : '/provider'}>
-                  {viewMode === 'renter' ? 'Mergi la Marketplace' : 'Devino Provider'}
+                  {viewMode === 'renter' ? 'Mergi la Piață' : 'Devino Furnizor'}
                 </Button>
               </div>
             </CardContent>

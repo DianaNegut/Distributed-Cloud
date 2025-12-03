@@ -4,12 +4,12 @@ import { motion } from 'framer-motion';
 import { LayoutDashboard, Network, FileText, Box, Server, ShoppingCart, Database, FileCheck } from 'lucide-react';
 
 const menuItems = [
-  { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
-  { path: '/marketplace', icon: ShoppingCart, label: 'Marketplace', badge: 'new' },
-  { path: '/provider', icon: Database, label: 'Oferire Storage', badge: 'new' },
-  { path: '/contracts', icon: FileCheck, label: 'Contracte', badge: 'new' },
-  { path: '/network', icon: Network, label: 'Network' },
-  { path: '/files', icon: FileText, label: 'Files' },
+  { path: '/', icon: LayoutDashboard, label: 'Panou Principal' },
+  { path: '/marketplace', icon: ShoppingCart, label: 'Piață' },
+  { path: '/provider', icon: Database, label: 'Oferire Stocare' },
+  { path: '/contracts', icon: FileCheck, label: 'Contracte' },
+  { path: '/network', icon: Network, label: 'Rețea' },
+  { path: '/files', icon: FileText, label: 'Fișiere' },
   { path: '/cluster', icon: Box, label: 'Cluster' },
 ];
 
@@ -27,7 +27,7 @@ export const Sidebar = () => {
           </div>
           <div>
             <h1 className="text-xl font-bold text-white">IPFS Cloud</h1>
-            <p className="text-xs text-gray-400">Distributed Network</p>
+            <p className="text-xs text-gray-400">Rețea Distribuită</p>
           </div>
         </div>
       </div>
@@ -68,7 +68,7 @@ export const Sidebar = () => {
 
       <div className="p-4 border-t border-dark-700">
         <div className="px-4 py-3 bg-dark-800 rounded-xl">
-          <p className="text-xs text-gray-400">Version 1.0.0</p>
+          <p className="text-xs text-gray-400">Versiune 1.0.0</p>
           <p className="text-xs text-gray-500 mt-1">© 2025 IPFS Cloud</p>
         </div>
       </div>

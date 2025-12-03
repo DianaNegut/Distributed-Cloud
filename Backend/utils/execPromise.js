@@ -1,4 +1,4 @@
-const { exec } = require('child_process');
+﻿const { exec } = require('child_process');
 
 function execPromise(command, options = {}) {
   return new Promise((resolve, reject) => {

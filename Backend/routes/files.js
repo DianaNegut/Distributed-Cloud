@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const router = express.Router();
 const path = require('path');
 const fs = require('fs');
@@ -29,12 +29,12 @@ function saveFilesMetadata(data) {
 }
 
 router.post('/upload', async (req, res) => {
-  console.log('[FILES] Procesare upload fișier...');
+  console.log('[FILES] Procesare upload fisier...');
   try {
     await ensureKuboInstalled();
 
     if (!req.files || !req.files.file) {
-      return res.status(400).json({ success: false, error: 'Niciun fișier încărcat' });
+      return res.status(400).json({ success: false, error: 'Niciun fisier incarcat' });
     }
 
     const uploadedFile = req.files.file;
@@ -42,9 +42,9 @@ router.post('/upload', async (req, res) => {
     const { description = '', tags = '', keepPrivate = 'false' } = req.body;
     const isPrivate = keepPrivate === 'true';
 
-    console.log(`[FILES] Fișier primit: ${uploadedFile.name}, ${uploadedFile.size} bytes`);
+    console.log(`[FILES] Fisier primit: ${uploadedFile.name}, ${uploadedFile.size} bytes`);
 
-    console.log(`[FILES] Adăugare în IPFS: ${filePath}`);
+    console.log(`[FILES] Adaugare in IPFS: ${filePath}`);
     const addResult = await execPromise(`ipfs add "${filePath}"`, { cwd: KUBO_PATH });
     
     const hashMatch = addResult.stdout.match(/added (\w+)/);
@@ -54,7 +54,7 @@ router.post('/upload', async (req, res) => {
     const fileHash = hashMatch[1];
 
     await execPromise(`ipfs pin add ${fileHash}`, { cwd: KUBO_PATH });
-    console.log(`[FILES] Fișier pinuit: ${fileHash}`);
+    console.log(`[FILES] Fisier pinuit: ${fileHash}`);
 
     const metadata = loadFilesMetadata();
     const parsedTags = typeof tags === 'string' && tags.trim() 
@@ -75,17 +75,17 @@ router.post('/upload', async (req, res) => {
     };
     saveFilesMetadata(metadata);
 
-    console.log(`[FILES] ✓ Fișier adăugat cu succes: ${fileHash} (${isPrivate ? 'PRIVAT' : 'PUBLIC'})`);
+    console.log(`[FILES] ✓ Fisier adaugat cu succes: ${fileHash} (${isPrivate ? 'PRIVAT' : 'PUBLIC'})`);
     
     await fsp.unlink(filePath).catch(err => {
-      console.warn('[FILES] Nu s-a putut șterge fișierul temporar:', err.message);
+      console.warn('[FILES] Nu s-a putut sterge fisierul temporar:', err.message);
     });
     
     res.json({
       success: true,
-      message: `Fișier adăugat în IPFS cu succes ${isPrivate ? '(privat - doar tu îl ai)' : '(va fi distribuit în rețea)'}`,
+      message: `Fisier adaugat in IPFS cu succes ${isPrivate ? '(privat - doar tu il ai)' : '(va fi distribuit in retea)'}`,
       file: metadata[fileHash],
-      nextStep: isPrivate ? null : 'Fișierul va fi distribuit automat către peers conectați'
+      nextStep: isPrivate ? null : 'Fisierul va fi distribuit automat catre peers conectati'
     });
 
   } catch (error) {
@@ -101,7 +101,7 @@ router.post('/upload', async (req, res) => {
 });
 
 router.get('/list', async (req, res) => {
-  console.log('[FILES] Listare fișiere...');
+  console.log('[FILES] Listare fisiere...');
   try {
     const metadata = loadFilesMetadata();
     const files = Object.entries(metadata).map(([hash, data]) => ({
@@ -130,7 +130,7 @@ router.get('/download/:fileHash', async (req, res) => {
     const fileInfo = metadata[fileHash];
 
     if (!fileInfo) {
-      return res.status(404).json({ success: false, error: 'Fișier negăsit în metadata' });
+      return res.status(404).json({ success: false, error: 'Fisier negasit in metadata' });
     }
 
     const tempDir = path.join(IPFS_PATH, 'temp-downloads');
@@ -138,7 +138,7 @@ router.get('/download/:fileHash', async (req, res) => {
     
     const tempFilePath = path.join(tempDir, `${fileHash}-${fileInfo.name}`);
 
-    console.log(`[FILES] Descărcare din IPFS: ${fileHash}`);
+    console.log(`[FILES] Descarcare din IPFS: ${fileHash}`);
     await execPromise(`ipfs get ${fileHash} -o "${tempFilePath}"`, { cwd: KUBO_PATH });
 
     res.setHeader('Content-Disposition', `attachment; filename="${fileInfo.name}"`);
@@ -155,7 +155,7 @@ router.get('/download/:fileHash', async (req, res) => {
       console.error('[FILES] Eroare la stream:', err);
       await fsp.unlink(tempFilePath).catch(() => {});
       if (!res.headersSent) {
-        res.status(500).json({ success: false, error: 'Eroare la trimitere fișier' });
+        res.status(500).json({ success: false, error: 'Eroare la trimitere fisier' });
       }
     });
 
@@ -168,7 +168,7 @@ router.get('/download/:fileHash', async (req, res) => {
 });
 
 router.get('/info/:fileHash', async (req, res) => {
-  console.log(`[FILES] Info fișier: ${req.params.fileHash}`);
+  console.log(`[FILES] Info fisier: ${req.params.fileHash}`);
   try {
     await ensureKuboInstalled();
 
@@ -177,7 +177,7 @@ router.get('/info/:fileHash', async (req, res) => {
     const fileInfo = metadata[fileHash];
 
     if (!fileInfo) {
-      return res.status(404).json({ success: false, error: 'Fișier negăsit' });
+      return res.status(404).json({ success: false, error: 'Fisier negasit' });
     }
 
     let isPinned = false;
@@ -195,7 +195,7 @@ router.get('/info/:fileHash', async (req, res) => {
       });
       providers = providersResult.stdout.split('\n').filter(p => p.trim());
     } catch (e) {
-      console.warn('[FILES] Nu s-au putut găsi provideri:', e.message);
+      console.warn('[FILES] Nu s-au putut gasi provideri:', e.message);
     }
 
     res.json({
@@ -215,7 +215,7 @@ router.get('/info/:fileHash', async (req, res) => {
 });
 
 router.delete('/delete/:fileHash', async (req, res) => {
-  console.log(`[FILES] Ștergere fișier: ${req.params.fileHash}`);
+  console.log(`[FILES] stergere fisier: ${req.params.fileHash}`);
   try {
     await ensureKuboInstalled();
 
@@ -223,7 +223,7 @@ router.delete('/delete/:fileHash', async (req, res) => {
     const metadata = loadFilesMetadata();
     
     if (!metadata[fileHash]) {
-      return res.status(404).json({ success: false, error: 'Fișier negăsit' });
+      return res.status(404).json({ success: false, error: 'Fisier negasit' });
     }
 
     try {
@@ -236,21 +236,21 @@ router.delete('/delete/:fileHash', async (req, res) => {
     delete metadata[fileHash];
     saveFilesMetadata(metadata);
 
-    console.log(`[FILES] ✓ Fișier șters: ${fileHash}`);
+    console.log(`[FILES] ✓ Fisier sters: ${fileHash}`);
     res.json({
       success: true,
-      message: `Fișier șters cu succes: ${fileName}`,
+      message: `Fisier sters cu succes: ${fileName}`,
       fileHash: fileHash.substring(0, 12) + '...'
     });
 
   } catch (error) {
-    console.error('[FILES] Eroare la ștergere:', error.message);
+    console.error('[FILES] Eroare la stergere:', error.message);
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
 router.post('/distribute/:fileHash', async (req, res) => {
-  console.log(`[FILES] Distribuire fișier: ${req.params.fileHash}`);
+  console.log(`[FILES] Distribuire fisier: ${req.params.fileHash}`);
   try {
     await ensureKuboInstalled();
 
@@ -259,13 +259,13 @@ router.post('/distribute/:fileHash', async (req, res) => {
     const fileInfo = metadata[fileHash];
 
     if (!fileInfo) {
-      return res.status(404).json({ success: false, error: 'Fișier negăsit' });
+      return res.status(404).json({ success: false, error: 'Fisier negasit' });
     }
 
     if (!fileInfo.isPrivate) {
       return res.json({ 
         success: true, 
-        message: 'Fișierul este deja public',
+        message: 'Fisierul este deja public',
         alreadyDistributed: true 
       });
     }
@@ -276,7 +276,7 @@ router.post('/distribute/:fileHash', async (req, res) => {
     if (peers.length === 0) {
       return res.json({
         success: false,
-        error: 'Nu există peers conectați pentru distribuție'
+        error: 'Nu exista peers conectati pentru distributie'
       });
     }
 
@@ -285,24 +285,24 @@ router.post('/distribute/:fileHash', async (req, res) => {
     metadata[fileHash].distributionStarted = new Date().toISOString();
     saveFilesMetadata(metadata);
 
-    console.log(`[FILES] ✓ Fișier marcat pentru distribuție: ${fileHash} către ${peers.length} peers`);
+    console.log(`[FILES] ✓ Fisier marcat pentru distributie: ${fileHash} catre ${peers.length} peers`);
 
     res.json({
       success: true,
-      message: `Fișier marcat ca PUBLIC. Peers pot acum să-l descarce.`,
+      message: `Fisier marcat ca PUBLIC. Peers pot acum sa-l descarce.`,
       availablePeers: peers.length,
       fileHash: fileHash.substring(0, 12) + '...',
-      note: 'Peers trebuie să ruleze "ipfs get ' + fileHash + '" pentru a-l descărca'
+      note: 'Peers trebuie sa ruleze "ipfs get ' + fileHash + '" pentru a-l descarca'
     });
 
   } catch (error) {
-    console.error('[FILES] Eroare la distribuție:', error.message);
+    console.error('[FILES] Eroare la distributie:', error.message);
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
 router.get('/distribution-status/:fileHash', async (req, res) => {
-  console.log(`[FILES] Status distribuție: ${req.params.fileHash}`);
+  console.log(`[FILES] Status distributie: ${req.params.fileHash}`);
   try {
     await ensureKuboInstalled();
 
@@ -311,7 +311,7 @@ router.get('/distribution-status/:fileHash', async (req, res) => {
     const fileInfo = metadata[fileHash];
 
     if (!fileInfo) {
-      return res.status(404).json({ success: false, error: 'Fișier negăsit' });
+      return res.status(404).json({ success: false, error: 'Fisier negasit' });
     }
 
     let providers = [];
@@ -321,7 +321,7 @@ router.get('/distribution-status/:fileHash', async (req, res) => {
       });
       providers = providersResult.stdout.split('\n').filter(p => p.trim());
     } catch (e) {
-      console.warn('[FILES] Nu s-au putut găsi provideri:', e.message);
+      console.warn('[FILES] Nu s-au putut gasi provideri:', e.message);
     }
 
     const distributionInfo = {
@@ -339,13 +339,13 @@ router.get('/distribution-status/:fileHash', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('[FILES] Eroare la verificare distribuție:', error.message);
+    console.error('[FILES] Eroare la verificare distributie:', error.message);
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
 router.post('/test-transfer', async (req, res) => {
-  console.log('[FILES] Test transfer între noduri...');
+  console.log('[FILES] Test transfer intre noduri...');
   try {
     await ensureKuboInstalled();
 
@@ -374,7 +374,7 @@ router.post('/test-transfer', async (req, res) => {
       });
       providers = providersResult.stdout.split('\n').filter(p => p.trim());
     } catch (e) {
-      console.warn('[FILES] Nu s-au găsit provideri DHT:', e.message);
+      console.warn('[FILES] Nu s-au gasit provideri DHT:', e.message);
     }
 
     await fsp.unlink(testFilePath).catch(() => {});
@@ -398,7 +398,7 @@ router.post('/test-transfer', async (req, res) => {
 });
 
 router.get('/transfer-stats', async (req, res) => {
-  console.log('[FILES] Obținere statistici transfer...');
+  console.log('[FILES] Obtinere statistici transfer...');
   try {
     await ensureKuboInstalled();
 
@@ -410,7 +410,7 @@ router.get('/transfer-stats', async (req, res) => {
       const peersResult = await execPromise('ipfs swarm peers', { cwd: KUBO_PATH });
       peerCount = peersResult.stdout.split('\n').filter(p => p.trim()).length;
     } catch (e) {
-      console.warn('[FILES] Nu s-au putut obține peers:', e.message);
+      console.warn('[FILES] Nu s-au putut obtine peers:', e.message);
     }
 
     const totalFiles = files.length;
@@ -434,7 +434,7 @@ router.get('/transfer-stats', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('[FILES] Eroare la obținere statistici:', error.message);
+    console.error('[FILES] Eroare la obtinere statistici:', error.message);
     res.status(500).json({ success: false, error: error.message });
   }
 });

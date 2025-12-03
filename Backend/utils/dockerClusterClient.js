@@ -1,4 +1,4 @@
-const axios = require('axios');
+﻿const axios = require('axios');
 
 class DockerClusterClient {
   constructor() {
@@ -8,10 +8,9 @@ class DockerClusterClient {
     this.timeout = parseInt(process.env.DOCKER_CLUSTER_TIMEOUT) || 5000;
     this.maxRetries = parseInt(process.env.DOCKER_CLUSTER_MAX_RETRIES) || 3;
     
-    console.log(`[DOCKER-CLUSTER-CLIENT] Inițializat cu ${this.nodes.length} noduri`);
+    console.log(`[DOCKER-CLUSTER-CLIENT] Initializat cu ${this.nodes.length} noduri`);
   }
 
- 
   async checkNodeHealth(nodeUrl) {
     try {
       const response = await axios.get(`${nodeUrl}/health`, { 
@@ -32,7 +31,7 @@ class DockerClusterClient {
         return node;
       }
     }
-    throw new Error('Niciun nod din cluster nu este disponibil. Verifică că Docker Compose rulează.');
+    throw new Error('Niciun nod din cluster nu este disponibil. Verifica ca Docker Compose ruleaza.');
   }
 
   async executeWithRetry(requestFn, retries = this.maxRetries) {
@@ -45,7 +44,7 @@ class DockerClusterClient {
         return result;
       } catch (error) {
         lastError = error;
-        console.error(`[DOCKER-CLUSTER-CLIENT] Încercare ${attempt}/${retries} eșuată:`, error.message);
+        console.error(`[DOCKER-CLUSTER-CLIENT] incercare ${attempt}/${retries} esuata:`, error.message);
         
         if (attempt < retries) {
 
@@ -55,7 +54,7 @@ class DockerClusterClient {
       }
     }
     
-    throw new Error(`Request eșuat după ${retries} încercări: ${lastError.message}`);
+    throw new Error(`Request esuat dupa ${retries} incercari: ${lastError.message}`);
   }
 
   async get(endpoint) {
@@ -124,7 +123,6 @@ class DockerClusterClient {
     });
   }
 
- 
   async post(endpoint, data, config = {}) {
     return this.executeWithRetry(async (node) => {
       const response = await axios.post(`${node}${endpoint}`, data, {
@@ -140,7 +138,6 @@ class DockerClusterClient {
     });
   }
 
-  
   async delete(endpoint) {
     return this.executeWithRetry(async (node) => {
       const response = await axios.delete(`${node}${endpoint}`, {
@@ -150,7 +147,6 @@ class DockerClusterClient {
     });
   }
 
-  
   async getClusterInfo() {
     try {
       const [peers, pins, health] = await Promise.allSettled([
@@ -171,11 +167,10 @@ class DockerClusterClient {
         nodes: this.nodes
       };
     } catch (error) {
-      throw new Error(`Nu s-au putut obține informațiile clusterului: ${error.message}`);
+      throw new Error(`Nu s-au putut obtine informatiile clusterului: ${error.message}`);
     }
   }
 
- 
   async checkAllNodes() {
     const healthChecks = await Promise.all(
       this.nodes.map(async (node) => {
@@ -190,16 +185,13 @@ class DockerClusterClient {
     }, {});
   }
 
- 
   extractCID(data) {
     if (!data) return null;
 
-   
     if (typeof data === 'string') {
       const match = data.match(/Qm[a-zA-Z0-9]{44,}|baf[a-zA-Z0-9]{50,}/);
       return match ? match[0] : null;
     }
-    
 
     if (typeof data === 'object') {
       
@@ -211,13 +203,11 @@ class DockerClusterClient {
       if (data.Hash) return data.Hash;
       if (data.key) return data.key;
       if (data.Key) return data.Key;
-      
-      
+
       if (data.data && data.data.cid) {
         return typeof data.data.cid === 'string' ? data.data.cid : data.data.cid['/'];
       }
-      
-    
+
       try {
         const jsonStr = JSON.stringify(data);
         const match = jsonStr.match(/Qm[a-zA-Z0-9]{44,}|baf[a-zA-Z0-9]{50,}/);
@@ -229,7 +219,6 @@ class DockerClusterClient {
     
     return null;
   }
-
 
   getIPFSGateways() {
     return [

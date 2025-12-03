@@ -1,4 +1,4 @@
-const path = require('path');
+﻿const path = require('path');
 const os = require('os');
 const { execSync } = require('child_process');
 const fs = require('fs');
@@ -7,10 +7,10 @@ function findIpfsBinary() {
   try {
     const cmd = process.platform === 'win32' ? 'where ipfs' : 'which ipfs';
     const ipfsPath = execSync(cmd).toString().trim();
-    console.log(`IPFS găsit la: ${ipfsPath}`);
+    console.log(`IPFS gasit la: ${ipfsPath}`);
     return ipfsPath;
   } catch {
-    console.warn('IPFS nu a fost găsit în PATH.');
+    console.warn('IPFS nu a fost gasit in PATH.');
     return null;
   }
 }

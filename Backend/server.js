@@ -1,4 +1,4 @@
-require('dotenv').config();
+﻿require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const fileUpload = require('express-fileupload');
@@ -19,6 +19,7 @@ const dockerClusterRoutes = require('./routes/dockerCluster');
 const networkInfoRoutes = require('./routes/networkInfo');
 const storageProvidersRoutes = require('./routes/storageProviders');
 const storageContractsRoutes = require('./routes/storageContracts');
+const userStorageRoutes = require('./routes/userStorage');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -50,6 +51,7 @@ app.use('/api/docker-cluster', dockerClusterRoutes);
 app.use('/api/network-info', networkInfoRoutes);
 app.use('/api/storage-providers', storageProvidersRoutes);
 app.use('/api/storage-contracts', storageContractsRoutes);
+app.use('/api/user-storage', userStorageRoutes);
 
 app.use((err, req, res, next) => {
   console.error('[ERROR]', err);

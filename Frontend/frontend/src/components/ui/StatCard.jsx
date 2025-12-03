@@ -5,6 +5,7 @@ import { TrendingUp, TrendingDown } from 'lucide-react';
 export const StatCard = ({ 
   title, 
   value, 
+  subtitle,
   icon: Icon, 
   trend,
   trendValue,
@@ -30,7 +31,11 @@ export const StatCard = ({
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <p className="text-gray-400 text-sm font-medium mb-2">{title}</p>
-          <h3 className="text-3xl font-bold text-white mb-3">{value}</h3>
+          <h3 className="text-3xl font-bold text-white mb-1">{value}</h3>
+          
+          {subtitle && (
+            <p className="text-gray-500 text-xs mb-2">{subtitle}</p>
+          )}
           
           {trend && (
             <div className={`flex items-center gap-1 text-sm ${

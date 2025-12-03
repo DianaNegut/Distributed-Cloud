@@ -1,18 +1,14 @@
-const { execPromise } = require('./execPromise');
+﻿const { execPromise } = require('./execPromise');
 const os = require('os');
 const path = require('path');
 const checkDiskSpace = require('check-disk-space').default;
 
-/**
- * Get available disk space in GB for the IPFS_PATH drive
- * @returns {Promise<{totalGB: number, freeGB: number, usedGB: number}>}
- */
 async function getDiskSpace() {
   try {
     const platform = os.platform();
     
     if (platform === 'win32') {
-      // Windows: Use check-disk-space package
+      
       const ipfsPath = process.env.IPFS_PATH || path.join(os.homedir(), '.ipfs');
       const diskSpace = await checkDiskSpace(ipfsPath);
       
@@ -26,7 +22,7 @@ async function getDiskSpace() {
         usedGB: parseFloat((usedBytes / (1024 * 1024 * 1024)).toFixed(2))
       };
     } else {
-      // Linux/Mac: Use df command
+      
       const ipfsPath = process.env.IPFS_PATH || `${os.homedir()}/.ipfs`;
       const command = `df -BG "${ipfsPath}" | tail -1 | awk '{print $2,$3,$4}'`;
       
@@ -41,7 +37,7 @@ async function getDiskSpace() {
     }
   } catch (error) {
     console.error('[DISK-SPACE] Error getting disk space:', error.message);
-    // Return fallback values if unable to determine
+    
     return {
       totalGB: 0,
       freeGB: 0,

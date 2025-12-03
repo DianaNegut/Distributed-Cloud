@@ -1,7 +1,8 @@
-const express = require('express');
+﻿const express = require('express');
 const router = express.Router();
 const StorageContract = require('../models/StorageContract');
 const StorageProvider = require('../models/StorageProvider');
+const UserStorage = require('../models/UserStorage');
 
 router.get('/', (req, res) => {
   try {
@@ -65,7 +66,6 @@ router.post('/create', (req, res) => {
       return res.status(404).json({ success: false, error: 'Provider not found' });
     }
 
-    // Verificare status provider (inclusiv suspended)
     if (provider.status === 'suspended') {
       return res.status(400).json({ 
         success: false, 
@@ -83,7 +83,6 @@ router.post('/create', (req, res) => {
     const requestedGB = parseFloat(allocatedGB);
     const months = durationMonths ? parseInt(durationMonths) : 1;
 
-    // Verificare capacitate disponibilă
     if (provider.capacity.availableGB < requestedGB) {
       return res.status(400).json({ 
         success: false, 
@@ -91,7 +90,6 @@ router.post('/create', (req, res) => {
       });
     }
 
-    // Warning dacă providerul este aproape de limită
     const utilizationPercent = ((provider.capacity.totalGB - provider.capacity.availableGB) / provider.capacity.totalGB) * 100;
     const warnings = [];
     
@@ -130,6 +128,9 @@ router.post('/create', (req, res) => {
       currency: pricing?.currency || 'USD'
     });
 
+    UserStorage.addContractStorage(renterId, contract.id, requestedGB);
+    console.log(`[STORAGE-CONTRACTS] Stocare adaugata pentru ${renterId}: +${requestedGB}GB`);
+
     res.json({
       success: true,
       message: 'Contract created successfully',
@@ -144,7 +145,7 @@ router.post('/create', (req, res) => {
 });
 
 router.post('/:id/add-file', (req, res) => {
-  console.log(`[STORAGE-CONTRACTS] Adăugare fișier în contract ${req.params.id}...`);
+  console.log(`[STORAGE-CONTRACTS] Adaugare fisier in contract ${req.params.id}...`);
   try {
     const { cid, name, sizeBytes, mimetype } = req.body;
 
@@ -181,7 +182,7 @@ router.post('/:id/add-file', (req, res) => {
 });
 
 router.delete('/:id/remove-file/:cid', (req, res) => {
-  console.log(`[STORAGE-CONTRACTS] Ștergere fișier ${req.params.cid} din contract ${req.params.id}...`);
+  console.log(`[STORAGE-CONTRACTS] stergere fisier ${req.params.cid} din contract ${req.params.id}...`);
   try {
     const result = StorageContract.removeFileFromContract(req.params.id, req.params.cid);
 
@@ -204,7 +205,7 @@ router.delete('/:id/remove-file/:cid', (req, res) => {
 });
 
 router.post('/:id/renew', (req, res) => {
-  console.log(`[STORAGE-CONTRACTS] Reînnoire contract ${req.params.id}...`);
+  console.log(`[STORAGE-CONTRACTS] Reinnoire contract ${req.params.id}...`);
   try {
     const { additionalDays } = req.body;
 
@@ -250,6 +251,9 @@ router.post('/:id/cancel', (req, res) => {
 
     StorageProvider.releaseStorage(contract.providerId, contract.storage.allocatedGB);
 
+    UserStorage.removeContractStorage(contract.renterId, contract.id, contract.storage.allocatedGB);
+    console.log(`[STORAGE-CONTRACTS] Stocare eliminata pentru ${contract.renterId}: -${contract.storage.allocatedGB}GB`);
+
     res.json({
       success: true,
       message: 'Contract cancelled successfully',
@@ -262,7 +266,7 @@ router.post('/:id/cancel', (req, res) => {
 });
 
 router.post('/:id/pay', (req, res) => {
-  console.log(`[STORAGE-CONTRACTS] Procesare plată pentru contract ${req.params.id}...`);
+  console.log(`[STORAGE-CONTRACTS] Procesare plata pentru contract ${req.params.id}...`);
   try {
     const { paymentMethod, transactionId } = req.body;
 
@@ -332,6 +336,9 @@ router.get('/maintenance/check-expired', (req, res) => {
     
     expiredContracts.forEach(contract => {
       StorageProvider.releaseStorage(contract.providerId, contract.storage.allocatedGB);
+      
+      UserStorage.removeContractStorage(contract.renterId, contract.id, contract.storage.allocatedGB);
+      console.log(`[STORAGE-CONTRACTS] Contract expirat ${contract.id}: stocare eliminata pentru ${contract.renterId}`);
     });
 
     res.json({

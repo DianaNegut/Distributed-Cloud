@@ -155,12 +155,6 @@ const ProviderPage = () => {
               <h1 className="text-4xl font-bold text-white mb-2">Provider Dashboard</h1>
               <p className="text-gray-400">Oferă spațiu de stocare și câștigă bani</p>
             </div>
-            {!isAlreadyProvider && (
-              <Button variant="primary" onClick={() => setShowRegisterModal(true)}>
-                <Plus className="w-4 h-4 mr-2" />
-                Înregistrează-te ca Provider
-              </Button>
-            )}
           </div>
         </motion.div>
 

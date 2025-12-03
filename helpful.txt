@@ -3,6 +3,9 @@ docker exec ipfs-node-1 ipfs swarm peers -> vad peersi conectati
 
 docker exec ipfs-node-1 ipfs cat QmTNoJrhSU1p7juqveZwroQAf3TrSXb3gRY5boUAf7ALwy
 
+docker exec cluster-node-1 ipfs-cluster-ctl pin ls
+
+docker exec ipfs-node-1 ipfs pin ls
 
 script testare replicare# Script rapid
 $cid = "QmcjsUjx8eoCfxGcvmjbnemoSAaWpnYvJKvSYhdehTLNg8"
@@ -15,3 +18,9 @@ $cid = "QmcjsUjx8eoCfxGcvmjbnemoSAaWpnYvJKvSYhdehTLNg8"
         Write-Host " $node - NOT PINNED" -ForegroundColor Gray
     }
 }
+
+
+5 noduri ipfs care stocheaza date
+5 noduri cluster care gestioneaza replicarea
+
+incarcare fisier: trimit la backend -> backendul trimite la cluster 

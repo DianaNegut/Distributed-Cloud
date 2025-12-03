@@ -125,8 +125,8 @@ export default function NetworkPage() {
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
-          <h1 className="text-4xl font-bold text-white mb-2">Private Network</h1>
-          <p className="text-gray-400">Configure your IPFS private network settings</p>
+          <h1 className="text-4xl font-bold text-white mb-2">Rețea Privată</h1>
+          <p className="text-gray-400">Configurează setările rețelei IPFS private</p>
         </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -134,21 +134,21 @@ export default function NetworkPage() {
           <div className="lg:col-span-2 space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle icon={Settings}>Network Configuration</CardTitle>
+                <CardTitle icon={Settings}>Configurare Rețea</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   <Input
-                    label="Swarm Key (hex)"
+                    label="Cheie Swarm (hex)"
                     value={swarmKey}
                     onChange={(e) => setSwarmKey(e.target.value)}
-                    placeholder="Enter your swarm key"
+                    placeholder="Introdu cheia swarm"
                     icon={Key}
                     readOnly
                   />
                   
                   <TextArea
-                    label="Bootstrap Node Address"
+                    label="Adresă Nod Bootstrap"
                     value={bootstrapNode}
                     onChange={(e) => setBootstrapNode(e.target.value)}
                     placeholder="/ip4/..."
@@ -163,7 +163,7 @@ export default function NetworkPage() {
                       icon={Server}
                       className="flex-1"
                     >
-                      Configure Network
+                      Configurează Rețeaua
                     </Button>
                     
                     <Button
@@ -171,21 +171,21 @@ export default function NetworkPage() {
                       variant="outline"
                       icon={Copy}
                     >
-                      Copy Key
+                      Copiază Cheia
                     </Button>
                   </div>
 
                   <div className="mt-6 p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-                    <h3 className="text-sm font-semibold text-blue-400 mb-2">How to Connect</h3>
+                    <h3 className="text-sm font-semibold text-blue-400 mb-2">Cum să te Conectezi</h3>
                     <p className="text-xs text-gray-400 mb-3">
-                      Share these credentials with others who want to join your private network.
+                      Distribuie aceste credențiale celorlalți care vor să se alăture rețelei tale private.
                     </p>
                     <div className="space-y-2 text-xs text-gray-300">
-                      <p>1. Install IPFS (kubo) on your machine</p>
-                      <p>2. Create <code className="bg-dark-800 px-1 py-0.5 rounded">~/.ipfs/swarm.key</code> with the key above</p>
-                      <p>3. Run: <code className="bg-dark-800 px-1 py-0.5 rounded">ipfs bootstrap rm --all</code></p>
-                      <p>4. Run: <code className="bg-dark-800 px-1 py-0.5 rounded">ipfs bootstrap add {bootstrapNode}</code></p>
-                      <p>5. Start daemon: <code className="bg-dark-800 px-1 py-0.5 rounded">LIBP2P_FORCE_PNET=1 ipfs daemon</code></p>
+                      <p>1. Instalează IPFS (kubo) pe mașina ta</p>
+                      <p>2. Creează <code className="bg-dark-800 px-1 py-0.5 rounded">~/.ipfs/swarm.key</code> cu cheia de mai sus</p>
+                      <p>3. Execută: <code className="bg-dark-800 px-1 py-0.5 rounded">ipfs bootstrap rm --all</code></p>
+                      <p>4. Execută: <code className="bg-dark-800 px-1 py-0.5 rounded">ipfs bootstrap add {bootstrapNode}</code></p>
+                      <p>5. Pornește daemon: <code className="bg-dark-800 px-1 py-0.5 rounded">LIBP2P_FORCE_PNET=1 ipfs daemon</code></p>
                     </div>
                   </div>
                 </div>
@@ -195,7 +195,7 @@ export default function NetworkPage() {
             {/* Peers Card */}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle icon={Users}>Connected Peers</CardTitle>
+                <CardTitle icon={Users}>Peers Conectați</CardTitle>
                 <Button
                   onClick={loadPeers}
                   loading={loadingPeers}
@@ -203,7 +203,7 @@ export default function NetworkPage() {
                   size="sm"
                   icon={RefreshCw}
                 >
-                  Refresh
+                  Reîmprospătează
                 </Button>
               </CardHeader>
               <CardContent>
@@ -219,15 +219,15 @@ export default function NetworkPage() {
                       >
                         <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
                         <span className="text-sm text-gray-300 font-mono flex-1 truncate">{peer}</span>
-                        <Badge variant="success">Active</Badge>
+                        <Badge variant="success">Activ</Badge>
                       </motion.div>
                     ))}
                   </div>
                 ) : (
                   <div className="text-center py-12">
                     <Users className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-                    <p className="text-gray-500">No peers connected</p>
-                    <p className="text-gray-600 text-sm mt-2">Configure the network to start connecting</p>
+                    <p className="text-gray-500">Niciun peer conectat</p>
+                    <p className="text-gray-600 text-sm mt-2">Configurează rețeaua pentru a începe conectarea</p>
                   </div>
                 )}
               </CardContent>
@@ -239,17 +239,17 @@ export default function NetworkPage() {
             {/* Network Status */}
             <Card>
               <CardHeader>
-                <CardTitle icon={NetworkIcon}>Network Status</CardTitle>
+                <CardTitle icon={NetworkIcon}>Status Rețea</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-400">Private Network</span>
+                    <span className="text-gray-400">Rețea Privată</span>
                     {networkStatus.checking ? (
-                      <Badge variant="default">Checking...</Badge>
+                      <Badge variant="default">Se verifică...</Badge>
                     ) : (
                       <Badge variant={networkStatus.active ? "success" : "error"}>
-                        {networkStatus.active ? "Active" : "Inactive"}
+                        {networkStatus.active ? "Activă" : "Inactivă"}
                       </Badge>
                     )}
                   </div>
@@ -260,12 +260,12 @@ export default function NetworkPage() {
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-400">Connected Peers</span>
+                    <span className="text-gray-400">Peers Conectați</span>
                     <span className="text-white font-semibold">{peers.length}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-400">Network Type</span>
-                    <Badge variant="info">Private</Badge>
+                    <span className="text-gray-400">Tip Rețea</span>
+                    <Badge variant="info">Privată</Badge>
                   </div>
                 </div>
               </CardContent>
@@ -274,7 +274,7 @@ export default function NetworkPage() {
             {/* Activity Logs */}
             <Card>
               <CardHeader>
-                <CardTitle icon={Activity}>Activity Logs</CardTitle>
+                <CardTitle icon={Activity}>Jurnale Activitate</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2 max-h-96 overflow-y-auto">
@@ -298,7 +298,7 @@ export default function NetworkPage() {
                   ) : (
                     <div className="text-center py-8">
                       <Server className="w-12 h-12 text-gray-600 mx-auto mb-2" />
-                      <p className="text-gray-500 text-sm">No activity yet</p>
+                      <p className="text-gray-500 text-sm">Nicio activitate încă</p>
                     </div>
                   )}
                 </div>

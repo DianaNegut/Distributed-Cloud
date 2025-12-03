@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const router = express.Router();
 const StorageProvider = require('../models/StorageProvider');
 const { getDiskSpace } = require('../utils/getDiskSpace');
@@ -45,20 +45,18 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ success: false, error: 'peerId and totalCapacityGB are required' });
     }
 
-    // Opțiunea 1: Verificare spațiu disk real
     const diskSpace = await getDiskSpace();
     const ipfsRepo = await getIPFSRepoSize();
     const requestedGB = parseFloat(totalCapacityGB);
     const availableDiskGB = diskSpace.freeGB;
-    const maxSafeCapacity = availableDiskGB * 0.8; // 80% din spațiul liber
+    const maxSafeCapacity = availableDiskGB * 0.8; 
 
     let warnings = [];
-    
-    // Warning dacă declară mai mult decât au disponibil
+
     if (requestedGB > availableDiskGB) {
       return res.status(400).json({
         success: false,
-        error: `Capacitatea solicitată (${requestedGB}GB) depășește spațiul liber disponibil (${availableDiskGB.toFixed(1)}GB)`,
+        error: `Capacitatea solicitata (${requestedGB}GB) depaseste spatiul liber disponibil (${availableDiskGB.toFixed(1)}GB)`,
         diskSpace: {
           totalGB: diskSpace.totalGB,
           freeGB: diskSpace.freeGB,
@@ -68,9 +66,8 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    // Warning dacă declară mai mult de 80% din spațiul liber (recomandat)
     if (requestedGB > maxSafeCapacity) {
-      warnings.push(`Atenție: Ai declarat ${requestedGB}GB dar ai doar ${availableDiskGB.toFixed(1)}GB liberi. Recomandăm maxim ${maxSafeCapacity.toFixed(1)}GB (80% din spațiul liber).`);
+      warnings.push(`Atentie: Ai declarat ${requestedGB}GB dar ai doar ${availableDiskGB.toFixed(1)}GB liberi. Recomandam maxim ${maxSafeCapacity.toFixed(1)}GB (80% din spatiul liber).`);
     }
 
     const provider = StorageProvider.registerProvider({
@@ -137,7 +134,6 @@ router.post('/:id/heartbeat', async (req, res) => {
       return res.status(404).json({ success: false, error: 'Provider not found' });
     }
 
-    // Opțiunea 2: Monitorizare avansată cu suspendare automată
     const diskSpace = await getDiskSpace();
     const ipfsRepo = await getIPFSRepoSize();
     
@@ -149,29 +145,27 @@ router.post('/:id/heartbeat', async (req, res) => {
     let statusUpdate = {};
     let alerts = [];
 
-    // Verifică dacă provider-ul mai are spațiul promis pentru contractele active
     if (actualFreeSpaceGB < reservedGB) {
-      // Provider-ul nu mai poate onora contractele → SUSPENDARE
+      
       statusUpdate.status = 'suspended';
       alerts.push({
         level: 'critical',
-        message: `Provider suspendat automat: Spațiu insuficient. Necesar: ${reservedGB}GB, Disponibil: ${actualFreeSpaceGB.toFixed(1)}GB`
+        message: `Provider suspendat automat: Spatiu insuficient. Necesar: ${reservedGB}GB, Disponibil: ${actualFreeSpaceGB.toFixed(1)}GB`
       });
       
       console.error(`[PROVIDER-HEARTBEAT] Provider ${provider.id} SUSPENDED: Insufficient space (need ${reservedGB}GB, has ${actualFreeSpaceGB.toFixed(1)}GB)`);
     } else if (actualFreeSpaceGB < reservedGB * 1.2) {
-      // Warning: Se apropie de limită (sub 120% din rezervat)
+      
       statusUpdate.status = 'active';
       alerts.push({
         level: 'warning',
-        message: `Atenție: Spațiu liber scăzut. Contracte: ${reservedGB}GB, Disponibil: ${actualFreeSpaceGB.toFixed(1)}GB`
+        message: `Atentie: Spatiu liber scazut. Contracte: ${reservedGB}GB, Disponibil: ${actualFreeSpaceGB.toFixed(1)}GB`
       });
     } else {
-      // Totul OK
+      
       statusUpdate.status = 'active';
     }
 
-    // Actualizează capacitatea reală
     statusUpdate.capacity = {
       totalGB: provider.capacity.totalGB,
       usedGB: ipfsUsageGB,
@@ -179,7 +173,6 @@ router.post('/:id/heartbeat', async (req, res) => {
       reservedGB: reservedGB
     };
 
-    // Actualizează uptime
     statusUpdate.statistics = {
       ...provider.statistics,
       lastUptime: new Date().toISOString(),

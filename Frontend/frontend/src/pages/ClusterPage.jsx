@@ -67,14 +67,14 @@ export default function ClusterPage() {
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
-          <h1 className="text-4xl font-bold text-white mb-2">Docker Cluster</h1>
-          <p className="text-gray-400">Manage your IPFS Docker cluster nodes</p>
+          <h1 className="text-4xl font-bold text-white mb-2">Cluster Docker</h1>
+          <p className="text-gray-400">Gestionează nodurile clusterului IPFS Docker</p>
         </motion.div>
 
         {/* Cluster Info Panel */}
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle icon={Box}>IPFS Cluster Information</CardTitle>
+            <CardTitle icon={Box}>Informații Cluster IPFS</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
@@ -88,7 +88,7 @@ export default function ClusterPage() {
                 {clusterInfo && (
                   <>
                     <div className="text-gray-400">
-                      Nodes: <span className="text-white font-medium">{clusterInfo.totalNodes || 0}</span>
+                      Noduri: <span className="text-white font-medium">{clusterInfo.totalNodes || 0}</span>
                     </div>
                     <div className="text-gray-400">
                       Peers: <span className="text-white font-medium">{clusterInfo.peers || 0}</span>
@@ -103,7 +103,7 @@ export default function ClusterPage() {
                 variant="ghost"
                 icon={RefreshCw}
               >
-                Refresh
+                Reîmprospătează
               </Button>
             </div>
           </CardContent>
@@ -118,7 +118,7 @@ export default function ClusterPage() {
                   <Container className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <p className="text-gray-400 text-sm">Total Nodes</p>
+                  <p className="text-gray-400 text-sm">Noduri Totale</p>
                   <p className="text-2xl font-bold text-white">{clusterInfo?.totalNodes || 0}</p>
                 </div>
               </div>
@@ -132,7 +132,7 @@ export default function ClusterPage() {
                   <CheckCircle className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <p className="text-gray-400 text-sm">Connected Peers</p>
+                  <p className="text-gray-400 text-sm">Peers Conectați</p>
                   <p className="text-2xl font-bold text-white">{clusterInfo?.peers || 0}</p>
                 </div>
               </div>
@@ -146,7 +146,7 @@ export default function ClusterPage() {
                   <Box className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <p className="text-gray-400 text-sm">Cluster Health</p>
+                  <p className="text-gray-400 text-sm">Sănătate Cluster</p>
                   <p className="text-2xl font-bold text-white">{clusterInfo ? '100%' : 'N/A'}</p>
                 </div>
               </div>
@@ -157,7 +157,7 @@ export default function ClusterPage() {
         {/* Cluster Peers */}
         <Card>
           <CardHeader>
-            <CardTitle icon={Users}>Cluster Peers</CardTitle>
+            <CardTitle icon={Users}>Peers Cluster</CardTitle>
           </CardHeader>
           <CardContent>
             {peers.length > 0 ? (
@@ -175,14 +175,14 @@ export default function ClusterPage() {
                       <p className="text-white text-sm font-medium truncate">{peer.peername || 'Unknown'}</p>
                       <p className="text-gray-400 text-xs font-mono truncate">{peer.id || peer}</p>
                     </div>
-                    <Badge variant="success">Active</Badge>
+                    <Badge variant="success">Activ</Badge>
                   </motion.div>
                 ))}
               </div>
             ) : (
               <div className="text-center py-12">
                 <Users className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-                <p className="text-gray-500">No peers connected</p>
+                <p className="text-gray-500">Niciun peer conectat</p>
               </div>
             )}
           </CardContent>

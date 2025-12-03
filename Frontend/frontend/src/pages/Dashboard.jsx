@@ -399,32 +399,6 @@ const Dashboard = () => {
         </Card>
       </div>
 
-      {/* Storage Overview */}
-      <Card>
-        <CardContent className="pt-6">
-        <h2 className="text-xl font-bold text-white mb-6">Statistici Stocare</h2>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="text-center">
-            <div className="text-4xl font-bold text-primary-400 mb-2">{stats.totalFiles}</div>
-            <p className="text-gray-400">Fișiere totale</p>
-          </div>
-          <div className="text-center">
-            <div className="text-4xl font-bold text-green-400 mb-2">{(stats.totalFiles * 2.5).toFixed(1)} MB</div>
-            <p className="text-gray-400">Spațiu utilizat (estimat)</p>
-          </div>
-          <div className="text-center">
-            <div className="text-4xl font-bold text-purple-400 mb-2">{stats.totalPeers + stats.clusterNodes}</div>
-            <p className="text-gray-400">Noduri total în rețea</p>
-          </div>
-          <div className="text-center">
-            <div className="text-4xl font-bold text-blue-400 mb-2">
-              {stats.totalStorageGB > 0 ? ((stats.totalStorageGB - stats.availableStorageGB) / stats.totalStorageGB * 100).toFixed(1) : 0}%
-            </div>
-            <p className="text-gray-400">Utilizare piață</p>
-          </div>
-        </div>
-        </CardContent>
-      </Card>
       </div>
     </div>
   );

@@ -65,18 +65,38 @@ router.post('/create', (req, res) => {
       return res.status(404).json({ success: false, error: 'Provider not found' });
     }
 
+    // Verificare status provider (inclusiv suspended)
+    if (provider.status === 'suspended') {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Provider is suspended due to insufficient storage capacity. Please choose another provider.' 
+      });
+    }
+
     if (provider.status !== 'active') {
-      return res.status(400).json({ success: false, error: 'Provider is not active' });
+      return res.status(400).json({ 
+        success: false, 
+        error: `Provider is not active (status: ${provider.status})` 
+      });
     }
 
     const requestedGB = parseFloat(allocatedGB);
     const months = durationMonths ? parseInt(durationMonths) : 1;
 
+    // Verificare capacitate disponibilă
     if (provider.capacity.availableGB < requestedGB) {
       return res.status(400).json({ 
         success: false, 
-        error: `Insufficient storage. Available: ${provider.capacity.availableGB}GB, Requested: ${requestedGB}GB` 
+        error: `Insufficient storage. Available: ${provider.capacity.availableGB.toFixed(1)}GB, Requested: ${requestedGB}GB` 
       });
+    }
+
+    // Warning dacă providerul este aproape de limită
+    const utilizationPercent = ((provider.capacity.totalGB - provider.capacity.availableGB) / provider.capacity.totalGB) * 100;
+    const warnings = [];
+    
+    if (utilizationPercent > 90) {
+      warnings.push('Provider has high storage utilization (>90%). Consider choosing another provider for better reliability.');
     }
 
     const pricing = StorageProvider.calculatePrice(providerId, requestedGB, months);
@@ -114,7 +134,8 @@ router.post('/create', (req, res) => {
       success: true,
       message: 'Contract created successfully',
       contract: contract,
-      pricing: pricing
+      pricing: pricing,
+      warnings: warnings.length > 0 ? warnings : undefined
     });
   } catch (error) {
     console.error('[STORAGE-CONTRACTS] Error:', error.message);

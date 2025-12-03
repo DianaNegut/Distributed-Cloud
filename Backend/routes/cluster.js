@@ -332,4 +332,82 @@ router.get('/health', async (req, res) => {
   }
 });
 
+
+router.get('/peers', async (req, res) => {
+  console.log('[CLUSTER] Obținere listă peers...');
+  try {
+    await ensureKuboInstalled();
+
+    const peersResult = await execPromise('ipfs swarm peers', { cwd: KUBO_PATH });
+    const peersRaw = peersResult.stdout.split('\n').filter(p => p.trim());
+
+    const peers = peersRaw.map(peerAddr => {
+      const match = peerAddr.match(/\/p2p\/([A-Za-z0-9]+)/);
+      const peerId = match ? match[1] : 'unknown';
+      return {
+        id: peerId,
+        address: peerAddr,
+        shortId: peerId.substring(0, 12) + '...'
+      };
+    });
+
+    res.json({
+      success: true,
+      totalPeers: peers.length,
+      peers
+    });
+  } catch (error) {
+    console.error('[CLUSTER] Eroare la obținere peers:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+
+router.post('/add-peer', async (req, res) => {
+  console.log('[CLUSTER] Adăugare peer...');
+  try {
+    await ensureKuboInstalled();
+
+    const { peerId, address } = req.body;
+    
+    if (!peerId && !address) {
+      return res.status(400).json({ success: false, error: 'peerId sau address obligatoriu' });
+    }
+
+    const connectAddr = address || `/p2p/${peerId}`;
+    
+    await execPromise(`ipfs swarm connect ${connectAddr}`, { cwd: KUBO_PATH });
+
+    res.json({
+      success: true,
+      message: 'Peer adăugat cu succes',
+      peerId: peerId?.substring(0, 12) + '...' || 'unknown'
+    });
+  } catch (error) {
+    console.error('[CLUSTER] Eroare la adăugare peer:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+
+router.delete('/remove/:peerId', async (req, res) => {
+  console.log(`[CLUSTER] Deconectare peer: ${req.params.peerId}`);
+  try {
+    await ensureKuboInstalled();
+
+    const { peerId } = req.params;
+
+    await execPromise(`ipfs swarm disconnect /p2p/${peerId}`, { cwd: KUBO_PATH });
+
+    res.json({
+      success: true,
+      message: 'Peer deconectat cu succes',
+      peerId: peerId.substring(0, 12) + '...'
+    });
+  } catch (error) {
+    console.error('[CLUSTER] Eroare la deconectare peer:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 module.exports = router;

@@ -47,7 +47,7 @@ const Dashboard = () => {
 
       const clusterRes = await axios.get(`${API_URL}/docker-cluster/status`, {
         headers: { 'x-api-key': API_KEY }
-      }).catch(() => ({ data: { nodes: [] } }));
+      }).catch(() => ({ data: { success: false, cluster: { totalNodes: 0 } } }));
 
       const providersRes = await axios.get(`${API_URL}/storage-providers`, {
         headers: { 'x-api-key': API_KEY }
@@ -64,11 +64,16 @@ const Dashboard = () => {
       const availableStorage = providers.reduce((sum, p) => sum + p.capacity.availableGB, 0);
       const activeContracts = contracts.filter(c => c.status === 'active').length;
 
+      // Verifică dacă rețeaua este activă
+      const totalPeers = peersRes.data?.peers?.length || 0;
+      const clusterNodesCount = clusterRes.data?.cluster?.totalNodes || 0;
+      const isNetworkActive = (totalPeers > 0 || clusterNodesCount > 0) && clusterRes.data?.success !== false;
+
       setStats({
         totalFiles: filesRes.data?.totalFiles || 0,
-        totalPeers: peersRes.data?.peers?.length || 0,
-        networkStatus: 'active',
-        clusterNodes: clusterRes.data?.nodes?.filter(n => n.running)?.length || 0,
+        totalPeers: totalPeers,
+        networkStatus: isNetworkActive ? 'active' : 'offline',
+        clusterNodes: clusterNodesCount,
         totalProviders: providers.length,
         activeContracts: activeContracts,
         totalStorageGB: totalStorage,
@@ -232,7 +237,7 @@ const Dashboard = () => {
             Actiuni Rapide
           </h2>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <motion.a
               href="/files"
               whileHover={{ scale: 1.05 }}
@@ -261,16 +266,6 @@ const Dashboard = () => {
             >
               <Server className="w-8 h-8 mx-auto mb-2" />
               <p className="font-medium">Gestioneaza Cluster</p>
-            </motion.a>
-
-            <motion.a
-              href="/activity"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="p-4 bg-gradient-to-br from-orange-600 to-orange-500 rounded-xl text-white text-center shadow-lg shadow-orange-500/30 cursor-pointer"
-            >
-              <TrendingUp className="w-8 h-8 mx-auto mb-2" />
-              <p className="font-medium">Vezi Activitate</p>
             </motion.a>
           </div>
           </CardContent>

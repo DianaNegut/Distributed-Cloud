@@ -132,6 +132,7 @@ const ProviderPage = () => {
   const totalCapacity = myProviders.reduce((sum, p) => sum + p.capacity.totalGB, 0);
   const totalUsed = myProviders.reduce((sum, p) => sum + p.capacity.usedGB, 0);
   const activeContracts = myProviders.reduce((sum, p) => sum + p.statistics.activeContracts, 0);
+  const isAlreadyProvider = myProviders.length > 0;
 
   if (loading) {
     return (
@@ -154,10 +155,12 @@ const ProviderPage = () => {
               <h1 className="text-4xl font-bold text-white mb-2">Provider Dashboard</h1>
               <p className="text-gray-400">Oferă spațiu de stocare și câștigă bani</p>
             </div>
-            <Button variant="primary" onClick={() => setShowRegisterModal(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Înregistrează-te ca Provider
-            </Button>
+            {!isAlreadyProvider && (
+              <Button variant="primary" onClick={() => setShowRegisterModal(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                Înregistrează-te ca Provider
+              </Button>
+            )}
           </div>
         </motion.div>
 

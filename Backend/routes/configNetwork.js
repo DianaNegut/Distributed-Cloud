@@ -29,14 +29,28 @@ router.post('/', async (req, res) => {
       `ipfs bootstrap add ${bootstrapNode}`
     ];
     for (const cmd of cmds) {
-      await execPromise(cmd, { cwd: KUBO_PATH });
-      logs.push({ message: `Executat: ${cmd}`, type: 'info' });
+      try {
+        await execPromise(cmd, { cwd: KUBO_PATH });
+        logs.push({ message: `✓ Executat: ${cmd}`, type: 'info' });
+      } catch (cmdError) {
+        const errorMsg = cmdError.stderr || cmdError.message || 'Eroare necunoscută';
+        logs.push({ message: `✗ Eșuat: ${cmd} - ${errorMsg}`, type: 'error' });
+        console.error(`[CONFIGURE-NETWORK] Eroare la: ${cmd}`, errorMsg);
+        throw new Error(`Comanda eșuată: ${cmd} - ${errorMsg}`);
+      }
     }
     logs.push({ message: 'Retea IPFS configurata cu succes!', type: 'success' });
     res.json({ success: true, logs });
   } catch (error) {
-    logs.push({ message: `Eroare: ${error.error || error.message}`, type: 'error' });
-    res.status(500).json({ success: false, logs });
+    const errorDetails = error.stderr || error.message || 'Eroare necunoscută';
+    logs.push({ message: `Eroare: ${errorDetails}`, type: 'error' });
+    console.error('[CONFIGURE-NETWORK] Eroare generală:', errorDetails);
+    res.status(500).json({ 
+      success: false, 
+      logs,
+      error: errorDetails,
+      suggestion: 'Verifică că daemon-ul IPFS rulează: ipfs daemon'
+    });
   }
 });
 

@@ -2,7 +2,30 @@ const express = require('express');
 const router = express.Router();
 const FormData = require('form-data');
 const fs = require('fs');
+const path = require('path');
 const clusterClient = require('../utils/dockerClusterClient');
+const { IPFS_PATH } = require('../config/paths');
+
+const metadataPath = path.join(IPFS_PATH, 'cluster-files-metadata.json');
+
+function loadMetadata() {
+  try {
+    if (fs.existsSync(metadataPath)) {
+      return JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
+    }
+  } catch (error) {
+    console.error('[DOCKER-CLUSTER] Eroare la citire metadata:', error.message);
+  }
+  return {};
+}
+
+function saveMetadata(data) {
+  try {
+    fs.writeFileSync(metadataPath, JSON.stringify(data, null, 2));
+  } catch (error) {
+    console.error('[DOCKER-CLUSTER] Eroare la salvare metadata:', error.message);
+  }
+}
 
 router.get('/status', async (req, res) => {
   console.log('[DOCKER-CLUSTER] Obținere status cluster...');
@@ -140,6 +163,25 @@ router.post('/add', async (req, res) => {
     const gateways = clusterClient.getIPFSGateways();
     const accessUrls = gateways.map(gw => `${gw}/ipfs/${cid}`);
 
+    // Salvează metadata
+    const metadata = loadMetadata();
+    const { description = '', tags = '' } = req.body;
+    const parsedTags = typeof tags === 'string' && tags.trim() 
+      ? tags.split(',').map(t => t.trim()).filter(t => t) 
+      : [];
+
+    metadata[cid] = {
+      cid: cid,
+      name: uploadedFile.name,
+      size: uploadedFile.size,
+      mimetype: uploadedFile.mimetype,
+      description: description.trim(),
+      tags: parsedTags,
+      uploadedAt: new Date().toISOString(),
+      pinnedOn: pinnedPeers
+    };
+    saveMetadata(metadata);
+
     res.json({
       success: true,
       message: 'Fișier adăugat în cluster cu succes',
@@ -149,10 +191,12 @@ router.post('/add', async (req, res) => {
         cid: cid,
         size: uploadedFile.size,
         mimetype: uploadedFile.mimetype,
+        description: description.trim(),
+        tags: parsedTags,
         pinnedOn: pinnedPeers,
         allocations: responseData.allocations || [],
         accessUrls: accessUrls,
-        addedAt: new Date().toISOString()
+        uploadedAt: new Date().toISOString()
       }
     });
 
@@ -179,6 +223,7 @@ router.get('/pins', async (req, res) => {
   console.log('[DOCKER-CLUSTER] Obținere listă fișiere pinuite...');
   try {
     const pinsData = await clusterClient.get('/pins');
+    const metadata = loadMetadata();
     
     let cidList = [];
     
@@ -188,12 +233,28 @@ router.get('/pins', async (req, res) => {
       );
     }
     
-    console.log(`[DOCKER-CLUSTER] ${cidList.length} fișiere găsite în cluster`);
+    // Îmbogățește cu metadata
+    const filesWithMetadata = cidList.map(cid => {
+      const meta = metadata[cid] || {};
+      return {
+        hash: cid,
+        cid: cid,
+        name: meta.name || `${cid.substring(0, 12)}...`,
+        size: meta.size || 'Unknown',
+        mimetype: meta.mimetype || 'application/octet-stream',
+        description: meta.description || '',
+        tags: meta.tags || [],
+        uploadedAt: meta.uploadedAt || new Date().toISOString(),
+        pinnedOn: meta.pinnedOn || 0
+      };
+    });
+    
+    console.log(`[DOCKER-CLUSTER] ${filesWithMetadata.length} fișiere găsite în cluster`);
     
     res.json({
       success: true,
-      totalPins: cidList.length,
-      pins: cidList
+      totalPins: filesWithMetadata.length,
+      pins: filesWithMetadata
     });
   } catch (error) {
     console.error('[DOCKER-CLUSTER] Eroare la pins:', error.message);
@@ -246,6 +307,13 @@ router.get('/download/:cid', async (req, res) => {
     const axios = require('axios');
     const gateways = clusterClient.getIPFSGateways();
     
+    // Citește metadata pentru a obține numele original
+    const metadata = loadMetadata();
+    const fileInfo = metadata[cid];
+    let filename = fileInfo?.name || cid;
+    
+    console.log(`[DOCKER-CLUSTER] Filename din metadata: ${filename}`);
+    
     let lastError;
     for (const gateway of gateways) {
       try {
@@ -258,15 +326,8 @@ router.get('/download/:cid', async (req, res) => {
           validateStatus: (status) => status === 200
         });
 
-        const contentDisposition = response.headers['content-disposition'];
-        let filename = cid;
-        if (contentDisposition) {
-          const match = contentDisposition.match(/filename="?([^"]+)"?/);
-          if (match) filename = match[1];
-        }
-
         res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-        res.setHeader('Content-Type', response.headers['content-type'] || 'application/octet-stream');
+        res.setHeader('Content-Type', fileInfo?.mimetype || response.headers['content-type'] || 'application/octet-stream');
         if (response.headers['content-length']) {
           res.setHeader('Content-Length', response.headers['content-length']);
         }

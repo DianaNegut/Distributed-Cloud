@@ -5,14 +5,19 @@ services:
     entrypoint: /entrypoint.sh
     environment:
       - IPFS_PROFILE=server
+      # PT PRIVATE NETWORK
       - LIBP2P_FORCE_PNET=1
     volumes:
       - ipfs-1-data:/data/ipfs
+      # MONTEZ KEYA DE PE HOST IN CONTAINER SI RAMANE RO
       - ./swarm.key:/data/ipfs/swarm.key:ro
       - ./entrypoint.sh:/entrypoint.sh:ro
     ports:
+       # MAPEZ NOD IPFS PE HOST
       - "4001:4001"
+      # MAPEZ API IPFS PE HOST
       - "5001:5001"
+      # MAPEZ GATEWAY IPFS PE HOST
       - "8080:8080"
     networks:
       - ipfs-net
@@ -28,6 +33,7 @@ services:
       - CLUSTER_IPFSHTTP_NODEMULTIADDRESS=/dns4/ipfs-1/tcp/5001
       - CLUSTER_REPLICATIONFACTORMIN=2
       - CLUSTER_REPLICATIONFACTORMAX=3
+      # aici ma conectez cu backendul 
       - CLUSTER_RESTAPI_HTTPLISTENMULTIADDRESS=/ip4/0.0.0.0/tcp/9094
       - CLUSTER_RESTAPI_CORSALLOWEDORIGINS=["*"]
       - CLUSTER_RESTAPI_CORSALLOWEDMETHODS=["GET","POST","PUT","DELETE","OPTIONS"]
@@ -37,7 +43,9 @@ services:
     volumes:
       - cluster-1-data:/data/ipfs-cluster
     ports:
+    # mapez REST API pe host
       - "9094:9094"
+      # mapez comunicarea intre nodurile cluster pe host
       - "9096:9096"
     networks:
       - ipfs-net

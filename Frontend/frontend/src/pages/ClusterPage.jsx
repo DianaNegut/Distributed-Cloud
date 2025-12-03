@@ -10,8 +10,7 @@ import {
   CheckCircle,
   Activity,
   Users,
-  FileText,
-  Upload
+  FileText
 } from 'lucide-react';
 import axios from 'axios';
 import toast, { Toaster } from 'react-hot-toast';
@@ -22,11 +21,7 @@ const API_KEY = process.env.REACT_APP_API_KEY || 'supersecret';
 export default function ClusterPage() {
   const [clusterInfo, setClusterInfo] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [peers, setPeers] = useState([]);
-  const [pins, setPins] = useState([]);
-  const [selectedFile, setSelectedFile] = useState(null);
-  const fileInputRef = React.useRef(null);
 
   useEffect(() => {
     loadClusterInfo();
@@ -47,20 +42,10 @@ export default function ClusterPage() {
         
         const peersList = response.data.cluster.peersList || [];
         setPeers(Array.isArray(peersList) ? peersList : []);
-        const pinsList = response.data.cluster.pinsList || [];
-        if (Array.isArray(pinsList)) {
-          setPins(pinsList);
-        } else if (typeof pinsList === 'object' && pinsList !== null) {
-          const pinsArray = Object.values(pinsList);
-          setPins(pinsArray);
-        } else {
-          setPins([]);
-        }
       }
     } catch (error) {
       console.error('Error loading cluster:', error);
       setPeers([]);
-      setPins([]);
     }
   };
 
@@ -69,56 +54,6 @@ export default function ClusterPage() {
     await loadClusterInfo();
     setLoading(false);
     toast.success('Cluster info refreshed');
-  };
-
-  const handleFileSelect = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      setSelectedFile(e.target.files[0]);
-      toast.success(`File selected: ${e.target.files[0].name}`);
-    }
-  };
-
-  const handleUploadToCluster = async () => {
-    if (!selectedFile) {
-      toast.error('Please select a file first');
-      return;
-    }
-
-    setUploading(true);
-    const formData = new FormData();
-    formData.append('file', selectedFile);
-
-    console.log('Uploading file to cluster:', selectedFile.name);
-    console.log('FormData entries:', Array.from(formData.entries()));
-
-    try {
-      toast.loading('Uploading to cluster...');
-      
-      const response = await axios.post(`${API_URL}/docker-cluster/add`, formData, {
-        headers: { 
-          'x-api-key': API_KEY
-        }
-      });
-
-      toast.dismiss();
-      console.log('Cluster upload response:', response.data);
-
-      if (response.data.success) {
-        toast.success(`File uploaded to cluster! CID: ${response.data.cid || response.data.file?.cid}`);
-        setSelectedFile(null);
-        if (fileInputRef.current) fileInputRef.current.value = '';
-        await loadClusterInfo();
-      } else {
-        toast.error('Upload failed: ' + (response.data.error || 'Unknown error'));
-      }
-    } catch (error) {
-      toast.dismiss();
-      console.error('Upload error:', error);
-      console.error('Error response:', error.response?.data);
-      toast.error('Upload to cluster failed: ' + (error.response?.data?.error || error.message));
-    } finally {
-      setUploading(false);
-    }
   };
 
   return (
@@ -158,9 +93,6 @@ export default function ClusterPage() {
                     <div className="text-gray-400">
                       Peers: <span className="text-white font-medium">{clusterInfo.peers || 0}</span>
                     </div>
-                    <div className="text-gray-400">
-                      Pinned Files: <span className="text-white font-medium">{clusterInfo.pinnedFiles || 0}</span>
-                    </div>
                   </>
                 )}
               </div>
@@ -178,7 +110,7 @@ export default function ClusterPage() {
         </Card>
 
         {/* Cluster Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
           <Card hover={false}>
             <CardContent className="pt-6">
               <div className="flex items-center gap-4">
@@ -210,20 +142,6 @@ export default function ClusterPage() {
           <Card hover={false}>
             <CardContent className="pt-6">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-blue-500 rounded-xl flex items-center justify-center">
-                  <Activity className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <p className="text-gray-400 text-sm">Pinned Files</p>
-                  <p className="text-2xl font-bold text-white">{clusterInfo?.pinnedFiles || 0}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card hover={false}>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-purple-500 rounded-xl flex items-center justify-center">
                   <Box className="w-6 h-6 text-white" />
                 </div>
@@ -236,130 +154,39 @@ export default function ClusterPage() {
           </Card>
         </div>
 
-        {/* Upload to Cluster */}
-        <Card className="mb-6">
+        {/* Cluster Peers */}
+        <Card>
           <CardHeader>
-            <CardTitle icon={Upload}>Upload File to Cluster</CardTitle>
+            <CardTitle icon={Users}>Cluster Peers</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-4">
-              <input
-                ref={fileInputRef}
-                type="file"
-                onChange={handleFileSelect}
-                className="flex-1 px-4 py-2 bg-dark-800 border border-dark-600 rounded-xl text-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-primary-600 file:text-white hover:file:bg-primary-500"
-              />
-              <Button
-                onClick={handleUploadToCluster}
-                loading={uploading}
-                disabled={!selectedFile}
-                icon={Upload}
-                variant="success"
-              >
-                Upload to Cluster
-              </Button>
-            </div>
-            {selectedFile && (
-              <p className="text-gray-400 text-sm mt-2">
-                Selected: {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
-              </p>
+            {peers.length > 0 ? (
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {peers.map((peer, index) => (
+                  <motion.div
+                    key={peer.id || index}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    className="flex items-center gap-3 p-3 bg-dark-800 rounded-lg"
+                  >
+                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse flex-shrink-0"></div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white text-sm font-medium truncate">{peer.peername || 'Unknown'}</p>
+                      <p className="text-gray-400 text-xs font-mono truncate">{peer.id || peer}</p>
+                    </div>
+                    <Badge variant="success">Active</Badge>
+                  </motion.div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <Users className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+                <p className="text-gray-500">No peers connected</p>
+              </div>
             )}
           </CardContent>
         </Card>
-
-        {/* Cluster Peers and Pins */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Peers List */}
-          <Card>
-            <CardHeader>
-              <CardTitle icon={Users}>Cluster Peers</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {peers.length > 0 ? (
-                <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {peers.map((peer, index) => (
-                    <motion.div
-                      key={peer.id || index}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                      className="flex items-center gap-3 p-3 bg-dark-800 rounded-lg"
-                    >
-                      <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse flex-shrink-0"></div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-white text-sm font-medium truncate">{peer.peername || 'Unknown'}</p>
-                        <p className="text-gray-400 text-xs font-mono truncate">{peer.id || peer}</p>
-                      </div>
-                      <Badge variant="success">Active</Badge>
-                    </motion.div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <Users className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-                  <p className="text-gray-500">No peers connected</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Pinned Files */}
-          <Card>
-            <CardHeader>
-              <CardTitle icon={FileText}>Pinned Files in Cluster</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {pins.length > 0 ? (
-                <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {pins.map((pin, index) => {
-                    const cid = pin.cid || pin;
-                    
-                    const handleOpenFile = async (e) => {
-                      e.stopPropagation();
-                      
-                      console.log('Opening file with CID:', cid);
-                      console.log('Full pin object:', pin);
-                      
-                      const proxyUrl = `${API_URL}/docker-cluster/file/${cid}?api-key=${API_KEY}&inline=true`;
-                      window.open(proxyUrl, '_blank');
-                    };
-                    
-                    return (
-                      <motion.div
-                        key={cid || index}
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.05 }}
-                        className="flex items-center gap-3 p-3 bg-dark-800 rounded-lg hover:bg-dark-700 transition-colors"
-                      >
-                        <FileText className="w-5 h-5 text-primary-400 flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-white text-sm font-medium truncate">{pin.name || 'File'}</p>
-                          <p className="text-gray-400 text-xs font-mono truncate">{cid}</p>
-                        </div>
-                        <Button
-                          onClick={handleOpenFile}
-                          size="sm"
-                          variant="primary"
-                          className="text-xs px-3 py-1"
-                        >
-                          Open
-                        </Button>
-                        <Badge variant="info">Pinned</Badge>
-                      </motion.div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <FileText className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-                  <p className="text-gray-500">No files pinned in cluster</p>
-                  <p className="text-gray-600 text-sm mt-2">Upload files to see them here</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
       </div>
     </div>
   );

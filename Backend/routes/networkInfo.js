@@ -22,10 +22,10 @@ router.get('/', async (req, res) => {
     try {
       const result = await execPromise('docker exec ipfs-node-1 ipfs id -f="<id>"');
       const peerId = result.stdout.trim();
-      const publicIP = process.env.PUBLIC_IP || 'localhost';
+      const publicIP = process.env.PUBLIC_IP || '127.0.0.1';  // ✓ IP numeric, nu localhost
       bootstrapNode = `/ip4/${publicIP}/tcp/4001/p2p/${peerId}`;
     } catch (error) {
-      bootstrapNode = process.env.BOOTSTRAP_NODE || '/ip4/localhost/tcp/4001/p2p/12D3KooWQWwEb4DrNcW85vsp5brhxQaRk6bennUHYqMbMVDnABXV';
+      bootstrapNode = process.env.BOOTSTRAP_NODE || '/ip4/127.0.0.1/tcp/4001/p2p/12D3KooWQWwEb4DrNcW85vsp5brhxQaRk6bennUHYqMbMVDnABXV';
     }
     
     const networkConfig = {

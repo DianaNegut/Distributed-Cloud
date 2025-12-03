@@ -32,7 +32,7 @@ app.use(fileUpload({
   tempFileDir: os.tmpdir(),
   limits: { fileSize: 100 * 1024 * 1024 },
   abortOnLimit: true,
-  debug: true
+  debug: false 
 }));
 app.use(logger);
 

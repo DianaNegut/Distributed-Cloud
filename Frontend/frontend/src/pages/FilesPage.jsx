@@ -43,13 +43,14 @@ export default function FilesPage() {
   const loadFiles = async () => {
     setLoading(true);
     try {
-      const response = await axios.get(`${API_URL}/files/list`, {
+      const response = await axios.get(`${API_URL}/docker-cluster/pins`, {
         headers: { 'x-api-key': API_KEY }
       });
       
       if (response.data.success) {
-        setFiles(response.data.files);
-        toast.success(`${response.data.totalFiles} files loaded`);
+        const files = response.data.pins || [];
+        setFiles(files);
+        toast.success(`${files.length} files loaded from cluster`);
       }
     } catch (error) {
       toast.error('Error loading files');
@@ -102,14 +103,15 @@ export default function FilesPage() {
     formData.append('tags', tags);
 
     try {
-      const response = await axios.post(`${API_URL}/files/upload`, formData, {
+      const response = await axios.post(`${API_URL}/docker-cluster/add`, formData, {
         headers: {
           'x-api-key': API_KEY
         }
       });
 
       if (response.data.success) {
-        toast.success(`File uploaded: ${response.data.file.hash}`);
+        const cid = response.data.cid || response.data.file?.cid;
+        toast.success(`File uploaded to cluster! CID: ${cid}`);
         setSelectedFile(null);
         setDescription('');
         setTags('');
@@ -125,9 +127,9 @@ export default function FilesPage() {
 
   const handleDownload = async (file) => {
     try {
-      toast.loading(`Downloading ${file.name}...`);
+      toast.loading(`Downloading ${file.hash}...`);
       
-      const response = await axios.get(`${API_URL}/files/download/${file.hash}`, {
+      const response = await axios.get(`${API_URL}/docker-cluster/download/${file.hash}`, {
         headers: { 'x-api-key': API_KEY },
         responseType: 'blob'
       });
@@ -135,30 +137,31 @@ export default function FilesPage() {
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', file.name);
+      link.setAttribute('download', file.hash);
       document.body.appendChild(link);
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
 
       toast.dismiss();
-      toast.success(`Downloaded: ${file.name}`);
+      toast.success(`Downloaded: ${file.hash}`);
     } catch (error) {
+      toast.dismiss();
       toast.error('Download failed');
       console.error('Download error:', error);
     }
   };
 
   const handleDelete = async (file) => {
-    if (!window.confirm(`Delete "${file.name}"?`)) return;
+    if (!window.confirm(`Delete "${file.hash}"?`)) return;
 
     try {
-      const response = await axios.delete(`${API_URL}/files/delete/${file.hash}`, {
+      const response = await axios.delete(`${API_URL}/docker-cluster/pin/${file.hash}`, {
         headers: { 'x-api-key': API_KEY }
       });
 
       if (response.data.success) {
-        toast.success(`Deleted: ${file.name}`);
+        toast.success(`Deleted: ${file.hash}`);
         await loadFiles();
       }
     } catch (error) {

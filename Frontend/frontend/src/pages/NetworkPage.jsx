@@ -106,7 +106,11 @@ export default function NetworkPage() {
 
   useEffect(() => {
     checkNetworkStatus();
-    const interval = setInterval(checkNetworkStatus, 10000);
+    loadPeers();
+    const interval = setInterval(() => {
+      checkNetworkStatus();
+      loadPeers();
+    }, 10000);
     return () => clearInterval(interval);
   }, []);
 

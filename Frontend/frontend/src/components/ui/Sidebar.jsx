@@ -1,13 +1,13 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { LayoutDashboard, Network, FileText, Box, Server, ShoppingCart, Database, FileCheck } from 'lucide-react';
+import { LayoutDashboard, Network, FileText, Box, Server, ShoppingCart, Database, FileCheck, Coins } from 'lucide-react';
 
 const menuItems = [
   { path: '/', icon: LayoutDashboard, label: 'Panou Principal' },
   { path: '/marketplace', icon: ShoppingCart, label: 'Piață' },
   { path: '/provider', icon: Database, label: 'Oferire Stocare' },
-  { path: '/contracts', icon: FileCheck, label: 'Contracte' },
+  { path: '/contracts', icon: FileCheck, label: 'Contracte & Wallet' },
   { path: '/network', icon: Network, label: 'Rețea' },
   { path: '/files', icon: FileText, label: 'Fișiere' },
   { path: '/cluster', icon: Box, label: 'Cluster' },

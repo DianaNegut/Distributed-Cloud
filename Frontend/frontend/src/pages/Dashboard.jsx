@@ -15,6 +15,8 @@ import {
 import { StatCard } from '../components/ui/StatCard';
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
+import StorageChart from '../components/analytics/StorageChart';
+import ActivityChart from '../components/analytics/ActivityChart';
 import axios from 'axios';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
@@ -356,6 +358,23 @@ const Dashboard = () => {
           </div>
           </CardContent>
         </Card>
+
+        {/* Analytics Charts */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          <Card>
+            <CardContent className="pt-6">
+              <h2 className="text-xl font-bold text-white mb-4">Utilizare Stocare</h2>
+              <StorageChart />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6">
+              <h2 className="text-xl font-bold text-white mb-4">Activitate Fișiere</h2>
+              <ActivityChart />
+            </CardContent>
+          </Card>
+        </div>
 
         <Card>
           <CardContent className="pt-6">

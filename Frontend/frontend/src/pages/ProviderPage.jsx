@@ -8,14 +8,20 @@ import {
   Settings,
   Plus,
   Trash2,
-  CheckCircle
+  CheckCircle,
+  Coins,
+  BarChart3,
+  Shield
 } from 'lucide-react';
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Badge } from '../components/ui/Badge';
 import { StatCard } from '../components/ui/StatCard';
+import ProviderAnalytics from '../components/analytics/ProviderAnalytics';
+import BackupManager from '../components/backup/BackupManager';
 import axios from 'axios';
+import filecoinService from '../services/filecoinService';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
 const API_KEY = process.env.REACT_APP_API_KEY || 'supersecret';
@@ -25,6 +31,10 @@ const ProviderPage = () => {
   const [myPeerId, setMyPeerId] = useState('');
   const [loading, setLoading] = useState(true);
   const [showRegisterModal, setShowRegisterModal] = useState(false);
+  const [filBalance, setFilBalance] = useState(null);
+  const [walletLoading, setWalletLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState('providers'); // providers, analytics, backup
+  const currentUserId = 'user-' + Date.now().toString().substring(8);
   const [registerForm, setRegisterForm] = useState({
     peerId: '',
     name: '',
@@ -41,6 +51,7 @@ const ProviderPage = () => {
   useEffect(() => {
     loadProviders();
     loadMyPeerId();
+    loadFilBalance();
   }, []);
 
   const loadMyPeerId = async () => {
@@ -72,6 +83,20 @@ const ProviderPage = () => {
       console.error('Error loading providers:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadFilBalance = async () => {
+    try {
+      setWalletLoading(true);
+      const data = await filecoinService.getBalance(currentUserId);
+      if (data.success) {
+        setFilBalance(data.balance);
+      }
+    } catch (error) {
+      console.error('Error loading FIL balance:', error);
+    } finally {
+      setWalletLoading(false);
     }
   };
 
@@ -158,14 +183,67 @@ const ProviderPage = () => {
           </div>
         </motion.div>
 
+        {/* Tabs */}
+        <div className="flex space-x-4 mb-6 border-b border-gray-700">
+          <button
+            onClick={() => setActiveTab('providers')}
+            className={`px-4 py-3 font-medium transition-colors ${
+              activeTab === 'providers'
+                ? 'text-purple-500 border-b-2 border-purple-500'
+                : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            <div className="flex items-center space-x-2">
+              <Server className="w-5 h-5" />
+              <span>Provideri</span>
+            </div>
+          </button>
+          <button
+            onClick={() => setActiveTab('analytics')}
+            className={`px-4 py-3 font-medium transition-colors ${
+              activeTab === 'analytics'
+                ? 'text-purple-500 border-b-2 border-purple-500'
+                : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            <div className="flex items-center space-x-2">
+              <BarChart3 className="w-5 h-5" />
+              <span>Analytics</span>
+            </div>
+          </button>
+          <button
+            onClick={() => setActiveTab('backup')}
+            className={`px-4 py-3 font-medium transition-colors ${
+              activeTab === 'backup'
+                ? 'text-purple-500 border-b-2 border-purple-500'
+                : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            <div className="flex items-center space-x-2">
+              <Shield className="w-5 h-5" />
+              <span>Backup & Recovery</span>
+            </div>
+          </button>
+        </div>
+
+        {/* Tab Content */}
+        {activeTab === 'providers' && (
+        <div>
+
         {myProviders.length > 0 && (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-6">
               <StatCard
                 title="Venit Total"
-                value={`$${totalEarnings.toFixed(2)}`}
-                icon={DollarSign}
+                value={`${totalEarnings.toFixed(6)} FIL`}
+                icon={Coins}
                 color="success"
+              />
+              <StatCard
+                title="Wallet FIL"
+                value={walletLoading ? 'Se încarcă...' : `${(filBalance || 0).toFixed(6)} FIL`}
+                icon={DollarSign}
+                color="purple"
               />
               <StatCard
                 title="Capacitate Totală"
@@ -229,16 +307,23 @@ const ProviderPage = () => {
                         </div>
                         <div className="p-3 bg-dark-800/50 rounded-lg">
                           <p className="text-gray-400 text-xs mb-1">Preț</p>
-                          <p className="text-green-400 font-bold">
-                            ${provider.pricing?.pricePerGBPerMonth || 0.10}
-                          </p>
-                          <p className="text-xs text-gray-500">per GB/lună</p>
+                          <div className="flex items-center gap-1">
+                            <Coins className="w-4 h-4 text-green-400" />
+                            <p className="text-green-400 font-bold">
+                              {(provider.pricing?.pricePerGBPerMonth || 0.10).toFixed(6)}
+                            </p>
+                          </div>
+                          <p className="text-xs text-gray-500">FIL per GB/lună</p>
                         </div>
                         <div className="p-3 bg-dark-800/50 rounded-lg">
                           <p className="text-gray-400 text-xs mb-1">Venit Total</p>
-                          <p className="text-green-400 font-bold">
-                            ${(provider.earnings?.totalEarned || 0).toFixed(2)}
-                          </p>
+                          <div className="flex items-center gap-1">
+                            <Coins className="w-4 h-4 text-green-400" />
+                            <p className="text-green-400 font-bold">
+                              {(provider.earnings?.totalEarned || 0).toFixed(6)}
+                            </p>
+                          </div>
+                          <p className="text-xs text-gray-500">FIL câștigat</p>
                         </div>
                         <div className="p-3 bg-dark-800/50 rounded-lg">
                           <p className="text-gray-400 text-xs mb-1">Contracte</p>
@@ -450,6 +535,18 @@ const ProviderPage = () => {
               </div>
             </motion.div>
           </div>
+        )}
+        </div>
+        )}
+
+        {/* Analytics Tab */}
+        {activeTab === 'analytics' && (
+          <ProviderAnalytics providerId={myPeerId} />
+        )}
+
+        {/* Backup Tab */}
+        {activeTab === 'backup' && (
+          <BackupManager contracts={[]} />
         )}
       </div>
     </div>

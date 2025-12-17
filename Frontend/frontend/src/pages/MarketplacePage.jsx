@@ -15,6 +15,7 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Badge } from '../components/ui/Badge';
 import axios from 'axios';
+import filecoinService from '../services/filecoinService';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
 const API_KEY = process.env.REACT_APP_API_KEY || 'supersecret';
@@ -28,6 +29,8 @@ const MarketplacePage = () => {
   const [showRentModal, setShowRentModal] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState(null);
   const [myPeerId, setMyPeerId] = useState('');
+  const [filBalance, setFilBalance] = useState(null);
+  const [calculatedFilCost, setCalculatedFilCost] = useState(null);
   const [rentForm, setRentForm] = useState({
     renterId: '',
     renterName: '',
@@ -36,11 +39,25 @@ const MarketplacePage = () => {
     description: ''
   });
   const [calculatedPrice, setCalculatedPrice] = useState(null);
+  
+  const currentUserId = 'user-' + Date.now().toString().substring(8);
 
   useEffect(() => {
     loadProviders();
     loadMyPeerId();
+    loadFilBalance();
   }, [sortBy]);
+
+  const loadFilBalance = async () => {
+    try {
+      const data = await filecoinService.getBalance(currentUserId);
+      if (data.success) {
+        setFilBalance(data.balance);
+      }
+    } catch (error) {
+      console.error('Error loading FIL balance:', error);
+    }
+  };
 
   const loadMyPeerId = async () => {
     try {
@@ -96,6 +113,7 @@ const MarketplacePage = () => {
     if (!selectedProvider) return;
 
     try {
+      // Calculate USD price (legacy)
       const response = await axios.get(`${API_URL}/storage-contracts/calculate-price`, {
         headers: { 'x-api-key': API_KEY },
         params: {
@@ -105,6 +123,15 @@ const MarketplacePage = () => {
         }
       });
       setCalculatedPrice(response.data.pricing);
+      
+      // Calculate FIL cost
+      const filResponse = await filecoinService.calculateStorageCost(
+        rentForm.allocatedGB,
+        rentForm.durationMonths
+      );
+      if (filResponse.success) {
+        setCalculatedFilCost(filResponse);
+      }
     } catch (error) {
       console.error('Error calculating price:', error);
     }
@@ -122,6 +149,18 @@ const MarketplacePage = () => {
       return;
     }
 
+    // Validate FIL balance
+    if (calculatedFilCost && filBalance !== null) {
+      if (filBalance < calculatedFilCost.totalCost) {
+        alert(`Balanță insuficientă!\nNecesar: ${calculatedFilCost.totalCost.toFixed(6)} FIL\nDisponibil: ${filBalance.toFixed(6)} FIL\n\nLipsește: ${(calculatedFilCost.totalCost - filBalance).toFixed(6)} FIL`);
+        return;
+      }
+    }
+
+    if (!window.confirm(`Confirmă închirierea:\n\nStorage: ${rentForm.allocatedGB} GB\nDurată: ${rentForm.durationMonths} lună/luni\nCost: ${calculatedFilCost?.totalCost.toFixed(6) || '0.000000'} FIL\n\nFondurile vor fi blocate în escrow până la finalizarea contractului.`)) {
+      return;
+    }
+
     try {
       const response = await axios.post(`${API_URL}/storage-contracts/create`, {
         ...rentForm,
@@ -131,19 +170,13 @@ const MarketplacePage = () => {
       });
 
       if (response.data.success) {
-        alert(`Contract creat cu succes! ID: ${response.data.contract.id}\nPreț total: $${response.data.pricing.finalPrice}`);
+        alert(`✅ Contract creat cu succes!\n\nID: ${response.data.contract.id}\nCost: ${calculatedFilCost?.totalCost.toFixed(6) || 'N/A'} FIL\nEscrow: Deposited\n\nMergi la Contracte pentru a gestiona contractul.`);
         setShowRentModal(false);
         loadProviders();
-        
-        // Procesează plata automat (pentru demo)
-        await axios.post(`${API_URL}/storage-contracts/${response.data.contract.id}/pay`, {
-          paymentMethod: 'credits'
-        }, {
-          headers: { 'x-api-key': API_KEY }
-        });
+        loadFilBalance(); // Refresh balance
       }
     } catch (error) {
-      alert('Eroare la crearea contractului: ' + (error.response?.data?.error || error.message));
+      alert('❌ Eroare la crearea contractului: ' + (error.response?.data?.error || error.message));
     }
   };
 
@@ -151,6 +184,8 @@ const MarketplacePage = () => {
     setSelectedProvider(provider);
     setShowRentModal(true);
     setCalculatedPrice(null);
+    setCalculatedFilCost(null);
+    loadFilBalance(); // Refresh balance
     // Auto-completare cu peer ID-ul meu
     setRentForm(prev => ({
       ...prev,
@@ -267,7 +302,7 @@ const MarketplacePage = () => {
                     <div className="flex items-center justify-between">
                       <span className="text-gray-400">Preț:</span>
                       <span className="text-green-400 font-bold">
-                        ${provider.pricing?.pricePerGBPerMonth || 0.10}/GB/lună
+                        {(provider.pricing?.pricePerGBPerMonth || 0.10).toFixed(6)} FIL/GB/lună
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
@@ -396,30 +431,47 @@ const MarketplacePage = () => {
                   />
                 </div>
 
-                {calculatedPrice && (
+                {calculatedFilCost && (
                   <div className="p-4 bg-primary-500/10 rounded-lg border border-primary-500/30">
-                    <h3 className="text-white font-bold mb-2">Rezumat preț:</h3>
-                    <div className="space-y-1 text-sm">
+                    <h3 className="text-white font-bold mb-2">💰 Cost în FIL:</h3>
+                    <div className="space-y-2 text-sm">
                       <div className="flex justify-between text-gray-400">
-                        <span>Preț de bază:</span>
-                        <span>${calculatedPrice.basePrice}</span>
+                        <span>Storage:</span>
+                        <span>{calculatedFilCost.sizeGB} GB × {calculatedFilCost.months} luni</span>
                       </div>
-                      {calculatedPrice.discount > 0 && (
-                        <>
-                          <div className="flex justify-between text-green-400">
-                            <span>Reducere ({calculatedPrice.discount}%):</span>
-                            <span>-${calculatedPrice.discountAmount}</span>
-                          </div>
-                          <div className="border-t border-gray-600 pt-1"></div>
-                        </>
-                      )}
+                      <div className="flex justify-between text-gray-400">
+                        <span>Preț/GB/lună:</span>
+                        <span>{calculatedFilCost.pricePerGBPerMonth.toFixed(6)} FIL</span>
+                      </div>
+                      <div className="border-t border-gray-600 pt-2 mt-2"></div>
                       <div className="flex justify-between text-white font-bold text-lg">
-                        <span>Total de plată:</span>
-                        <span className="text-green-400">${calculatedPrice.finalPrice}</span>
+                        <span>Total cost:</span>
+                        <span className="text-primary-400">{calculatedFilCost.totalCost.toFixed(6)} FIL</span>
                       </div>
-                      <p className="text-xs text-gray-500 mt-2">
-                        ${calculatedPrice.pricePerGBPerMonth}/GB × {rentForm.allocatedGB}GB × {rentForm.durationMonths} luni
-                      </p>
+                      
+                      {/* Balance check */}
+                      <div className="mt-3 pt-3 border-t border-gray-600">
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-400">Balanța ta:</span>
+                          <span className={`font-semibold ${filBalance !== null && filBalance >= calculatedFilCost.totalCost ? 'text-green-400' : 'text-red-400'}`}>
+                            {filBalance !== null ? `${filBalance.toFixed(6)} FIL` : 'Se încarcă...'}
+                          </span>
+                        </div>
+                        {filBalance !== null && filBalance < calculatedFilCost.totalCost && (
+                          <div className="mt-2 p-2 bg-red-500/20 border border-red-500/50 rounded text-red-400 text-xs">
+                            ⚠️ Balanță insuficientă! Lipsesc {(calculatedFilCost.totalCost - filBalance).toFixed(6)} FIL
+                          </div>
+                        )}
+                        {filBalance !== null && filBalance >= calculatedFilCost.totalCost && (
+                          <div className="mt-2 p-2 bg-green-500/20 border border-green-500/50 rounded text-green-400 text-xs">
+                            ✓ Balanță suficientă! După plată vei avea {(filBalance - calculatedFilCost.totalCost).toFixed(6)} FIL
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="mt-2 p-2 bg-orange-500/20 border border-orange-500/50 rounded text-orange-300 text-xs">
+                        💡 Fondurile vor fi blocate în escrow până la finalizarea contractului
+                      </div>
                     </div>
                   </div>
                 )}

@@ -10,8 +10,8 @@ import {
   Trash2, 
   FileText, 
   RefreshCw,
-  File,
-  Image as ImageIcon,
+  File as FileIcon,
+  FileImage,
   Video,
   Music,
   Archive,
@@ -19,16 +19,23 @@ import {
   Info,
   HardDrive,
   AlertTriangle,
-  ShoppingCart
+  ShoppingCart,
+  Eye,
+  Share2
 } from 'lucide-react';
 import axios from 'axios';
 import toast, { Toaster } from 'react-hot-toast';
+import FileEncryption from '../utils/fileEncryption';
+import FileSearchFilter from '../components/filters/FileSearchFilter';
+import FilePreviewModal from '../components/modals/FilePreviewModal';
+import FileShareModal from '../components/modals/FileShareModal';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
 const API_KEY = process.env.REACT_APP_API_KEY || 'supersecret';
 
 export default function FilesPage() {
   const [files, setFiles] = useState([]);
+  const [filteredFiles, setFilteredFiles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
@@ -38,12 +45,79 @@ export default function FilesPage() {
   const [selectedFileInfo, setSelectedFileInfo] = useState(null);
   const [storageInfo, setStorageInfo] = useState(null);
   const [myPeerId, setMyPeerId] = useState('');
+  const [contracts, setContracts] = useState([]);
+  const [selectedContract, setSelectedContract] = useState(null);
+  const [encryptionEnabled, setEncryptionEnabled] = useState(true);
+  const [encryptionProgress, setEncryptionProgress] = useState({ percent: 0, message: '' });
+  const [previewFile, setPreviewFile] = useState(null);
+  const [shareFile, setShareFile] = useState(null);
   const fileInputRef = useRef(null);
+  
+  const currentUserId = 'user-' + Date.now().toString().substring(8);
 
   useEffect(() => {
     loadMyPeerId();
     loadFiles();
+    loadContracts();
   }, []);
+
+  const loadContracts = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/storage-contracts`, {
+        headers: { 'x-api-key': API_KEY }
+      });
+      
+      if (response.data.success) {
+        // Filter only active contracts
+        const activeContracts = (response.data.contracts || []).filter(c => c.status === 'active');
+        
+        // Load or generate encryption keys for contracts
+        for (const contract of activeContracts) {
+          // First, try to load existing key from localStorage
+          const storedKey = localStorage.getItem(`contract_key_${contract.id}`);
+          
+          if (storedKey) {
+            // Use existing key from localStorage
+            contract.encryption = {
+              enabled: true,
+              key: storedKey,
+              algorithm: 'AES-256-GCM',
+              createdAt: contract.encryption?.createdAt || new Date().toISOString()
+            };
+            console.log(`🔑 Loaded existing encryption key for contract ${contract.id.slice(-8)}`);
+          } else if (contract.encryption && contract.encryption.key) {
+            // Key exists in contract, save it to localStorage
+            localStorage.setItem(`contract_key_${contract.id}`, contract.encryption.key);
+            console.log(`💾 Saved encryption key to localStorage for contract ${contract.id.slice(-8)}`);
+          } else {
+            // Generate new key only if none exists
+            try {
+              const { keyString } = await FileEncryption.generateKey();
+              contract.encryption = {
+                enabled: true,
+                key: keyString,
+                algorithm: 'AES-256-GCM',
+                createdAt: new Date().toISOString()
+              };
+              localStorage.setItem(`contract_key_${contract.id}`, keyString);
+              console.log(`🔐 Generated NEW encryption key for contract ${contract.id.slice(-8)}`);
+            } catch (error) {
+              console.error('Error generating encryption key:', error);
+            }
+          }
+        }
+        
+        setContracts(activeContracts);
+        
+        // Auto-select first contract if available
+        if (activeContracts.length > 0 && !selectedContract) {
+          setSelectedContract(activeContracts[0]);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading contracts:', error);
+    }
+  };
 
   useEffect(() => {
     if (myPeerId && files.length > 0) {
@@ -171,22 +245,90 @@ export default function FilesPage() {
       return;
     }
 
-    // Verifică limita de stocare înainte de upload
-    if (storageInfo && selectedFile.size) {
-      const wouldUse = storageInfo.storage.usedBytes + selectedFile.size;
-      if (wouldUse > storageInfo.storage.limitBytes) {
-        const exceededMB = ((wouldUse - storageInfo.storage.limitBytes) / (1024 * 1024)).toFixed(2);
-        toast.error(`Limită de stocare depășită! Ai nevoie de încă ${exceededMB} MB. Achiziționează spațiu din Piață.`);
+    // Check if contract is selected
+    if (!selectedContract) {
+      toast.error('Selectează un contract activ pentru a încărca fișiere!');
+      return;
+    }
+
+    // Validate contract storage limits
+    const fileSizeGB = selectedFile.size / (1024 * 1024 * 1024);
+    const usedGB = selectedContract.storage.usedGB || 0;
+    const allocatedGB = selectedContract.storage.allocatedGB;
+    const availableGB = allocatedGB - usedGB;
+
+    if (fileSizeGB > availableGB) {
+      toast.error(`⚠️ Fișierul este prea mare!\n\nDimensiune fișier: ${fileSizeGB.toFixed(3)} GB\nSpațiu disponibil în contract: ${availableGB.toFixed(3)} GB\nLipsește: ${(fileSizeGB - availableGB).toFixed(3)} GB\n\nCreează un contract nou sau șterge fișiere vechi.`, { duration: 8000 });
+      return;
+    }
+
+    // Warning if close to limit
+    const usageAfterUpload = ((usedGB + fileSizeGB) / allocatedGB) * 100;
+    if (usageAfterUpload > 80 && usageAfterUpload < 90) {
+      toast('⚠️ Atenție: Vei folosi ' + usageAfterUpload.toFixed(1) + '% din contractul tău!', {
+        icon: '🟠',
+        duration: 5000
+      });
+    } else if (usageAfterUpload >= 90) {
+      toast.error('🔴 Spațiu critic: Vei folosi ' + usageAfterUpload.toFixed(1) + '% din contract!', { duration: 6000 });
+    }
+
+    setUploading(true);
+    let fileToUpload = selectedFile;
+    let encryptionMetadata = null;
+
+    // Encrypt file if enabled and contract has encryption key
+    if (encryptionEnabled && selectedContract.encryption && selectedContract.encryption.key) {
+      const toastId = toast.loading('🔒 Criptare fișier...');
+      
+      try {
+        console.log('Starting encryption...');
+        const cryptoKey = await FileEncryption.importKey(selectedContract.encryption.key);
+        console.log('Key imported successfully');
+        
+        const encryptionResult = await FileEncryption.encryptFile(
+          selectedFile,
+          cryptoKey,
+          null // Disable progress callback to isolate issue
+        );
+
+        console.log('Encryption complete:', encryptionResult);
+
+        fileToUpload = new File(
+          [encryptionResult.encryptedBlob],
+          selectedFile.name + '.encrypted',
+          { type: 'application/octet-stream' }
+        );
+
+        encryptionMetadata = {
+          encrypted: true,
+          iv: encryptionResult.iv,
+          originalName: encryptionResult.originalName,
+          originalSize: encryptionResult.originalSize,
+          algorithm: 'AES-256-GCM'
+        };
+
+        toast.dismiss(toastId);
+        toast.success(`✅ Fișier criptat (${(encryptionResult.encryptedSize / 1024 / 1024).toFixed(2)} MB)`);
+      } catch (error) {
+        console.error('Encryption error:', error);
+        toast.dismiss(toastId);
+        toast.error(`❌ Eroare la criptare: ${error.message}`);
+        setUploading(false);
+        setEncryptionProgress({ percent: 0, message: '' });
         return;
       }
     }
 
-    setUploading(true);
     const formData = new FormData();
-    formData.append('file', selectedFile);
+    formData.append('file', fileToUpload);
     formData.append('description', description);
     formData.append('tags', tags);
     formData.append('peerId', myPeerId);
+    formData.append('contractId', selectedContract.id);
+    if (encryptionMetadata) {
+      formData.append('encryption', JSON.stringify(encryptionMetadata));
+    }
 
     try {
       const response = await axios.post(`${API_URL}/docker-cluster/add`, formData, {
@@ -198,9 +340,38 @@ export default function FilesPage() {
 
       if (response.data.success) {
         const cid = response.data.cid || response.data.file?.cid;
-        toast.success(`Fișier încărcat cu succes! CID: ${cid}`);
+        const fileSizeGB = selectedFile.size / (1024 * 1024 * 1024);
         
-        // Afișează avertizare dacă există
+        // Update contract storage
+        try {
+          const fileMetadata = {
+            cid,
+            name: fileToUpload.name, // Use encrypted filename if encrypted
+            originalName: selectedFile.name, // Keep original name
+            size: selectedFile.size,
+            uploadedAt: new Date().toISOString(),
+            contractId: selectedContract.id
+          };
+          
+          // Add encryption metadata if file was encrypted
+          if (encryptionMetadata) {
+            fileMetadata.encryption = encryptionMetadata;
+          }
+          
+          await axios.patch(`${API_URL}/storage-contracts/${selectedContract.id}/storage`, {
+            usedGB: selectedContract.storage.usedGB + fileSizeGB,
+            files: [...(selectedContract.storage.files || []), fileMetadata]
+          }, {
+            headers: { 'x-api-key': API_KEY }
+          });
+        } catch (updateError) {
+          console.error('Error updating contract storage:', updateError);
+        }
+        
+        const encryptionStatus = encryptionMetadata ? ' 🔒 Criptat' : '';
+        toast.success(`✅ Fișier încărcat!${encryptionStatus}\nCID: ${cid}\nContract: ${selectedContract.id.slice(-8)}`, { duration: 5000 });
+        
+        // Display storage warnings
         if (response.data.storageWarning) {
           if (response.data.storageWarning.status === 'critical') {
             toast.error(response.data.storageWarning.message, { duration: 6000 });
@@ -215,8 +386,10 @@ export default function FilesPage() {
         setSelectedFile(null);
         setDescription('');
         setTags('');
+        setEncryptionProgress({ percent: 0, message: '' });
         await loadFiles();
         await loadStorageInfo();
+        await loadContracts(); // Refresh contracts
       }
     } catch (error) {
       if (error.response?.data?.storageExceeded) {
@@ -232,28 +405,113 @@ export default function FilesPage() {
   };
 
   const handleDownload = async (file) => {
+    const toastId = toast.loading(`📥 Descărcare ${file.name || file.hash}...`);
+    
     try {
-      toast.loading(`Downloading ${file.hash}...`);
-      
+      // Download encrypted file from IPFS
       const response = await axios.get(`${API_URL}/docker-cluster/download/${file.hash}`, {
         headers: { 'x-api-key': API_KEY },
         responseType: 'blob'
       });
 
-      const url = window.URL.createObjectURL(new Blob([response.data]));
+      let downloadBlob = response.data;
+      let downloadName = file.name || file.hash;
+
+      // Check if file is encrypted
+      const isEncrypted = file.name?.endsWith('.encrypted') || file.encryption?.encrypted;
+      
+      if (isEncrypted && file.encryption) {
+        try {
+          toast.dismiss(toastId);
+          const decryptToastId = toast.loading('🔓 Decriptare fișier...');
+          
+          console.log('Decrypting file:', file);
+          console.log('File encryption metadata:', file.encryption);
+          console.log('Available contracts:', contracts.length);
+          
+          // Find the contract that has the encryption key
+          let fileContract = contracts.find(c => 
+            c.id === file.contractId || 
+            c.storage?.files?.some(f => f.cid === file.hash || f.cid === file.cid)
+          );
+
+          // If not found, try to use the currently selected contract
+          if (!fileContract && selectedContract) {
+            console.log('Contract not found by ID, using selected contract');
+            fileContract = selectedContract;
+          }
+
+          // If still not found, reload contracts and try again
+          if (!fileContract) {
+            console.log('Reloading contracts to find the right one...');
+            await loadContracts();
+            fileContract = contracts.find(c => 
+              c.id === file.contractId || 
+              c.storage?.files?.some(f => f.cid === file.hash || f.cid === file.cid)
+            );
+          }
+
+          if (!fileContract || !fileContract.encryption || !fileContract.encryption.key) {
+            console.error('Contract not found or missing key:', fileContract);
+            toast.dismiss(decryptToastId);
+            toast.error('⚠️ Cheie de decriptare lipsă!\n\nAcest fișier a fost criptat cu o cheie care nu mai este disponibilă. Încearcă să ștergi și să reîncarci fișierul.', { duration: 8000 });
+            return;
+          }
+
+          console.log('Using contract for decryption:', fileContract.id);
+          console.log('Contract encryption key exists:', !!fileContract.encryption.key);
+
+          // Import decryption key
+          const cryptoKey = await FileEncryption.importKey(fileContract.encryption.key);
+          console.log('Key imported successfully');
+          
+          // Prepare external metadata
+          const externalMetadata = {
+            originalName: file.encryption.originalName || file.originalName,
+            originalSize: file.encryption.originalSize || file.size,
+            mimeType: file.mimetype || 'application/octet-stream'
+          };
+          
+          console.log('External metadata:', externalMetadata);
+          
+          // Decrypt file with external metadata
+          const decryptionResult = await FileEncryption.decryptFile(
+            downloadBlob,
+            cryptoKey,
+            file.encryption.iv,
+            externalMetadata
+          );
+
+          downloadBlob = decryptionResult.decryptedBlob;
+          downloadName = decryptionResult.metadata.originalName || file.encryption.originalName;
+          
+          toast.dismiss(decryptToastId);
+          toast.success('✅ Fișier decriptat cu succes!');
+          
+          console.log('Decryption successful:', decryptionResult.metadata);
+        } catch (decryptError) {
+          toast.dismiss();
+          toast.error(`❌ Eroare la decriptare: ${decryptError.message}`);
+          console.error('Decryption error:', decryptError);
+          return;
+        }
+      }
+
+      // Create download link
+      const url = window.URL.createObjectURL(downloadBlob);
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', file.hash);
+      link.setAttribute('download', downloadName);
       document.body.appendChild(link);
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
 
-      toast.dismiss();
-      toast.success(`Downloaded: ${file.hash}`);
+      toast.dismiss(toastId);
+      toast.success(`✅ Descărcat: ${downloadName}`);
     } catch (error) {
-      toast.dismiss();
-      toast.error('Download failed');
+      toast.dismiss(toastId);
+      toast.error('❌ Descărcare eșuată');
       console.error('Download error:', error);
     }
   };
@@ -279,7 +537,7 @@ export default function FilesPage() {
 
   const getFileIcon = (filename) => {
     const ext = filename.split('.').pop().toLowerCase();
-    if (['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp'].includes(ext)) return ImageIcon;
+    if (['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp'].includes(ext)) return FileImage;
     if (['mp4', 'avi', 'mov', 'mkv'].includes(ext)) return Video;
     if (['mp3', 'wav', 'ogg', 'flac'].includes(ext)) return Music;
     if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext)) return Archive;
@@ -393,6 +651,126 @@ export default function FilesPage() {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleUpload} className="space-y-4">
+                {/* Contract Selector */}
+                {contracts.length > 0 ? (
+                  <div className="space-y-2">
+                    <label className="text-gray-400 text-sm font-medium">
+                      📝 Selectează Contract *
+                    </label>
+                    <select
+                      value={selectedContract?.id || ''}
+                      onChange={(e) => {
+                        const contract = contracts.find(c => c.id === e.target.value);
+                        setSelectedContract(contract);
+                      }}
+                      className="w-full bg-dark-700 text-white px-4 py-2 rounded-lg border border-dark-600 focus:border-primary-500 focus:outline-none"
+                    >
+                      {contracts.map(contract => {
+                        const usagePercent = (contract.storage.usedGB / contract.storage.allocatedGB * 100).toFixed(1);
+                        const availableGB = (contract.storage.allocatedGB - contract.storage.usedGB).toFixed(2);
+                        return (
+                          <option key={contract.id} value={contract.id}>
+                            {contract.id.slice(-8)} • {availableGB} GB disponibili ({usagePercent}% folosit)
+                          </option>
+                        );
+                      })}
+                    </select>
+                    
+                    {selectedContract && (
+                      <div className={`p-3 rounded-lg border ${
+                        selectedContract.storage.usedGB / selectedContract.storage.allocatedGB >= 0.9 
+                          ? 'bg-red-500/10 border-red-500/30' 
+                          : selectedContract.storage.usedGB / selectedContract.storage.allocatedGB >= 0.8
+                          ? 'bg-yellow-500/10 border-yellow-500/30'
+                          : 'bg-green-500/10 border-green-500/30'
+                      }`}>
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="text-gray-400 text-xs">Stocare contract</span>
+                          <span className={`text-xs font-semibold ${
+                            selectedContract.storage.usedGB / selectedContract.storage.allocatedGB >= 0.9 ? 'text-red-400' :
+                            selectedContract.storage.usedGB / selectedContract.storage.allocatedGB >= 0.8 ? 'text-yellow-400' :
+                            'text-green-400'
+                          }`}>
+                            {selectedContract.storage.usedGB.toFixed(2)} / {selectedContract.storage.allocatedGB} GB
+                          </span>
+                        </div>
+                        <div className="w-full bg-dark-800 rounded-full h-1.5">
+                          <div
+                            className={`h-1.5 rounded-full transition-all ${
+                              selectedContract.storage.usedGB / selectedContract.storage.allocatedGB >= 0.9 ? 'bg-red-500' :
+                              selectedContract.storage.usedGB / selectedContract.storage.allocatedGB >= 0.8 ? 'bg-yellow-500' :
+                              'bg-green-500'
+                            }`}
+                            style={{ width: `${Math.min((selectedContract.storage.usedGB / selectedContract.storage.allocatedGB * 100), 100)}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+                    <p className="text-yellow-400 text-sm mb-2">⚠️ Nu ai contracte active!</p>
+                    <Button
+                      type="button"
+                      variant="primary"
+                      size="sm"
+                      onClick={() => window.location.href = '/marketplace'}
+                      className="w-full"
+                    >
+                      <ShoppingCart className="w-4 h-4 mr-2" />
+                      Cumpără Spațiu
+                    </Button>
+                  </div>
+                )}
+
+                {/* Encryption Toggle */}
+                {selectedContract && selectedContract.encryption && (
+                  <div className="p-3 bg-dark-700 rounded-lg border border-dark-600">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-white">🔐 Criptare End-to-End</span>
+                        <button
+                          type="button"
+                          onClick={() => setEncryptionEnabled(!encryptionEnabled)}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                            encryptionEnabled ? 'bg-green-500' : 'bg-gray-600'
+                          }`}
+                        >
+                          <span
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                              encryptionEnabled ? 'translate-x-6' : 'translate-x-1'
+                            }`}
+                          />
+                        </button>
+                      </div>
+                      <span className={`text-xs font-semibold ${
+                        encryptionEnabled ? 'text-green-400' : 'text-gray-500'
+                      }`}>
+                        {encryptionEnabled ? 'ACTIVAT' : 'DEZACTIVAT'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-400">
+                      {encryptionEnabled 
+                        ? '✓ Fișierele sunt criptate AES-256 înainte de upload. Nimeni, nici providerul, nu le poate citi.'
+                        : '⚠️ Fișierele vor fi stocate necriptate. Provider-ul le poate accesa.'}
+                    </p>
+                    {encryptionProgress.percent > 0 && encryptionProgress.percent < 100 && (
+                      <div className="mt-2">
+                        <div className="flex justify-between text-xs mb-1">
+                          <span className="text-gray-400">{encryptionProgress.message}</span>
+                          <span className="text-primary-400">{encryptionProgress.percent}%</span>
+                        </div>
+                        <div className="w-full bg-dark-800 rounded-full h-1.5">
+                          <div
+                            className="bg-primary-500 h-1.5 rounded-full transition-all"
+                            style={{ width: `${encryptionProgress.percent}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Drag & Drop Zone */}
                 <div
                   onDragEnter={handleDrag}
@@ -451,12 +829,21 @@ export default function FilesPage() {
                 <Button
                   type="submit"
                   loading={uploading}
-                  disabled={!selectedFile}
+                  disabled={!selectedFile || !selectedContract || contracts.length === 0}
                   icon={Upload}
                   className="w-full"
                 >
-                  Încărcare pe IPFS
+                  {!selectedContract && contracts.length > 0 ? 'Selectează Contract' : 
+                   contracts.length === 0 ? 'Lipsește Contract' :
+                   !selectedFile ? 'Selectează Fișier' :
+                   'Încărcare pe IPFS'}
                 </Button>
+                
+                {selectedFile && selectedContract && (
+                  <div className="text-xs text-gray-500 text-center">
+                    📦 Fișierul va fi salvat în contractul: {selectedContract.id.slice(-8)}
+                  </div>
+                )}
               </form>
             </CardContent>
           </Card>
@@ -476,14 +863,20 @@ export default function FilesPage() {
               </Button>
             </CardHeader>
             <CardContent>
+              {/* Search and Filter */}
+              <FileSearchFilter 
+                files={files} 
+                onFilterChange={setFilteredFiles}
+              />
+
               {loading ? (
                 <div className="flex items-center justify-center py-12">
                   <RefreshCw className="w-8 h-8 text-primary-500 animate-spin" />
                 </div>
-              ) : files.length > 0 ? (
-                <div className="space-y-3">
+              ) : (filteredFiles.length > 0 || files.length > 0) ? (
+                <div className="space-y-3 mt-4">
                   <AnimatePresence>
-                    {files.map((file, index) => {
+                    {(filteredFiles.length > 0 ? filteredFiles : files).map((file, index) => {
                       const FileIcon = getFileIcon(file.name);
                       return (
                         <motion.div
@@ -512,6 +905,20 @@ export default function FilesPage() {
 
                           <div className="flex gap-2">
                             <Button
+                              onClick={() => setPreviewFile(file)}
+                              variant="ghost"
+                              size="sm"
+                              icon={Eye}
+                              title="Preview"
+                            />
+                            <Button
+                              onClick={() => setShareFile(file)}
+                              variant="ghost"
+                              size="sm"
+                              icon={Share2}
+                              title="Share"
+                            />
+                            <Button
                               onClick={() => handleDownload(file)}
                               variant="ghost"
                               size="sm"
@@ -537,7 +944,7 @@ export default function FilesPage() {
                 </div>
               ) : (
                 <div className="text-center py-12">
-                  <File className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+                  <FileIcon className="w-16 h-16 text-gray-600 mx-auto mb-4" />
                   <p className="text-gray-500">Niciun fișier încărcat încă</p>
                   <p className="text-gray-600 text-sm mt-2">Încărcare primul fișier pentru a începe</p>
                 </div>
@@ -611,6 +1018,21 @@ export default function FilesPage() {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* File Preview Modal */}
+        <FilePreviewModal
+          isOpen={!!previewFile}
+          onClose={() => setPreviewFile(null)}
+          file={previewFile}
+          onDownload={handleDownload}
+        />
+
+        {/* File Share Modal */}
+        <FileShareModal
+          isOpen={!!shareFile}
+          onClose={() => setShareFile(null)}
+          file={shareFile}
+        />
       </div>
     </div>
   );

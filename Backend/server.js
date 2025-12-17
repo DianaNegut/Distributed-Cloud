@@ -23,6 +23,11 @@ const userStorageRoutes = require('./routes/userStorage');
 const filecoinRoutes = require('./routes/filecoin');
 const solidRoutes = require('./routes/solid');
 const authRoutes = require('./routes/auth');
+const didRoutes = require('./routes/did');
+const { router: integrityRoutes, integrityVerifier } = require('./routes/integrity');
+const { router: failoverRoutes, failoverManager, setupFailoverWebSocket } = require('./routes/failover');
+const ethereumRoutes = require('./routes/ethereum');
+const fileAccessRoutes = require('./routes/fileAccess');
 
 const filecoinService = require('./services/filecoinService');
 
@@ -60,6 +65,11 @@ app.use('/api/storage-contracts', storageContractsRoutes);
 app.use('/api/user-storage', userStorageRoutes);
 app.use('/api/filecoin', filecoinRoutes);
 app.use('/api/solid', solidRoutes);
+app.use('/api/did', didRoutes);
+app.use('/api/integrity', integrityRoutes);
+app.use('/api/failover', failoverRoutes);
+app.use('/api/ethereum', ethereumRoutes);
+app.use('/api/file-access', fileAccessRoutes);
 
 app.use((err, req, res, next) => {
   console.error('[ERROR]', err);
@@ -87,5 +97,51 @@ app.listen(PORT, async () => {
     console.log('[SERVER] Filecoin service initialized\n');
   } catch (error) {
     console.error('[SERVER] Filecoin initialization failed:', error.message);
+  }
+
+  // Inițializare DID System
+  try {
+    console.log('[SERVER] Decentralized Identity (DID) system initialized');
+    console.log(`[SERVER] DID API available at http://localhost:${PORT}/api/did\n`);
+  } catch (error) {
+    console.error('[SERVER] DID initialization failed:', error.message);
+  }
+
+  // Inițializare Integrity Verifier cu scheduler
+  try {
+    const INTEGRITY_CHECK_INTERVAL = process.env.INTEGRITY_CHECK_INTERVAL_HOURS || 24;
+    integrityVerifier.startPeriodicChecks(INTEGRITY_CHECK_INTERVAL * 60 * 60 * 1000);
+    console.log(`[SERVER] Data Integrity Verifier initialized`);
+    console.log(`[SERVER] Periodic checks every ${INTEGRITY_CHECK_INTERVAL} hours`);
+    
+    // Start auto-repair replication monitoring
+    const REPLICATION_CHECK_INTERVAL = process.env.REPLICATION_CHECK_INTERVAL_MINUTES || 30;
+    const MIN_REPLICAS = process.env.MIN_REPLICAS || 3;
+    integrityVerifier.startReplicationMonitoring(
+      REPLICATION_CHECK_INTERVAL * 60 * 1000,
+      MIN_REPLICAS
+    );
+    console.log(`[SERVER] Auto-repair monitoring enabled: ${REPLICATION_CHECK_INTERVAL}min intervals, min ${MIN_REPLICAS} replicas\n`);
+  } catch (error) {
+    console.error('[SERVER] Integrity Verifier initialization failed:', error.message);
+  }
+
+  // Inițializare Failover Manager
+  try {
+    const FAILOVER_CHECK_INTERVAL = process.env.FAILOVER_CHECK_INTERVAL_SECONDS || 30;
+    failoverManager.startHealthMonitoring(FAILOVER_CHECK_INTERVAL * 1000);
+    console.log(`[SERVER] Failover Manager initialized`);
+    console.log(`[SERVER] Health checks every ${FAILOVER_CHECK_INTERVAL} seconds\n`);
+  } catch (error) {
+    console.error('[SERVER] Failover Manager initialization failed:', error.message);
+  }
+
+  // Inițializare Ethereum Smart Contracts
+  try {
+    console.log('[SERVER] Ethereum Smart Contracts integration initialized');
+    console.log(`[SERVER] Network: ${process.env.ETHEREUM_NETWORK || 'sepolia-testnet'}`);
+    console.log(`[SERVER] Ethereum API available at http://localhost:${PORT}/api/ethereum\n`);
+  } catch (error) {
+    console.error('[SERVER] Ethereum integration failed:', error.message);
   }
 });

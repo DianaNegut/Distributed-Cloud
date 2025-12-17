@@ -6,6 +6,8 @@ const fsp = fs.promises;
 const { execPromise } = require('../utils/execPromise');
 const { ensureKuboInstalled } = require('../utils/ensureKuboInstalled');
 const { KUBO_PATH, IPFS_PATH } = require('../config/paths');
+const fileOwnership = require('../models/FileOwnership');
+const { requireAuth } = require('../middleware/solidAuth');
 
 const fileMetadataPath = path.join(IPFS_PATH, 'files-metadata.json');
 
@@ -28,9 +30,14 @@ function saveFilesMetadata(data) {
   }
 }
 
-router.post('/upload', async (req, res) => {
+router.post('/upload', requireAuth, async (req, res) => {
   console.log('[FILES] Procesare upload fisier...');
   try {
+    const webId = req.session?.webId;
+    if (!webId) {
+      return res.status(401).json({ success: false, error: 'Authentication required' });
+    }
+
     await ensureKuboInstalled();
 
     if (!req.files || !req.files.file) {
@@ -74,6 +81,13 @@ router.post('/upload', async (req, res) => {
       distributedToPeers: !isPrivate ? 0 : null
     };
     saveFilesMetadata(metadata);
+
+    // Register ownership
+    fileOwnership.registerFile(fileHash, webId, {
+      filename: uploadedFile.name,
+      size: uploadedFile.size,
+      mimeType: uploadedFile.mimetype
+    });
 
     console.log(`[FILES] ✓ Fisier adaugat cu succes: ${fileHash} (${isPrivate ? 'PRIVAT' : 'PUBLIC'})`);
     

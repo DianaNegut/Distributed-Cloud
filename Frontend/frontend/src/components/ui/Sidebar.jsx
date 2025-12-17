@@ -1,12 +1,13 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { LayoutDashboard, Network, FileText, Box as BoxIcon, Server, ShoppingCart, Database, FileCheck, Coins, User, LogOut } from 'lucide-react';
+import { LayoutDashboard, Network, FileText, Box as BoxIcon, Server, ShoppingCart, Database, FileCheck, Coins, User, LogOut, Activity } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 const menuItems = [
   { path: '/', icon: LayoutDashboard, label: 'Panou Principal' },
-  { path: '/solid-pods', icon: BoxIcon, label: 'Solid PODs', badge: 'NEW' },
+  { path: '/monitoring', icon: Activity, label: 'Monitoring', badge: 'NEW' },
+  { path: '/solid-pods', icon: BoxIcon, label: 'Solid PODs' },
   { path: '/marketplace', icon: ShoppingCart, label: 'Piață' },
   { path: '/provider', icon: Database, label: 'Oferire Stocare' },
   { path: '/contracts', icon: FileCheck, label: 'Contracte & Wallet' },

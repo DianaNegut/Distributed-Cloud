@@ -220,6 +220,72 @@ class DockerClusterClient {
     return null;
   }
 
+  /**
+   * Re-pin a CID with specified replication factor
+   * @param {string} cid - Content identifier
+   * @param {Object} options - Repin options
+   * @returns {Promise<Object>} Repin result
+   */
+  async repin(cid, options = {}) {
+    try {
+      const { replicationFactor = 3, name = '' } = options;
+      
+      console.log(`[DOCKER-CLUSTER-CLIENT] Repinning ${cid} with replication factor ${replicationFactor}`);
+
+      return await this.executeWithRetry(async (node) => {
+        // First unpin to ensure clean state
+        try {
+          await axios.post(`${node}/pins/${cid}`, {
+            method: 'DELETE'
+          }, {
+            timeout: this.timeout
+          });
+        } catch (e) {
+          // Ignore errors if already unpinned
+        }
+
+        // Re-pin with new replication factor
+        const response = await axios.post(`${node}/pins/${cid}`, {
+          replication_factor_min: replicationFactor,
+          replication_factor_max: replicationFactor,
+          name: name || `repin-${Date.now()}`
+        }, {
+          timeout: this.timeout,
+          headers: { 'Content-Type': 'application/json' }
+        });
+
+        if (response.status === 200 || response.status === 201) {
+          console.log(`[DOCKER-CLUSTER-CLIENT] ✓ Successfully repinned ${cid}`);
+          return {
+            success: true,
+            cid,
+            replicationFactor,
+            timestamp: new Date().toISOString()
+          };
+        }
+
+        throw new Error(`Repin failed with status ${response.status}`);
+      });
+    } catch (error) {
+      console.error(`[DOCKER-CLUSTER-CLIENT] Repin error for ${cid}:`, error.message);
+      return {
+        success: false,
+        cid,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * Set replication factor for a CID
+   * @param {string} cid - Content identifier
+   * @param {number} replicationFactor - Target replication factor
+   * @returns {Promise<Object>} Result
+   */
+  async setReplication(cid, replicationFactor) {
+    return this.repin(cid, { replicationFactor });
+  }
+
   getIPFSGateways() {
     return [
       'http://localhost:8080',

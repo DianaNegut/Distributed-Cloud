@@ -11,6 +11,7 @@ import NetworkPage from './pages/NetworkPage';
 import FilesPage from './pages/FilesPage';
 import ClusterPage from './pages/ClusterPage';
 import SolidPodsPage from './pages/SolidPodsPage';
+import MonitoringDashboard from './pages/MonitoringDashboard';
 import LoginPage from './pages/LoginPage';
 
 // Protected Route Component
@@ -100,6 +101,14 @@ function AppContent() {
           element={
             <ProtectedRoute>
               <SolidPodsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/monitoring"
+          element={
+            <ProtectedRoute>
+              <MonitoringDashboard />
             </ProtectedRoute>
           }
         />

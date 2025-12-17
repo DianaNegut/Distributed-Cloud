@@ -5,10 +5,19 @@ const https = require('https');
 const unzipper = require('unzipper');
 const { IPFS_BIN, KUBO_PATH } = require('../config/paths');
 
-async function ensureKuboInstalled() {
+let ipfsAvailable = false;
+
+async function ensureKuboInstalled(throwOnMissing = false) {
   if (fs.existsSync(IPFS_BIN)) {
     console.log('Kubo este deja instalat.');
-    return;
+    ipfsAvailable = true;
+    return true;
+  }
+
+  if (!throwOnMissing) {
+    console.log('[IPFS] Kubo not installed - will use public gateway fallback');
+    ipfsAvailable = false;
+    return false;
   }
 
   console.log('Kubo lipseste - se descarca automat...');
@@ -41,6 +50,12 @@ async function ensureKuboInstalled() {
   console.log(' Stergem arhiva temporara...');
   await fsp.unlink(zipPath).catch(() => {});
   console.log(' Kubo instalat cu succes!');
+  ipfsAvailable = true;
+  return true;
 }
 
-module.exports = { ensureKuboInstalled };
+function isIPFSAvailable() {
+  return ipfsAvailable;
+}
+
+module.exports = { ensureKuboInstalled, isIPFSAvailable };

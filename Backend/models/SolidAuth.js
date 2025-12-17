@@ -10,12 +10,16 @@ const crypto = require('crypto');
 const { IPFS_PATH } = require('../config/paths');
 
 const AUTH_FILE = path.join(IPFS_PATH, 'solid-auth.json');
+const SESSION_FILE = path.join(IPFS_PATH, 'solid-sessions.json');
 
 class SolidAuth {
   constructor() {
     this.users = new Map();
     this.sessions = new Map();
     this.loadData();
+    this.loadSessions();
+    // Cleanup expired sessions every hour
+    setInterval(() => this.cleanupExpiredSessions(), 60 * 60 * 1000);
   }
 
   /**
@@ -56,6 +60,65 @@ class SolidAuth {
     } catch (error) {
       console.error('[SOLID-AUTH] Error saving data:', error.message);
       throw error;
+    }
+  }
+
+  /**
+   * Load sessions from disk
+   */
+  loadSessions() {
+    try {
+      if (fs.existsSync(SESSION_FILE)) {
+        const data = JSON.parse(fs.readFileSync(SESSION_FILE, 'utf8'));
+        this.sessions = new Map(Object.entries(data.sessions || {}));
+        console.log(`[SOLID-AUTH] Loaded ${this.sessions.size} active sessions`);
+        this.cleanupExpiredSessions();
+      }
+    } catch (error) {
+      console.error('[SOLID-AUTH] Error loading sessions:', error.message);
+      this.sessions = new Map();
+    }
+  }
+
+  /**
+   * Save sessions to disk
+   */
+  saveSessions() {
+    try {
+      const dir = path.dirname(SESSION_FILE);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+
+      const data = {
+        version: '1.0',
+        lastUpdated: new Date().toISOString(),
+        sessions: Object.fromEntries(this.sessions)
+      };
+
+      fs.writeFileSync(SESSION_FILE, JSON.stringify(data, null, 2));
+    } catch (error) {
+      console.error('[SOLID-AUTH] Error saving sessions:', error.message);
+    }
+  }
+
+  /**
+   * Cleanup expired sessions
+   */
+  cleanupExpiredSessions() {
+    const now = new Date();
+    let cleaned = 0;
+    
+    for (const [token, session] of this.sessions.entries()) {
+      if (new Date(session.expiresAt) < now) {
+        this.sessions.delete(token);
+        cleaned++;
+      }
+    }
+
+    if (cleaned > 0) {
+      console.log(`[SOLID-AUTH] Cleaned up ${cleaned} expired sessions`);
+      this.saveSessions();
     }
   }
 
@@ -158,6 +221,7 @@ class SolidAuth {
     };
 
     this.sessions.set(sessionToken, session);
+    this.saveSessions();
 
     // Actualizează last login
     user.lastLogin = new Date().toISOString();
@@ -189,6 +253,7 @@ class SolidAuth {
     }
 
     this.sessions.delete(token);
+    this.saveSessions();
     console.log(`[SOLID-AUTH] User logged out: ${session.username}`);
     
     return { success: true };

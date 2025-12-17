@@ -5,7 +5,10 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "start:css": "community-solid-server -p 3002 -b http://localhost:3002/ -f ./solid-data -l info",
+    "start:css:ipfs": "node solid-server/start-css.js",
+    "start:all": "concurrently \"npm start\" \"npm run start:css\""
   },
   "keywords": [
     "ipfs",
@@ -16,10 +19,12 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@solid/community-server": "^7.1.7",
     "@zondax/filecoin-signing-tools": "^2.3.2",
     "axios": "^1.13.2",
     "body-parser": "^1.20.2",
     "check-disk-space": "^3.4.0",
+    "concurrently": "^8.2.2",
     "cors": "^2.8.5",
     "dotenv": "^16.6.1",
     "ethers": "^6.13.0",

@@ -3,6 +3,7 @@ const router = express.Router();
 const StorageContract = require('../models/StorageContract');
 const StorageProvider = require('../models/StorageProvider');
 const UserStorage = require('../models/UserStorage');
+const filecoinService = require('../services/filecoinService');
 
 router.get('/', (req, res) => {
   try {
@@ -39,7 +40,7 @@ router.get('/:id', (req, res) => {
   }
 });
 
-router.post('/create', (req, res) => {
+router.post('/create', async (req, res) => {
   console.log('[STORAGE-CONTRACTS] Creare contract nou...');
   try {
     const { 
@@ -104,6 +105,36 @@ router.post('/create', (req, res) => {
 
     console.log('[STORAGE-CONTRACTS] Pricing calculated:', pricing);
 
+    // Calculează cost în FIL
+    const filCost = filecoinService.calculateStorageCost(requestedGB, months, provider.pricing?.pricePerGBPerMonth);
+    console.log('[STORAGE-CONTRACTS] FIL cost:', filCost);
+
+    // Verifică balanță client
+    try {
+      const clientBalance = await filecoinService.getBalance(renterId);
+      if (clientBalance.balance < filCost.totalCost) {
+        return res.status(400).json({
+          success: false,
+          error: `Insufficient FIL balance. Available: ${clientBalance.balance} FIL, Required: ${filCost.totalCost} FIL`,
+          required: filCost.totalCost,
+          available: clientBalance.balance
+        });
+      }
+    } catch (error) {
+      console.warn('[STORAGE-CONTRACTS] Balance check failed, creating wallet:', error.message);
+      // Dacă nu există wallet, creează unul
+      await filecoinService.createUserWallet(renterId);
+      const newBalance = await filecoinService.getBalance(renterId);
+      if (newBalance.balance < filCost.totalCost) {
+        return res.status(400).json({
+          success: false,
+          error: `Insufficient FIL balance. Available: ${newBalance.balance} FIL, Required: ${filCost.totalCost} FIL`,
+          required: filCost.totalCost,
+          available: newBalance.balance
+        });
+      }
+    }
+
     const allocationResult = StorageProvider.allocateStorage(providerId, requestedGB);
     if (!allocationResult.success) {
       return res.status(400).json(allocationResult);
@@ -120,22 +151,46 @@ router.post('/create', (req, res) => {
       replicationFactor,
       slaUptimeMin,
       autoRenew: autoRenew === true,
-      pricePerGBPerMonth: pricing?.pricePerGBPerMonth || 0.10,
-      totalPrice: pricing?.finalPrice || 0,
-      basePrice: pricing?.basePrice || 0,
-      discount: pricing?.discount || 0,
-      discountAmount: pricing?.discountAmount || 0,
-      currency: pricing?.currency || 'USD'
+      pricePerGBPerMonth: filCost.pricePerGBPerMonth,
+      totalPrice: filCost.totalCost,
+      priceInFIL: filCost.totalCost,
+      basePrice: filCost.totalCost,
+      discount: 0,
+      discountAmount: 0,
+      currency: 'FIL'
     });
+
+    // Deposit în escrow
+    try {
+      const escrowResult = await filecoinService.depositEscrow(renterId, contract.id, filCost.totalCost);
+      console.log('[STORAGE-CONTRACTS] Escrow deposit:', escrowResult);
+
+      // Update contract cu info escrow
+      contract.payment.escrowStatus = 'deposited';
+      contract.payment.escrowAmount = filCost.totalCost;
+      contract.payment.escrowTxId = escrowResult.transaction.id;
+      contract.status = 'active'; // Contract devine activ după deposit
+    } catch (error) {
+      // Rollback allocation dacă deposit eșuează
+      StorageProvider.deallocateStorage(providerId, requestedGB);
+      console.error('[STORAGE-CONTRACTS] Escrow deposit failed:', error.message);
+      return res.status(500).json({
+        success: false,
+        error: `Failed to deposit escrow: ${error.message}`
+      });
+    }
 
     UserStorage.addContractStorage(renterId, contract.id, requestedGB);
     console.log(`[STORAGE-CONTRACTS] Stocare adaugata pentru ${renterId}: +${requestedGB}GB`);
 
     res.json({
       success: true,
-      message: 'Contract created successfully',
+      message: 'Contract created successfully with FIL payment',
       contract: contract,
-      pricing: pricing,
+      pricing: {
+        ...filCost,
+        escrowDeposit: filCost.totalCost
+      },
       warnings: warnings.length > 0 ? warnings : undefined
     });
   } catch (error) {
@@ -233,7 +288,7 @@ router.post('/:id/renew', (req, res) => {
   }
 });
 
-router.post('/:id/cancel', (req, res) => {
+router.post('/:id/cancel', async (req, res) => {
   console.log(`[STORAGE-CONTRACTS] Anulare contract ${req.params.id}...`);
   try {
     const { reason } = req.body;
@@ -249,6 +304,22 @@ router.post('/:id/cancel', (req, res) => {
       return res.status(400).json(result);
     }
 
+    // Refund escrow către client
+    if (contract.payment.escrowStatus === 'deposited' && contract.payment.escrowAmount > 0) {
+      try {
+        const refundResult = await filecoinService.refundEscrow(
+          contract.renterId, 
+          contract.id, 
+          contract.payment.escrowAmount
+        );
+        console.log('[STORAGE-CONTRACTS] Escrow refunded:', refundResult);
+        contract.payment.escrowStatus = 'refunded';
+      } catch (error) {
+        console.error('[STORAGE-CONTRACTS] Escrow refund failed:', error.message);
+        // Contract este anulat oricum, dar notifică eroarea
+      }
+    }
+
     StorageProvider.releaseStorage(contract.providerId, contract.storage.allocatedGB);
 
     UserStorage.removeContractStorage(contract.renterId, contract.id, contract.storage.allocatedGB);
@@ -256,8 +327,60 @@ router.post('/:id/cancel', (req, res) => {
 
     res.json({
       success: true,
-      message: 'Contract cancelled successfully',
+      message: 'Contract cancelled and escrow refunded',
       contract: result.contract
+    });
+  } catch (error) {
+    console.error('[STORAGE-CONTRACTS] Error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.post('/:id/complete', async (req, res) => {
+  console.log(`[STORAGE-CONTRACTS] Finalizare contract ${req.params.id}...`);
+  try {
+    const contract = StorageContract.getContract(req.params.id);
+    if (!contract) {
+      return res.status(404).json({ success: false, error: 'Contract not found' });
+    }
+
+    if (contract.status !== 'active') {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Only active contracts can be completed' 
+      });
+    }
+
+    // Release escrow către provider
+    if (contract.payment.escrowStatus === 'deposited' && contract.payment.escrowAmount > 0) {
+      try {
+        const releaseResult = await filecoinService.releaseEscrow(
+          contract.providerId, 
+          contract.id, 
+          contract.payment.escrowAmount
+        );
+        console.log('[STORAGE-CONTRACTS] Escrow released to provider:', releaseResult);
+        contract.payment.escrowStatus = 'released';
+        contract.payment.status = 'paid';
+        contract.payment.paidAmount = contract.payment.escrowAmount;
+        contract.payment.paymentDate = new Date().toISOString();
+      } catch (error) {
+        console.error('[STORAGE-CONTRACTS] Escrow release failed:', error.message);
+        return res.status(500).json({
+          success: false,
+          error: `Failed to release escrow: ${error.message}`
+        });
+      }
+    }
+
+    // Update contract status
+    StorageContract.updateContractStatus(contract.id, 'completed');
+    StorageProvider.updateEarnings(contract.providerId, contract.payment.escrowAmount);
+
+    res.json({
+      success: true,
+      message: 'Contract completed and payment released to provider',
+      contract: contract
     });
   } catch (error) {
     console.error('[STORAGE-CONTRACTS] Error:', error.message);
@@ -277,7 +400,7 @@ router.post('/:id/pay', (req, res) => {
 
     const result = StorageContract.processPayment(req.params.id, {
       amount: contract.pricing.totalPrice,
-      method: paymentMethod || 'credits',
+      method: paymentMethod || 'filecoin',
       transactionId: transactionId
     });
 
@@ -322,6 +445,43 @@ router.get('/calculate-price', (req, res) => {
     res.json({
       success: true,
       pricing: pricing
+    });
+  } catch (error) {
+    console.error('[STORAGE-CONTRACTS] Error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.patch('/:id/storage', (req, res) => {
+  console.log('[STORAGE-CONTRACTS] Actualizare storage contract:', req.params.id);
+  try {
+    const contract = StorageContract.getContract(req.params.id);
+    if (!contract) {
+      return res.status(404).json({ success: false, error: 'Contract not found' });
+    }
+
+    const { usedGB, files } = req.body;
+
+    if (usedGB !== undefined) {
+      if (usedGB > contract.storage.allocatedGB) {
+        return res.status(400).json({ 
+          success: false, 
+          error: `Storage limit exceeded. Allocated: ${contract.storage.allocatedGB}GB, Trying to use: ${usedGB}GB` 
+        });
+      }
+      contract.storage.usedGB = usedGB;
+    }
+
+    if (files !== undefined) {
+      contract.storage.files = files;
+    }
+
+    contract.updatedAt = new Date().toISOString();
+
+    res.json({
+      success: true,
+      message: 'Contract storage updated',
+      contract: contract
     });
   } catch (error) {
     console.error('[STORAGE-CONTRACTS] Error:', error.message);

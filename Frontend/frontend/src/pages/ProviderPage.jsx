@@ -22,21 +22,20 @@ import ProviderAnalytics from '../components/analytics/ProviderAnalytics';
 import BackupManager from '../components/backup/BackupManager';
 import axios from 'axios';
 import filecoinService from '../services/filecoinService';
+import { useAuth } from '../contexts/AuthContext';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
 const API_KEY = process.env.REACT_APP_API_KEY || 'supersecret';
 
 const ProviderPage = () => {
+  const { user, sessionToken } = useAuth();
   const [providers, setProviders] = useState([]);
-  const [myPeerId, setMyPeerId] = useState('');
   const [loading, setLoading] = useState(true);
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [filBalance, setFilBalance] = useState(null);
   const [walletLoading, setWalletLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('providers'); // providers, analytics, backup
-  const currentUserId = 'user-' + Date.now().toString().substring(8);
   const [registerForm, setRegisterForm] = useState({
-    peerId: '',
     name: '',
     description: '',
     totalCapacityGB: 50,
@@ -50,33 +49,17 @@ const ProviderPage = () => {
 
   useEffect(() => {
     loadProviders();
-    loadMyPeerId();
     loadFilBalance();
-  }, []);
-
-  const loadMyPeerId = async () => {
-    try {
-      const response = await axios.get(`${API_URL}/status`, {
-        headers: { 'x-api-key': API_KEY }
-      });
-      console.log('[PROVIDER] Peer ID response:', response.data);
-      
-      const peerId = response.data?.data?.ID || response.data?.id || response.data?.peerId;
-      
-      if (peerId) {
-        setMyPeerId(peerId);
-        setRegisterForm(prev => ({ ...prev, peerId: peerId }));
-      }
-    } catch (error) {
-      console.error('Error loading peer ID:', error);
-    }
-  };
+  }, [user]);
 
   const loadProviders = async () => {
     try {
       setLoading(true);
       const response = await axios.get(`${API_URL}/storage-providers`, {
-        headers: { 'x-api-key': API_KEY }
+        headers: { 
+          'x-api-key': API_KEY,
+          'x-session-token': sessionToken
+        }
       });
       setProviders(response.data.providers || []);
     } catch (error) {
@@ -87,9 +70,10 @@ const ProviderPage = () => {
   };
 
   const loadFilBalance = async () => {
+    if (!user) return;
     try {
       setWalletLoading(true);
-      const data = await filecoinService.getBalance(currentUserId);
+      const data = await filecoinService.getBalance(user.username);
       if (data.success) {
         setFilBalance(data.balance);
       }
@@ -101,7 +85,7 @@ const ProviderPage = () => {
   };
 
   const handleRegister = async () => {
-    if (!registerForm.peerId || !registerForm.name || !registerForm.totalCapacityGB) {
+    if (!user || !registerForm.name || !registerForm.totalCapacityGB) {
       alert('Te rog completează toate câmpurile obligatorii!');
       return;
     }
@@ -109,11 +93,15 @@ const ProviderPage = () => {
     try {
       const response = await axios.post(`${API_URL}/storage-providers/register`, {
         ...registerForm,
+        peerId: user.username,
         totalCapacityGB: parseFloat(registerForm.totalCapacityGB),
         pricePerGBPerMonth: parseFloat(registerForm.pricePerGBPerMonth),
         uptimeGuarantee: parseFloat(registerForm.uptimeGuarantee)
       }, {
-        headers: { 'x-api-key': API_KEY }
+        headers: { 
+          'x-api-key': API_KEY,
+          'x-session-token': sessionToken
+        }
       });
 
       if (response.data.success) {
@@ -121,7 +109,6 @@ const ProviderPage = () => {
         setShowRegisterModal(false);
         loadProviders();
         setRegisterForm({
-          peerId: myPeerId,
           name: '',
           description: '',
           totalCapacityGB: 50,
@@ -143,7 +130,10 @@ const ProviderPage = () => {
 
     try {
       await axios.delete(`${API_URL}/storage-providers/${providerId}`, {
-        headers: { 'x-api-key': API_KEY }
+        headers: { 
+          'x-api-key': API_KEY,
+          'x-session-token': sessionToken
+        }
       });
       alert('Provider șters cu succes!');
       loadProviders();
@@ -152,7 +142,7 @@ const ProviderPage = () => {
     }
   };
 
-  const myProviders = providers.filter(p => p.peerId === myPeerId);
+  const myProviders = user ? providers.filter(p => p.peerId === user.username) : [];
   const totalEarnings = myProviders.reduce((sum, p) => sum + (p.earnings?.totalEarned || 0), 0);
   const totalCapacity = myProviders.reduce((sum, p) => sum + p.capacity.totalGB, 0);
   const totalUsed = myProviders.reduce((sum, p) => sum + p.capacity.usedGB, 0);
@@ -404,18 +394,13 @@ const ProviderPage = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="md:col-span-2">
-                  <label className="block text-gray-400 mb-2">Peer ID * {myPeerId ? '(auto-completat)' : '(se încarcă...)'}</label>
+                  <label className="block text-gray-400 mb-2">Username *</label>
                   <Input
-                    value={registerForm.peerId}
-                    onChange={(e) => setRegisterForm({ ...registerForm, peerId: e.target.value })}
-                    placeholder="QmXxxx... sau introdu manual"
+                    value={user?.username || ''}
+                    disabled
+                    className="bg-dark-700"
                   />
-                  {myPeerId && (
-                    <p className="text-xs text-green-400 mt-1">✓ Peer ID detectat automat</p>
-                  )}
-                  {!myPeerId && (
-                    <p className="text-xs text-yellow-400 mt-1">Asigură-te că backend-ul rulează și că IPFS este activ</p>
-                  )}
+                  <p className="text-xs text-green-400 mt-1">✓ Vei fi înregistrat ca provider cu username-ul tău</p>
                 </div>
 
                 <div className="md:col-span-2">
@@ -540,8 +525,8 @@ const ProviderPage = () => {
         )}
 
         {/* Analytics Tab */}
-        {activeTab === 'analytics' && (
-          <ProviderAnalytics providerId={myPeerId} />
+        {activeTab === 'analytics' && user && (
+          <ProviderAnalytics providerId={user.username} />
         )}
 
         {/* Backup Tab */}

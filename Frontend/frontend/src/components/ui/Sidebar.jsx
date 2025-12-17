@@ -1,16 +1,18 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { LayoutDashboard, Network, FileText, Box, Server, ShoppingCart, Database, FileCheck, Coins } from 'lucide-react';
+import { LayoutDashboard, Network, FileText, Box as BoxIcon, Server, ShoppingCart, Database, FileCheck, Coins, User, LogOut } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
 
 const menuItems = [
   { path: '/', icon: LayoutDashboard, label: 'Panou Principal' },
+  { path: '/solid-pods', icon: BoxIcon, label: 'Solid PODs', badge: 'NEW' },
   { path: '/marketplace', icon: ShoppingCart, label: 'Piață' },
   { path: '/provider', icon: Database, label: 'Oferire Stocare' },
   { path: '/contracts', icon: FileCheck, label: 'Contracte & Wallet' },
   { path: '/network', icon: Network, label: 'Rețea' },
   { path: '/files', icon: FileText, label: 'Fișiere' },
-  { path: '/cluster', icon: Box, label: 'Cluster' },
+  { path: '/cluster', icon: BoxIcon, label: 'Cluster' },
 ];
 
 export const Sidebar = () => {
@@ -68,8 +70,22 @@ export const Sidebar = () => {
 
       <div className="p-4 border-t border-dark-700">
         <div className="px-4 py-3 bg-dark-800 rounded-xl">
-          <p className="text-xs text-gray-400">Versiune 1.0.0</p>
-          <p className="text-xs text-gray-500 mt-1">© 2025 IPFS Cloud</p>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs text-gray-400">Logged in as:</p>
+            <button
+              onClick={() => {
+                localStorage.clear();
+                window.location.href = '/login';
+              }}
+              className="text-xs text-red-400 hover:text-red-300"
+            >
+              Logout
+            </button>
+          </div>
+          <p className="text-xs text-white font-semibold truncate">
+            @{localStorage.getItem('username') || 'unknown'}
+          </p>
+          <p className="text-xs text-gray-500 mt-2">© 2025 IPFS Cloud</p>
         </div>
       </div>
     </motion.div>

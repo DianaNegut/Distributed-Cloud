@@ -17,12 +17,14 @@ import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import StorageChart from '../components/analytics/StorageChart';
 import ActivityChart from '../components/analytics/ActivityChart';
+import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
 const API_KEY = process.env.REACT_APP_API_KEY || 'supersecret';
 
 const Dashboard = () => {
+  const { user, sessionToken } = useAuth();
   const [stats, setStats] = useState({
     totalFiles: 0,
     totalPeers: 0,
@@ -33,40 +35,25 @@ const Dashboard = () => {
     totalStorageGB: 0,
     availableStorageGB: 0
   });
-  const [myPeerId, setMyPeerId] = useState('');
   const [userStorage, setUserStorage] = useState(null);
 
   useEffect(() => {
-    loadMyPeerId();
-    loadDashboardData();
-    const interval = setInterval(loadDashboardData, 10000);
-    return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
-    if (myPeerId) {
+    if (user) {
+      loadDashboardData();
       loadUserStorage();
+      const interval = setInterval(loadDashboardData, 10000);
+      return () => clearInterval(interval);
     }
-  }, [myPeerId]);
-
-  const loadMyPeerId = async () => {
-    try {
-      const response = await axios.get(`${API_URL}/status`, {
-        headers: { 'x-api-key': API_KEY }
-      });
-      const peerId = response.data?.data?.ID || response.data?.id || response.data?.peerId || 'default-user';
-      setMyPeerId(peerId);
-    } catch (error) {
-      console.error('Error loading peer ID:', error);
-      setMyPeerId('default-user');
-    }
-  };
+  }, [user]);
 
   const loadUserStorage = async () => {
-    if (!myPeerId) return;
+    if (!user) return;
     try {
-      const response = await axios.get(`${API_URL}/user-storage/${myPeerId}`, {
-        headers: { 'x-api-key': API_KEY }
+      const response = await axios.get(`${API_URL}/user-storage/${user.username}`, {
+        headers: { 
+          'x-api-key': API_KEY,
+          'x-session-token': sessionToken
+        }
       });
       if (response.data.success) {
         setUserStorage(response.data);

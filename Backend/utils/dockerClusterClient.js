@@ -231,4 +231,6 @@ class DockerClusterClient {
   }
 }
 
-module.exports = new DockerClusterClient();
+// Export both the class and a singleton instance
+module.exports = DockerClusterClient;
+module.exports.default = new DockerClusterClient();

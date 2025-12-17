@@ -48,7 +48,8 @@ class StorageContract {
       pricing: {
         pricePerGBPerMonth: contractData.pricePerGBPerMonth || 0.10,
         totalPrice: contractData.totalPrice || 0,
-        currency: contractData.currency || 'USD',
+        currency: contractData.currency || 'FIL',
+        priceInFIL: contractData.priceInFIL || (contractData.allocatedGB * (contractData.pricePerGBPerMonth || 0.10) * (contractData.durationMonths || 1)),
         basePrice: contractData.basePrice || 0,
         discount: contractData.discount || 0,
         discountAmount: contractData.discountAmount || 0
@@ -57,8 +58,11 @@ class StorageContract {
         status: 'pending',
         paidAmount: 0,
         paymentDate: null,
-        paymentMethod: 'credits',
-        transactionId: null
+        paymentMethod: 'filecoin',
+        transactionId: null,
+        escrowStatus: 'pending', // pending, deposited, released, refunded
+        escrowAmount: 0,
+        escrowTxId: null
       },
       terms: {
         startDate: startDate.toISOString(),

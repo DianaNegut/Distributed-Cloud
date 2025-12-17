@@ -20,6 +20,11 @@ const networkInfoRoutes = require('./routes/networkInfo');
 const storageProvidersRoutes = require('./routes/storageProviders');
 const storageContractsRoutes = require('./routes/storageContracts');
 const userStorageRoutes = require('./routes/userStorage');
+const filecoinRoutes = require('./routes/filecoin');
+const solidRoutes = require('./routes/solid');
+const authRoutes = require('./routes/auth');
+
+const filecoinService = require('./services/filecoinService');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -40,6 +45,7 @@ app.use(logger);
 app.use('/api/health', healthRoutes);
 app.use('/api/bootstrap-info', bootstrapRoutes);
 app.use('/api/join-network', joinRoutes);
+app.use('/api/auth', authRoutes);
 
 app.use(auth);
 app.use('/api/status', statusRoutes);
@@ -52,6 +58,8 @@ app.use('/api/network-info', networkInfoRoutes);
 app.use('/api/storage-providers', storageProvidersRoutes);
 app.use('/api/storage-contracts', storageContractsRoutes);
 app.use('/api/user-storage', userStorageRoutes);
+app.use('/api/filecoin', filecoinRoutes);
+app.use('/api/solid', solidRoutes);
 
 app.use((err, req, res, next) => {
   console.error('[ERROR]', err);
@@ -68,8 +76,16 @@ app.use((req, res) => {
   });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`\n[SERVER] Pornit pe http://localhost:${PORT}`);
   console.log(`[SERVER] API disponibil la http://localhost:${PORT}/api`);
   console.log(`[SERVER] API Key: ${process.env.API_KEY || 'supersecret'}\n`);
+  
+  // Inițializare Filecoin service
+  try {
+    await filecoinService.initialize();
+    console.log('[SERVER] Filecoin service initialized\n');
+  } catch (error) {
+    console.error('[SERVER] Filecoin initialization failed:', error.message);
+  }
 });

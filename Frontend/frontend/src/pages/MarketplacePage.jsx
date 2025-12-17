@@ -14,6 +14,7 @@ import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Badge } from '../components/ui/Badge';
+import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
 import filecoinService from '../services/filecoinService';
 
@@ -21,6 +22,7 @@ const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
 const API_KEY = process.env.REACT_APP_API_KEY || 'supersecret';
 
 const MarketplacePage = () => {
+  const { user, sessionToken } = useAuth();
   const [providers, setProviders] = useState([]);
   const [filteredProviders, setFilteredProviders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -28,48 +30,31 @@ const MarketplacePage = () => {
   const [sortBy, setSortBy] = useState('space');
   const [showRentModal, setShowRentModal] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState(null);
-  const [myPeerId, setMyPeerId] = useState('');
   const [filBalance, setFilBalance] = useState(null);
   const [calculatedFilCost, setCalculatedFilCost] = useState(null);
   const [rentForm, setRentForm] = useState({
-    renterId: '',
-    renterName: '',
     allocatedGB: 10,
     durationMonths: 1,
     description: ''
   });
   const [calculatedPrice, setCalculatedPrice] = useState(null);
-  
-  const currentUserId = 'user-' + Date.now().toString().substring(8);
 
   useEffect(() => {
-    loadProviders();
-    loadMyPeerId();
-    loadFilBalance();
-  }, [sortBy]);
+    if (user) {
+      loadProviders();
+      loadFilBalance();
+    }
+  }, [sortBy, user]);
 
   const loadFilBalance = async () => {
+    if (!user) return;
     try {
-      const data = await filecoinService.getBalance(currentUserId);
+      const data = await filecoinService.getBalance(user.username);
       if (data.success) {
         setFilBalance(data.balance);
       }
     } catch (error) {
       console.error('Error loading FIL balance:', error);
-    }
-  };
-
-  const loadMyPeerId = async () => {
-    try {
-      const response = await axios.get(`${API_URL}/status`, {
-        headers: { 'x-api-key': API_KEY }
-      });
-      const peerId = response.data?.data?.ID || response.data?.id || response.data?.peerId;
-      if (peerId) {
-        setMyPeerId(peerId);
-      }
-    } catch (error) {
-      console.error('Error loading peer ID:', error);
     }
   };
 
@@ -81,7 +66,10 @@ const MarketplacePage = () => {
     try {
       setLoading(true);
       const response = await axios.get(`${API_URL}/storage-providers`, {
-        headers: { 'x-api-key': API_KEY },
+        headers: { 
+          'x-api-key': API_KEY,
+          'x-session-token': sessionToken
+        },
         params: { 
           status: 'active',
           sortBy: sortBy 
@@ -144,8 +132,8 @@ const MarketplacePage = () => {
   }, [rentForm.allocatedGB, rentForm.durationMonths]);
 
   const handleRent = async () => {
-    if (!rentForm.renterId || !rentForm.renterName) {
-      alert('Te rog completează Renter ID și Nume!');
+    if (!user) {
+      alert('Trebuie să fii autentificat pentru a închiria spațiu!');
       return;
     }
 
@@ -164,9 +152,14 @@ const MarketplacePage = () => {
     try {
       const response = await axios.post(`${API_URL}/storage-contracts/create`, {
         ...rentForm,
+        renterId: user.username,
+        renterName: user.username,
         providerId: selectedProvider.id
       }, {
-        headers: { 'x-api-key': API_KEY }
+        headers: { 
+          'x-api-key': API_KEY,
+          'x-session-token': sessionToken
+        }
       });
 
       if (response.data.success) {
@@ -186,12 +179,6 @@ const MarketplacePage = () => {
     setCalculatedPrice(null);
     setCalculatedFilCost(null);
     loadFilBalance(); // Refresh balance
-    // Auto-completare cu peer ID-ul meu
-    setRentForm(prev => ({
-      ...prev,
-      renterId: myPeerId || '',
-      renterName: prev.renterName || 'User'
-    }));
   };
 
   if (loading) {
@@ -372,24 +359,13 @@ const MarketplacePage = () => {
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-gray-400 mb-2">ID Chiriaș * (auto-completat cu Peer ID)</label>
+                  <label className="block text-gray-400 mb-2">Utilizator *</label>
                   <Input
-                    placeholder="Ex: user-123"
-                    value={rentForm.renterId}
-                    onChange={(e) => setRentForm({ ...rentForm, renterId: e.target.value })}
+                    value={user?.username || ''}
+                    disabled
+                    className="bg-dark-700"
                   />
-                  {myPeerId && (
-                    <p className="text-xs text-gray-500 mt-1">Peer ID detectat: {myPeerId.slice(0, 20)}...</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-gray-400 mb-2">Numele tău *</label>
-                  <Input
-                    placeholder="Ex: Ion Popescu"
-                    value={rentForm.renterName}
-                    onChange={(e) => setRentForm({ ...rentForm, renterName: e.target.value })}
-                  />
+                  <p className="text-xs text-green-400 mt-1">✓ Autentificat ca {user?.username}</p>
                 </div>
 
                 <div>

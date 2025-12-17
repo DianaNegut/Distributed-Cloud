@@ -3,7 +3,8 @@ const router = express.Router();
 const FormData = require('form-data');
 const fs = require('fs');
 const path = require('path');
-const clusterClient = require('../utils/dockerClusterClient');
+const DockerClusterClient = require('../utils/dockerClusterClient');
+const clusterClient = DockerClusterClient.default;
 const { IPFS_PATH } = require('../config/paths');
 const UserStorage = require('../models/UserStorage');
 
@@ -176,20 +177,54 @@ router.post('/add', async (req, res) => {
 
     console.log(`[DOCKER-CLUSTER] Fisier adaugat cu CID: ${cid}`);
 
+    // Record upload
     UserStorage.recordUpload(peerId, cid, uploadedFile.size, uploadedFile.name);
 
+    // Clean up temp file
     if (fs.existsSync(tempPath)) {
       fs.unlinkSync(tempPath);
     }
 
+    // Configure replication (default: 3 copies for redundancy)
+    const replicationFactor = parseInt(req.body.replicationFactor) || 3;
+    console.log(`[DOCKER-CLUSTER] 📋 Configurare replicare: ${replicationFactor} copii...`);
+
+    try {
+      // Update pin with replication settings
+      await clusterClient.post(`/pins/${cid}`, {
+        replication_factor_min: Math.min(replicationFactor, 2),
+        replication_factor_max: replicationFactor,
+        name: uploadedFile.name,
+        mode: 'recursive',
+        pin_options: {
+          replication: replicationFactor
+        }
+      });
+      console.log(`[DOCKER-CLUSTER] ✓ Replicare configurată: ${replicationFactor} noduri`);
+    } catch (repError) {
+      console.warn('[DOCKER-CLUSTER] ⚠️ Eroare la configurare replicare:', repError.message);
+    }
+
+    // Wait for replication to propagate
     await new Promise(resolve => setTimeout(resolve, 2000));
 
+    // Check pin status and replication
     let pinStatus = null;
     let pinnedPeers = 0;
+    let replicationStatus = 'pending';
     try {
       pinStatus = await clusterClient.get(`/pins/${cid}`);
       if (pinStatus && pinStatus.peer_map) {
-        pinnedPeers = Object.values(pinStatus.peer_map).filter(p => p.status === 'pinned').length;
+        const pinnedNodes = Object.values(pinStatus.peer_map).filter(p => p.status === 'pinned');
+        pinnedPeers = pinnedNodes.length;
+        
+        if (pinnedPeers >= replicationFactor) {
+          replicationStatus = 'complete';
+          console.log(`[DOCKER-CLUSTER] ✓ Replicare completă: ${pinnedPeers}/${replicationFactor} noduri`);
+        } else if (pinnedPeers > 0) {
+          replicationStatus = 'partial';
+          console.log(`[DOCKER-CLUSTER] ⏳ Replicare parțială: ${pinnedPeers}/${replicationFactor} noduri`);
+        }
       }
     } catch (e) {
       console.warn('[DOCKER-CLUSTER] Nu s-a putut obtine status pin:', e.message);
@@ -198,11 +233,21 @@ router.post('/add', async (req, res) => {
     const gateways = clusterClient.getIPFSGateways();
     const accessUrls = gateways.map(gw => `${gw}/ipfs/${cid}`);
 
+    // Save metadata with encryption and replication info
     const metadata = loadMetadata();
-    const { description = '', tags = '' } = req.body;
+    const { description = '', tags = '', encryption } = req.body;
     const parsedTags = typeof tags === 'string' && tags.trim() 
       ? tags.split(',').map(t => t.trim()).filter(t => t) 
       : [];
+
+    let encryptionInfo = null;
+    if (encryption) {
+      try {
+        encryptionInfo = typeof encryption === 'string' ? JSON.parse(encryption) : encryption;
+      } catch (e) {
+        console.warn('[DOCKER-CLUSTER] Invalid encryption metadata:', e.message);
+      }
+    }
 
     metadata[cid] = {
       cid: cid,
@@ -213,7 +258,14 @@ router.post('/add', async (req, res) => {
       tags: parsedTags,
       uploadedAt: new Date().toISOString(),
       pinnedOn: pinnedPeers,
-      uploadedBy: peerId
+      uploadedBy: peerId,
+      contractId: req.body.contractId || null,
+      replication: {
+        factor: replicationFactor,
+        status: replicationStatus,
+        nodes: pinnedPeers
+      },
+      encryption: encryptionInfo
     };
     saveMetadata(metadata);
 
@@ -233,7 +285,20 @@ router.post('/add', async (req, res) => {
         pinnedOn: pinnedPeers,
         allocations: responseData.allocations || [],
         accessUrls: accessUrls,
-        uploadedAt: new Date().toISOString()
+        uploadedAt: new Date().toISOString(),
+        replication: {
+          factor: replicationFactor,
+          status: replicationStatus,
+          nodes: pinnedPeers,
+          message: pinnedPeers >= replicationFactor 
+            ? `✓ Fișier replicat pe ${pinnedPeers} noduri` 
+            : `⏳ Replicare în curs: ${pinnedPeers}/${replicationFactor} noduri`
+        },
+        encryption: encryptionInfo ? {
+          enabled: true,
+          algorithm: encryptionInfo.algorithm,
+          originalName: encryptionInfo.originalName
+        } : { enabled: false }
       },
       storageInfo: {
         usedGB: updatedStorageInfo.storage.usedGB,
@@ -288,7 +353,10 @@ router.get('/pins', async (req, res) => {
         description: meta.description || '',
         tags: meta.tags || [],
         uploadedAt: meta.uploadedAt || new Date().toISOString(),
-        pinnedOn: meta.pinnedOn || 0
+        pinnedOn: meta.pinnedOn || 0,
+        encryption: meta.encryption || null,
+        contractId: meta.contractId || null,
+        uploadedBy: meta.uploadedBy || null
       };
     });
     

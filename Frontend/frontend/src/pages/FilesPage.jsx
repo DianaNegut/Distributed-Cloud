@@ -29,11 +29,13 @@ import FileEncryption from '../utils/fileEncryption';
 import FileSearchFilter from '../components/filters/FileSearchFilter';
 import FilePreviewModal from '../components/modals/FilePreviewModal';
 import FileShareModal from '../components/modals/FileShareModal';
+import { useAuth } from '../contexts/AuthContext';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
 const API_KEY = process.env.REACT_APP_API_KEY || 'supersecret';
 
 export default function FilesPage() {
+  const { user, sessionToken } = useAuth();
   const [files, setFiles] = useState([]);
   const [filteredFiles, setFilteredFiles] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -44,7 +46,6 @@ export default function FilesPage() {
   const [dragActive, setDragActive] = useState(false);
   const [selectedFileInfo, setSelectedFileInfo] = useState(null);
   const [storageInfo, setStorageInfo] = useState(null);
-  const [myPeerId, setMyPeerId] = useState('');
   const [contracts, setContracts] = useState([]);
   const [selectedContract, setSelectedContract] = useState(null);
   const [encryptionEnabled, setEncryptionEnabled] = useState(true);
@@ -52,14 +53,13 @@ export default function FilesPage() {
   const [previewFile, setPreviewFile] = useState(null);
   const [shareFile, setShareFile] = useState(null);
   const fileInputRef = useRef(null);
-  
-  const currentUserId = 'user-' + Date.now().toString().substring(8);
 
   useEffect(() => {
-    loadMyPeerId();
-    loadFiles();
-    loadContracts();
-  }, []);
+    if (user) {
+      loadFiles();
+      loadContracts();
+    }
+  }, [user]);
 
   const loadContracts = async () => {
     try {
@@ -120,31 +120,23 @@ export default function FilesPage() {
   };
 
   useEffect(() => {
-    if (myPeerId && files.length > 0) {
-      syncStorageWithFiles();
-    } else if (myPeerId) {
-      loadStorageInfo();
+    if (user) {
+      if (files.length > 0) {
+        syncStorageWithFiles();
+      } else {
+        loadStorageInfo();
+      }
     }
-  }, [myPeerId, files]);
-
-  const loadMyPeerId = async () => {
-    try {
-      const response = await axios.get(`${API_URL}/status`, {
-        headers: { 'x-api-key': API_KEY }
-      });
-      const peerId = response.data?.data?.ID || response.data?.id || response.data?.peerId || 'default-user';
-      setMyPeerId(peerId);
-    } catch (error) {
-      console.error('Error loading peer ID:', error);
-      setMyPeerId('default-user');
-    }
-  };
+  }, [user, files]);
 
   const loadStorageInfo = async () => {
-    if (!myPeerId) return;
+    if (!user) return;
     try {
-      const response = await axios.get(`${API_URL}/user-storage/${myPeerId}`, {
-        headers: { 'x-api-key': API_KEY }
+      const response = await axios.get(`${API_URL}/user-storage/${user.username}`, {
+        headers: { 
+          'x-api-key': API_KEY,
+          'x-session-token': sessionToken
+        }
       });
       if (response.data.success) {
         setStorageInfo(response.data);
@@ -156,7 +148,7 @@ export default function FilesPage() {
 
   // Sincronizează datele de stocare cu fișierele existente în cluster
   const syncStorageWithFiles = async () => {
-    if (!myPeerId || files.length === 0) return;
+    if (!user || files.length === 0) return;
     try {
       // Pregătește lista de fișiere pentru sincronizare
       const filesToSync = files.map(f => ({
@@ -166,10 +158,13 @@ export default function FilesPage() {
         uploadedAt: f.uploadedAt
       }));
 
-      const response = await axios.post(`${API_URL}/user-storage/${myPeerId}/sync`, {
+      const response = await axios.post(`${API_URL}/user-storage/${user.username}/sync`, {
         files: filesToSync
       }, {
-        headers: { 'x-api-key': API_KEY }
+        headers: { 
+          'x-api-key': API_KEY,
+          'x-session-token': sessionToken
+        }
       });
 
       if (response.data.success) {
@@ -190,16 +185,26 @@ export default function FilesPage() {
   }, []);
 
   const loadFiles = async () => {
+    if (!user) return;
     setLoading(true);
     try {
       const response = await axios.get(`${API_URL}/docker-cluster/pins`, {
-        headers: { 'x-api-key': API_KEY }
+        headers: { 
+          'x-api-key': API_KEY,
+          'x-session-token': sessionToken
+        }
       });
       
       if (response.data.success) {
-        const files = response.data.pins || [];
-        setFiles(files);
-        toast.success(`${files.length} fișiere încărcate din cluster`);
+        const allFiles = response.data.pins || [];
+        // Filter files to show only those uploaded by current user
+        const myFiles = allFiles.filter(file => {
+          // Check if file has metadata with owner information
+          const metadata = file.metadata || {};
+          return metadata.owner === user.username || metadata.uploadedBy === user.username;
+        });
+        setFiles(myFiles);
+        toast.success(`${myFiles.length} fișiere personale încărcate`);
       }
     } catch (error) {
       toast.error('Eroare la încărcarea fișierelor');
@@ -324,7 +329,8 @@ export default function FilesPage() {
     formData.append('file', fileToUpload);
     formData.append('description', description);
     formData.append('tags', tags);
-    formData.append('peerId', myPeerId);
+    formData.append('owner', user.username); // Add owner information
+    formData.append('uploadedBy', user.username); // Add uploader information
     formData.append('contractId', selectedContract.id);
     if (encryptionMetadata) {
       formData.append('encryption', JSON.stringify(encryptionMetadata));
@@ -334,7 +340,8 @@ export default function FilesPage() {
       const response = await axios.post(`${API_URL}/docker-cluster/add`, formData, {
         headers: {
           'x-api-key': API_KEY,
-          'x-peer-id': myPeerId
+          'x-session-token': sessionToken,
+          'x-user-id': user.username
         }
       });
 

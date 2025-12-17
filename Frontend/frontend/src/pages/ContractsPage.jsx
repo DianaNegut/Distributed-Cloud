@@ -26,6 +26,7 @@ import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { StatCard } from '../components/ui/StatCard';
 import BackupManager from '../components/backup/BackupManager';
+import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
 import filecoinService from '../services/filecoinService';
 
@@ -33,8 +34,8 @@ const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
 const API_KEY = process.env.REACT_APP_API_KEY || 'supersecret';
 
 const ContractsPage = () => {
+  const { user, sessionToken } = useAuth();
   const [contracts, setContracts] = useState([]);
-  const [myPeerId, setMyPeerId] = useState('');
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState('all');
   const [viewMode, setViewMode] = useState('renter'); // renter or provider
@@ -56,35 +57,23 @@ const ContractsPage = () => {
   });
   const [transferResult, setTransferResult] = useState(null);
 
-  const currentUserId = 'user-' + Date.now().toString().substring(8); // Mock user ID
-
   useEffect(() => {
-    loadContracts();
-    loadMyPeerId();
-    loadFilBalance();
-    loadWalletData();
-    loadStatistics();
-  }, []);
-
-  const loadMyPeerId = async () => {
-    try {
-      const response = await axios.get(`${API_URL}/status`, {
-        headers: { 'x-api-key': API_KEY }
-      });
-      const peerId = response.data?.data?.ID || response.data?.id || response.data?.peerId;
-      if (peerId) {
-        setMyPeerId(peerId);
-      }
-    } catch (error) {
-      console.error('Error loading peer ID:', error);
+    if (user) {
+      loadContracts();
+      loadFilBalance();
+      loadWalletData();
+      loadStatistics();
     }
-  };
+  }, [user]);
 
   const loadContracts = async () => {
     try {
       setLoading(true);
       const response = await axios.get(`${API_URL}/storage-contracts`, {
-        headers: { 'x-api-key': API_KEY }
+        headers: { 
+          'x-api-key': API_KEY,
+          'x-session-token': sessionToken
+        }
       });
       setContracts(response.data.contracts || []);
     } catch (error) {
@@ -95,9 +84,10 @@ const ContractsPage = () => {
   };
 
   const loadFilBalance = async () => {
+    if (!user) return;
     try {
       setWalletLoading(true);
-      const balance = await filecoinService.getBalance(currentUserId);
+      const balance = await filecoinService.getBalance(user.username);
       if (balance.success) {
         setFilBalance(balance.balance);
       }
@@ -108,21 +98,22 @@ const ContractsPage = () => {
     }
   };
   const loadWalletData = async () => {
+    if (!user) return;
     try {
       // Get wallet
-      const walletResponse = await filecoinService.getWallet(currentUserId);
+      const walletResponse = await filecoinService.getWallet(user.username);
       if (walletResponse.success) {
         setWallet(walletResponse.wallet);
       }
 
       // Get balance
-      const balanceResponse = await filecoinService.getBalance(currentUserId);
+      const balanceResponse = await filecoinService.getBalance(user.username);
       if (balanceResponse.success) {
         setBalance(balanceResponse);
       }
 
       // Get transactions
-      const txResponse = await filecoinService.getWalletTransactions(currentUserId);
+      const txResponse = await filecoinService.getWalletTransactions(user.username);
       if (txResponse.success) {
         setTransactions(txResponse.transactions || []);
       }
@@ -159,7 +150,7 @@ const ContractsPage = () => {
       }
 
       const result = await filecoinService.transfer(
-        currentUserId,
+        user.username,
         transferForm.toUserId,
         amount,
         { note: transferForm.note }
@@ -295,13 +286,13 @@ const ContractsPage = () => {
     return Math.max(0, diff);
   };
 
-  const myContracts = contracts.filter(c => {
+  const myContracts = user ? contracts.filter(c => {
     if (viewMode === 'renter') {
-      return c.renterId === myPeerId || c.renterId.includes('user');
+      return c.renterId === user.username;
     } else {
-      return c.providerId;
+      return c.providerId === user.username;
     }
-  });
+  }) : [];
 
   const filteredContracts = filterStatus === 'all' 
     ? myContracts 

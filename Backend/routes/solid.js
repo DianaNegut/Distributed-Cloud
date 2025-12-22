@@ -1,10 +1,3 @@
-/**
- * Solid POD API Routes
- * 
- * Endpoints pentru gestionarea POD-urilor Solid stocate pe IPFS
- * Implementează funcționalități compatibile cu specificația Solid
- */
-
 const express = require('express');
 const router = express.Router();
 const SolidPod = require('../models/SolidPod');
@@ -12,18 +5,13 @@ const SolidIPFSAdapter = require('../utils/solidIPFSAdapter');
 const DockerClusterClient = require('../utils/dockerClusterClient');
 const { requireAuth, optionalAuth } = require('../middleware/solidAuth');
 
-// Inițializare adapter IPFS pentru Solid
 const clusterClient = new DockerClusterClient();
 const solidAdapter = new SolidIPFSAdapter(clusterClient);
 
-/**
- * GET /api/solid/status
- * Status sistem Solid-IPFS
- */
 router.get('/status', (req, res) => {
   try {
     const stats = SolidPod.getStatistics();
-    
+
     res.json({
       success: true,
       message: 'Solid-IPFS system operational',
@@ -50,21 +38,9 @@ router.get('/status', (req, res) => {
   }
 });
 
-/**
- * POST /api/solid/pods
- * Creează un POD nou
- * 
- * Body:
- * {
- *   "username": "alice",
- *   "ownerId": "user-123",
- *   "name": "Alice's POD",
- *   "description": "Personal data store"
- * }
- */
 router.post('/pods', async (req, res) => {
   console.log('[SOLID-API] Creating new POD...');
-  
+
   try {
     const { username, ownerId, name, description } = req.body;
 
@@ -75,7 +51,6 @@ router.post('/pods', async (req, res) => {
       });
     }
 
-    // Validare username (doar alfanumeric și underscore)
     if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
       return res.status(400).json({
         success: false,
@@ -83,7 +58,6 @@ router.post('/pods', async (req, res) => {
       });
     }
 
-    // Creează POD
     const pod = SolidPod.createPod({
       username,
       ownerId,
@@ -91,16 +65,13 @@ router.post('/pods', async (req, res) => {
       description
     });
 
-    // Inițializează structura pe IPFS
     console.log('[SOLID-API] Initializing POD structure on IPFS...');
     const containerCids = await solidAdapter.initializePodStructure(pod);
 
-    // Actualizează CID-urile în POD
     for (const [container, cid] of Object.entries(containerCids)) {
       SolidPod.updateContainerCid(pod.id, container, cid);
     }
 
-    // Creează ACL pentru POD
     const aclData = {
       resourcePath: `/${username}/`,
       owner: pod.webId,
@@ -137,10 +108,6 @@ router.post('/pods', async (req, res) => {
   }
 });
 
-/**
- * GET /api/solid/pods
- * Listează toate POD-urile (cu filtrare opțională)
- */
 router.get('/pods', (req, res) => {
   try {
     const filters = {
@@ -173,10 +140,6 @@ router.get('/pods', (req, res) => {
   }
 });
 
-/**
- * GET /api/solid/pods/:podId
- * Obține detalii despre un POD specific
- */
 router.get('/pods/:podId', (req, res) => {
   try {
     const pod = SolidPod.getPod(req.params.podId);
@@ -193,10 +156,6 @@ router.get('/pods/:podId', (req, res) => {
   }
 });
 
-/**
- * GET /api/solid/:username
- * Obține POD după username (compatibility endpoint)
- */
 router.get('/:username', (req, res) => {
   try {
     const pod = SolidPod.getPodByUsername(req.params.username);
@@ -220,10 +179,6 @@ router.get('/:username', (req, res) => {
   }
 });
 
-/**
- * GET /api/solid/:username/profile/card
- * Obține WebID Profile Card (în format Turtle RDF)
- */
 router.get('/:username/profile/card', async (req, res) => {
   try {
     const pod = SolidPod.getPodByUsername(req.params.username);
@@ -236,10 +191,8 @@ router.get('/:username/profile/card', async (req, res) => {
       });
     }
 
-    // Citește profilul de pe IPFS
     const profileContent = await solidAdapter.readFileFromPod(profileCid);
 
-    // Returnează ca text/turtle pentru compatibilitate Solid
     res.set('Content-Type', 'text/turtle');
     res.set('Link', `<${pod.webId}.acl>; rel="acl"`);
     res.send(profileContent);
@@ -252,22 +205,15 @@ router.get('/:username/profile/card', async (req, res) => {
   }
 });
 
-/**
- * POST /api/solid/:username/:container/upload
- * Upload fișier în container POD
- * Container poate fi: public, private, inbox, settings
- */
 router.post('/:username/:container/upload', requireAuth, async (req, res) => {
   console.log(`[SOLID-API] Upload to ${req.params.username}/${req.params.container}`);
-  
+
   try {
     const { username, container } = req.params;
     const pod = SolidPod.getPodByUsername(username);
 
-    // Verifică permisiuni - utilizatorul autentificat
     const userId = req.user.username;
 
-    // Verifică dacă containerul există
     if (!pod.containers[container]) {
       return res.status(404).json({
         success: false,
@@ -275,10 +221,9 @@ router.post('/:username/:container/upload', requireAuth, async (req, res) => {
       });
     }
 
-    // Verifică permisiuni de scriere
-    const canWrite = SolidPod.checkPermission(pod.id, userId, 'write') || 
-                     pod.ownerId === userId;
-    
+    const canWrite = SolidPod.checkPermission(pod.id, userId, 'write') ||
+      pod.ownerId === userId;
+
     if (!canWrite && container !== 'public') {
       return res.status(403).json({
         success: false,
@@ -286,7 +231,6 @@ router.post('/:username/:container/upload', requireAuth, async (req, res) => {
       });
     }
 
-    // Verifică fișier
     if (!req.files || !req.files.file) {
       return res.status(400).json({
         success: false,
@@ -297,14 +241,12 @@ router.post('/:username/:container/upload', requireAuth, async (req, res) => {
     const file = req.files.file;
     const containerPath = pod.containers[container].path;
 
-    // Upload fișier
     const result = await solidAdapter.uploadFileToPod(file, containerPath, {
       uploadedBy: userId,
       podId: pod.id,
       container
     });
 
-    // Actualizează statistici POD
     const currentStorage = pod.storage;
     SolidPod.updateStorage(pod.id, {
       fileCount: currentStorage.fileCount + 1,
@@ -334,16 +276,11 @@ router.post('/:username/:container/upload', requireAuth, async (req, res) => {
   }
 });
 
-/**
- * GET /api/solid/:username/:container/:cid
- * Download fișier din container POD
- */
 router.get('/:username/:container/:cid', optionalAuth, async (req, res) => {
   try {
     const { username, container, cid } = req.params;
     const pod = SolidPod.getPodByUsername(username);
 
-    // Verifică dacă containerul există
     if (!pod.containers[container]) {
       return res.status(404).json({
         success: false,
@@ -351,8 +288,6 @@ router.get('/:username/:container/:cid', optionalAuth, async (req, res) => {
       });
     }
 
-    // Pentru public, nu trebuie autentificare
-    // Pentru alte containere, verifică permisiuni
     if (container !== 'public') {
       if (!req.user) {
         return res.status(401).json({
@@ -362,9 +297,9 @@ router.get('/:username/:container/:cid', optionalAuth, async (req, res) => {
       }
 
       const userId = req.user.username;
-      const canRead = SolidPod.checkPermission(pod.id, userId, 'read') || 
-                      pod.ownerId === userId;
-      
+      const canRead = SolidPod.checkPermission(pod.id, userId, 'read') ||
+        pod.ownerId === userId;
+
       if (!canRead) {
         return res.status(403).json({
           success: false,
@@ -373,10 +308,8 @@ router.get('/:username/:container/:cid', optionalAuth, async (req, res) => {
       }
     }
 
-    // Citește fișierul de pe IPFS
     const fileContent = await solidAdapter.readFileFromPod(cid);
 
-    // Setează headers
     res.set('Content-Type', 'application/octet-stream');
     res.set('Content-Disposition', `attachment`);
     res.send(fileContent);
@@ -389,10 +322,7 @@ router.get('/:username/:container/:cid', optionalAuth, async (req, res) => {
   }
 });
 
-/**
- * PUT /api/solid/pods/:podId/permissions
- * Actualizează permisiuni pentru POD
- */
+
 router.put('/pods/:podId/permissions', (req, res) => {
   try {
     const { podId } = req.params;
@@ -433,10 +363,7 @@ router.put('/pods/:podId/permissions', (req, res) => {
   }
 });
 
-/**
- * POST /api/solid/pods/:podId/verify
- * Verifică integritatea unui POD
- */
+
 router.post('/pods/:podId/verify', async (req, res) => {
   try {
     const pod = SolidPod.getPod(req.params.podId);
@@ -455,10 +382,6 @@ router.post('/pods/:podId/verify', async (req, res) => {
   }
 });
 
-/**
- * DELETE /api/solid/pods/:podId
- * Șterge un POD
- */
 router.delete('/pods/:podId', (req, res) => {
   try {
     const result = SolidPod.deletePod(req.params.podId);
@@ -479,10 +402,7 @@ router.delete('/pods/:podId', (req, res) => {
   }
 });
 
-/**
- * GET /api/solid/webid/:webId
- * Obține POD după WebID (URL-encoded)
- */
+
 router.get('/webid/:webId', (req, res) => {
   try {
     const webId = decodeURIComponent(req.params.webId);

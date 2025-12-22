@@ -4,10 +4,10 @@ import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card'
 import { Button } from '../components/ui/Button';
 import { Input, TextArea } from '../components/ui/Input';
 import { Badge } from '../components/ui/Badge';
-import { 
-  Network as NetworkIcon, 
-  Key, 
-  Server, 
+import {
+  Network as NetworkIcon,
+  Key,
+  Server,
   RefreshCw,
   Users,
   CheckCircle,
@@ -31,7 +31,7 @@ export default function NetworkPage() {
   const addLog = (message, type) => {
     const newLog = { message, type, timestamp: new Date().toLocaleTimeString() };
     setLogs(prev => [newLog, ...prev].slice(0, 50));
-    
+
     if (type === 'success') toast.success(message);
     else if (type === 'error') toast.error(message);
     else toast(message);
@@ -90,8 +90,8 @@ export default function NetworkPage() {
         if (res.data.network.bootstrapNode) {
           setBootstrapNode(res.data.network.bootstrapNode);
         }
-        console.log('Network status:', { 
-          isActive, 
+        console.log('Network status:', {
+          isActive,
           swarmKeyExists: res.data.network.status?.swarmKeyExists,
           autoConfDisabled: res.data.network.status?.autoConfDisabled
         });
@@ -117,7 +117,7 @@ export default function NetworkPage() {
   return (
     <div className="flex-1 overflow-auto">
       <Toaster position="top-right" />
-      
+
       <div className="max-w-7xl mx-auto p-8">
         {/* Header */}
         <motion.div
@@ -146,7 +146,7 @@ export default function NetworkPage() {
                     icon={Key}
                     readOnly
                   />
-                  
+
                   <TextArea
                     label="Adresă Nod Bootstrap"
                     value={bootstrapNode}
@@ -165,7 +165,7 @@ export default function NetworkPage() {
                     >
                       Configurează Rețeaua
                     </Button>
-                    
+
                     <Button
                       onClick={copySwarmKey}
                       variant="outline"
@@ -218,7 +218,7 @@ export default function NetworkPage() {
                         className="flex items-center gap-3 p-3 bg-dark-800 rounded-lg"
                       >
                         <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                        <span className="text-sm text-gray-300 font-mono flex-1 truncate">{peer}</span>
+                        <span className="text-sm text-gray-300 font-mono flex-1 truncate">{typeof peer === 'string' ? peer : (peer.peername || peer.id || 'Unknown')}</span>
                         <Badge variant="success">Activ</Badge>
                       </motion.div>
                     ))}

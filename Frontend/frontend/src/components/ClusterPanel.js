@@ -76,18 +76,22 @@ function ClusterPanel() {
 
       {peers.length > 0 ? (
         <ul>
-          {peers.map((peer) => (
-            <li key={peer}>
-              {peer}
-              <button
-                onClick={() => handleRemovePeer(peer)}
-                disabled={loading}
-                style={{ marginLeft: '10px', color: 'red', cursor: 'pointer' }}
-              >
-                Remove
-              </button>
-            </li>
-          ))}
+          {peers.map((peer, index) => {
+            const peerId = typeof peer === 'string' ? peer : (peer.id || index);
+            const peerName = typeof peer === 'string' ? peer : (peer.peername || peer.id || 'Unknown');
+            return (
+              <li key={peerId}>
+                {peerName}
+                <button
+                  onClick={() => handleRemovePeer(peerId)}
+                  disabled={loading}
+                  style={{ marginLeft: '10px', color: 'red', cursor: 'pointer' }}
+                >
+                  Remove
+                </button>
+              </li>
+            );
+          })}
         </ul>
       ) : (
         !loading && <p>No peers found in the cluster.</p>

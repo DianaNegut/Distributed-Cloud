@@ -9,12 +9,9 @@ const auth = require('./middleware/auth');
 
 const healthRoutes = require('./routes/health');
 const statusRoutes = require('./routes/status');
-const peersRoutes = require('./routes/peers');
 const bootstrapRoutes = require('./routes/bootstrap');
 const joinRoutes = require('./routes/join');
-const configNetworkRoutes = require('./routes/configNetwork');
 const filesRoutes = require('./routes/files');
-const clusterRoutes = require('./routes/cluster');
 const dockerClusterRoutes = require('./routes/dockerCluster');
 const networkInfoRoutes = require('./routes/networkInfo');
 const storageProvidersRoutes = require('./routes/storageProviders');
@@ -28,6 +25,7 @@ const { router: integrityRoutes, integrityVerifier } = require('./routes/integri
 const { router: failoverRoutes, failoverManager, setupFailoverWebSocket } = require('./routes/failover');
 const ethereumRoutes = require('./routes/ethereum');
 const fileAccessRoutes = require('./routes/fileAccess');
+const providerAgentRoutes = require('./routes/providerAgent');
 
 const filecoinService = require('./services/filecoinService');
 
@@ -43,7 +41,7 @@ app.use(fileUpload({
   tempFileDir: os.tmpdir(),
   limits: { fileSize: 100 * 1024 * 1024 },
   abortOnLimit: true,
-  debug: false 
+  debug: false
 }));
 app.use(logger);
 
@@ -51,14 +49,29 @@ app.use('/api/health', healthRoutes);
 app.use('/api/bootstrap-info', bootstrapRoutes);
 app.use('/api/join-network', joinRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/provider-agent', providerAgentRoutes); // Provider Agent communication (no auth)
 
 app.use(auth);
-app.use('/api/status', statusRoutes);
-app.use('/api/peers', peersRoutes);
-app.use('/api/configure-network', configNetworkRoutes);
+const DockerClusterClient = require('./utils/dockerClusterClient');
+const peersClient = new DockerClusterClient();
+
+app.get('/api/peers', async (req, res) => {
+  try {
+    const clusterInfo = await peersClient.getClusterInfo();
+    res.json({
+      success: true,
+      peers: clusterInfo.peers || [],
+      totalPeers: (clusterInfo.peers || []).length
+    });
+  } catch (error) {
+    console.error('[PEERS] Error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 app.use('/api/files', filesRoutes);
-app.use('/api/cluster', clusterRoutes);
-app.use('/api/docker-cluster', dockerClusterRoutes);
+app.use('/api/cluster', dockerClusterRoutes);
+app.use('/api/docker-cluster', dockerClusterRoutes); // Frontend uses this path
 app.use('/api/network-info', networkInfoRoutes);
 app.use('/api/storage-providers', storageProvidersRoutes);
 app.use('/api/storage-contracts', storageContractsRoutes);
@@ -73,16 +86,16 @@ app.use('/api/file-access', fileAccessRoutes);
 
 app.use((err, req, res, next) => {
   console.error('[ERROR]', err);
-  res.status(500).json({ 
-    success: false, 
-    error: err.message || 'Internal server error' 
+  res.status(500).json({
+    success: false,
+    error: err.message || 'Internal server error'
   });
 });
 
 app.use((req, res) => {
-  res.status(404).json({ 
-    success: false, 
-    error: 'Endpoint not found' 
+  res.status(404).json({
+    success: false,
+    error: 'Endpoint not found'
   });
 });
 
@@ -90,7 +103,7 @@ app.listen(PORT, async () => {
   console.log(`\n[SERVER] Pornit pe http://localhost:${PORT}`);
   console.log(`[SERVER] API disponibil la http://localhost:${PORT}/api`);
   console.log(`[SERVER] API Key: ${process.env.API_KEY || 'supersecret'}\n`);
-  
+
   // Inițializare Filecoin service
   try {
     await filecoinService.initialize();
@@ -113,7 +126,7 @@ app.listen(PORT, async () => {
     integrityVerifier.startPeriodicChecks(INTEGRITY_CHECK_INTERVAL * 60 * 60 * 1000);
     console.log(`[SERVER] Data Integrity Verifier initialized`);
     console.log(`[SERVER] Periodic checks every ${INTEGRITY_CHECK_INTERVAL} hours`);
-    
+
     // Start auto-repair replication monitoring
     const REPLICATION_CHECK_INTERVAL = process.env.REPLICATION_CHECK_INTERVAL_MINUTES || 30;
     const MIN_REPLICAS = process.env.MIN_REPLICAS || 3;

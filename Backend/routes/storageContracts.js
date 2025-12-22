@@ -43,11 +43,11 @@ router.get('/:id', (req, res) => {
 router.post('/create', async (req, res) => {
   console.log('[STORAGE-CONTRACTS] Creare contract nou...');
   try {
-    const { 
-      renterId, 
+    const {
+      renterId,
       renterName,
-      providerId, 
-      allocatedGB, 
+      providerId,
+      allocatedGB,
       durationMonths,
       description,
       replicationFactor,
@@ -56,9 +56,9 @@ router.post('/create', async (req, res) => {
     } = req.body;
 
     if (!renterId || !providerId || !allocatedGB) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'renterId, providerId, and allocatedGB are required' 
+      return res.status(400).json({
+        success: false,
+        error: 'renterId, providerId, and allocatedGB are required'
       });
     }
 
@@ -67,17 +67,25 @@ router.post('/create', async (req, res) => {
       return res.status(404).json({ success: false, error: 'Provider not found' });
     }
 
+    // Prevent self-rental: check if renter is the provider owner
+    if (provider.peerId === renterId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Nu poți închiria stocare de la propriul tău provider. Te rugăm să alegi alt provider.'
+      });
+    }
+
     if (provider.status === 'suspended') {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Provider is suspended due to insufficient storage capacity. Please choose another provider.' 
+      return res.status(400).json({
+        success: false,
+        error: 'Provider is suspended due to insufficient storage capacity. Please choose another provider.'
       });
     }
 
     if (provider.status !== 'active') {
-      return res.status(400).json({ 
-        success: false, 
-        error: `Provider is not active (status: ${provider.status})` 
+      return res.status(400).json({
+        success: false,
+        error: `Provider is not active (status: ${provider.status})`
       });
     }
 
@@ -85,15 +93,15 @@ router.post('/create', async (req, res) => {
     const months = durationMonths ? parseInt(durationMonths) : 1;
 
     if (provider.capacity.availableGB < requestedGB) {
-      return res.status(400).json({ 
-        success: false, 
-        error: `Insufficient storage. Available: ${provider.capacity.availableGB.toFixed(1)}GB, Requested: ${requestedGB}GB` 
+      return res.status(400).json({
+        success: false,
+        error: `Insufficient storage. Available: ${provider.capacity.availableGB.toFixed(1)}GB, Requested: ${requestedGB}GB`
       });
     }
 
     const utilizationPercent = ((provider.capacity.totalGB - provider.capacity.availableGB) / provider.capacity.totalGB) * 100;
     const warnings = [];
-    
+
     if (utilizationPercent > 90) {
       warnings.push('Provider has high storage utilization (>90%). Consider choosing another provider for better reliability.');
     }
@@ -105,11 +113,11 @@ router.post('/create', async (req, res) => {
 
     console.log('[STORAGE-CONTRACTS] Pricing calculated:', pricing);
 
-    // Calculează cost în FIL
+
     const filCost = filecoinService.calculateStorageCost(requestedGB, months, provider.pricing?.pricePerGBPerMonth);
     console.log('[STORAGE-CONTRACTS] FIL cost:', filCost);
 
-    // Verifică balanță client
+
     try {
       const clientBalance = await filecoinService.getBalance(renterId);
       if (clientBalance.balance < filCost.totalCost) {
@@ -122,7 +130,7 @@ router.post('/create', async (req, res) => {
       }
     } catch (error) {
       console.warn('[STORAGE-CONTRACTS] Balance check failed, creating wallet:', error.message);
-      // Dacă nu există wallet, creează unul
+
       await filecoinService.createUserWallet(renterId);
       const newBalance = await filecoinService.getBalance(renterId);
       if (newBalance.balance < filCost.totalCost) {
@@ -160,18 +168,18 @@ router.post('/create', async (req, res) => {
       currency: 'FIL'
     });
 
-    // Deposit în escrow
+
     try {
       const escrowResult = await filecoinService.depositEscrow(renterId, contract.id, filCost.totalCost);
       console.log('[STORAGE-CONTRACTS] Escrow deposit:', escrowResult);
 
-      // Update contract cu info escrow
+
       contract.payment.escrowStatus = 'deposited';
       contract.payment.escrowAmount = filCost.totalCost;
       contract.payment.escrowTxId = escrowResult.transaction.id;
-      contract.status = 'active'; // Contract devine activ după deposit
+      contract.status = 'active';
     } catch (error) {
-      // Rollback allocation dacă deposit eșuează
+
       StorageProvider.deallocateStorage(providerId, requestedGB);
       console.error('[STORAGE-CONTRACTS] Escrow deposit failed:', error.message);
       return res.status(500).json({
@@ -205,9 +213,9 @@ router.post('/:id/add-file', (req, res) => {
     const { cid, name, sizeBytes, mimetype } = req.body;
 
     if (!cid || !name || !sizeBytes) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'cid, name, and sizeBytes are required' 
+      return res.status(400).json({
+        success: false,
+        error: 'cid, name, and sizeBytes are required'
       });
     }
 
@@ -265,9 +273,9 @@ router.post('/:id/renew', (req, res) => {
     const { additionalDays } = req.body;
 
     if (!additionalDays || additionalDays <= 0) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'additionalDays must be a positive number' 
+      return res.status(400).json({
+        success: false,
+        error: 'additionalDays must be a positive number'
       });
     }
 
@@ -304,19 +312,19 @@ router.post('/:id/cancel', async (req, res) => {
       return res.status(400).json(result);
     }
 
-    // Refund escrow către client
+
     if (contract.payment.escrowStatus === 'deposited' && contract.payment.escrowAmount > 0) {
       try {
         const refundResult = await filecoinService.refundEscrow(
-          contract.renterId, 
-          contract.id, 
+          contract.renterId,
+          contract.id,
           contract.payment.escrowAmount
         );
         console.log('[STORAGE-CONTRACTS] Escrow refunded:', refundResult);
         contract.payment.escrowStatus = 'refunded';
       } catch (error) {
         console.error('[STORAGE-CONTRACTS] Escrow refund failed:', error.message);
-        // Contract este anulat oricum, dar notifică eroarea
+
       }
     }
 
@@ -345,18 +353,18 @@ router.post('/:id/complete', async (req, res) => {
     }
 
     if (contract.status !== 'active') {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Only active contracts can be completed' 
+      return res.status(400).json({
+        success: false,
+        error: 'Only active contracts can be completed'
       });
     }
 
-    // Release escrow către provider
+
     if (contract.payment.escrowStatus === 'deposited' && contract.payment.escrowAmount > 0) {
       try {
         const releaseResult = await filecoinService.releaseEscrow(
-          contract.providerId, 
-          contract.id, 
+          contract.providerId,
+          contract.id,
           contract.payment.escrowAmount
         );
         console.log('[STORAGE-CONTRACTS] Escrow released to provider:', releaseResult);
@@ -373,7 +381,7 @@ router.post('/:id/complete', async (req, res) => {
       }
     }
 
-    // Update contract status
+
     StorageContract.updateContractStatus(contract.id, 'completed');
     StorageProvider.updateEarnings(contract.providerId, contract.payment.escrowAmount);
 
@@ -426,15 +434,15 @@ router.get('/calculate-price', (req, res) => {
     const { providerId, sizeGB, durationMonths } = req.query;
 
     if (!providerId || !sizeGB || !durationMonths) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'providerId, sizeGB, and durationMonths are required' 
+      return res.status(400).json({
+        success: false,
+        error: 'providerId, sizeGB, and durationMonths are required'
       });
     }
 
     const pricing = StorageProvider.calculatePrice(
-      providerId, 
-      parseFloat(sizeGB), 
+      providerId,
+      parseFloat(sizeGB),
       parseInt(durationMonths)
     );
 
@@ -464,9 +472,9 @@ router.patch('/:id/storage', (req, res) => {
 
     if (usedGB !== undefined) {
       if (usedGB > contract.storage.allocatedGB) {
-        return res.status(400).json({ 
-          success: false, 
-          error: `Storage limit exceeded. Allocated: ${contract.storage.allocatedGB}GB, Trying to use: ${usedGB}GB` 
+        return res.status(400).json({
+          success: false,
+          error: `Storage limit exceeded. Allocated: ${contract.storage.allocatedGB}GB, Trying to use: ${usedGB}GB`
         });
       }
       contract.storage.usedGB = usedGB;
@@ -493,10 +501,10 @@ router.get('/maintenance/check-expired', (req, res) => {
   console.log('[STORAGE-CONTRACTS] Verificare contracte expirate...');
   try {
     const expiredContracts = StorageContract.checkExpiredContracts();
-    
+
     expiredContracts.forEach(contract => {
       StorageProvider.releaseStorage(contract.providerId, contract.storage.allocatedGB);
-      
+
       UserStorage.removeContractStorage(contract.renterId, contract.id, contract.storage.allocatedGB);
       console.log(`[STORAGE-CONTRACTS] Contract expirat ${contract.id}: stocare eliminata pentru ${contract.renterId}`);
     });

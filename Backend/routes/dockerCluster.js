@@ -7,6 +7,7 @@ const DockerClusterClient = require('../utils/dockerClusterClient');
 const clusterClient = DockerClusterClient.default;
 const { IPFS_PATH } = require('../config/paths');
 const UserStorage = require('../models/UserStorage');
+const providerRouter = require('../utils/providerNetworkRouter');
 
 const metadataPath = path.join(IPFS_PATH, 'cluster-files-metadata.json');
 
@@ -67,7 +68,7 @@ router.get('/status', async (req, res) => {
         peers: Array.isArray(peers) ? peers.length : 0,
         pinnedFiles: pinsList.length,
         peersList: peers,
-        pinsList: pinsList, 
+        pinsList: pinsList,
         nodesHealth: clusterInfo.nodesHealth,
         nodes: clusterInfo.nodes
       }
@@ -77,10 +78,10 @@ router.get('/status', async (req, res) => {
     res.json(responseData);
   } catch (error) {
     console.error('[DOCKER-CLUSTER] Eroare la status:', error.message);
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       error: 'Cluster-ul nu este disponibil. Asigura-te ca Docker Compose ruleaza.',
-      details: error.message 
+      details: error.message
     });
   }
 });
@@ -89,7 +90,7 @@ router.get('/peers', async (req, res) => {
   console.log('[DOCKER-CLUSTER] Obtinere peers...');
   try {
     const peers = await clusterClient.get('/peers');
-    
+
     res.json({
       success: true,
       totalPeers: Array.isArray(peers) ? peers.length : 0,
@@ -105,26 +106,27 @@ router.post('/add', async (req, res) => {
   console.log('[DOCKER-CLUSTER] Adaugare fisier in cluster...');
   console.log('[DOCKER-CLUSTER] req.files:', req.files);
   console.log('[DOCKER-CLUSTER] req.body:', req.body);
-  
+
   if (!req.files || !req.files.file) {
     console.error('[DOCKER-CLUSTER] Niciun fisier gasit in request');
-    return res.status(400).json({ 
-      success: false, 
-      error: 'Niciun fisier nu a fost incarcat' 
+    return res.status(400).json({
+      success: false,
+      error: 'Niciun fisier nu a fost incarcat'
     });
   }
 
   const uploadedFile = req.files.file;
   const tempPath = uploadedFile.tempFilePath;
 
-  const peerId = req.body.peerId || req.headers['x-peer-id'] || 'default-user';
+  // Get the actual owner from request body, then headers, then fallback
+  const peerId = req.body.owner || req.body.uploadedBy || req.headers['x-user-id'] || req.body.peerId || 'default-user';
 
   console.log(`[DOCKER-CLUSTER] Verificare limita stocare pentru ${peerId}, fisier: ${uploadedFile.size} bytes`);
   const storageCheck = UserStorage.canUpload(peerId, uploadedFile.size);
-  
+
   if (!storageCheck.allowed) {
     console.log(`[DOCKER-CLUSTER] Upload refuzat - limita depasita pentru ${peerId}`);
-    
+
     if (fs.existsSync(tempPath)) {
       fs.unlinkSync(tempPath);
     }
@@ -150,94 +152,154 @@ router.post('/add', async (req, res) => {
   }
 
   try {
-    const form = new FormData();
-    form.append('file', fs.createReadStream(tempPath), {
-      filename: uploadedFile.name,
-      contentType: uploadedFile.mimetype
-    });
+    // ========================================
+    // PROVIDER-FIRST UPLOAD STRATEGY
+    // ========================================
+    const contractId = req.body.contractId;
+    let cid = null;
+    let storedOn = 'cluster'; // Default
+    let providerUploadResult = null;
 
-    console.log(`[DOCKER-CLUSTER] Upload fisier: ${uploadedFile.name} (${uploadedFile.size} bytes)`);
-    
-    const responseData = await clusterClient.post('/add', form, {
-      headers: form.getHeaders(),
-      timeout: 60000
-    });
+    // Default values for cluster-specific variables
+    let replicationFactor = parseInt(req.body.replicationFactor) || 3;
+    let replicationStatus = 'N/A';
+    let pinnedPeers = 0;
+    let responseData = { allocations: [] };
 
-    console.log('[DOCKER-CLUSTER] Raspuns cluster RAW:', JSON.stringify(responseData, null, 2));
-    console.log('[DOCKER-CLUSTER] Tip raspuns:', typeof responseData);
-    console.log('[DOCKER-CLUSTER] Chei raspuns:', responseData ? Object.keys(responseData) : 'null');
+    // Step 1: Try provider first (if contract exists)
+    if (contractId) {
+      console.log(`[DOCKER-CLUSTER] 🎯 Provider-First Strategy: Checking contract ${contractId}`);
 
-    const cid = clusterClient.extractCID(responseData);
+      const routingDecision = await providerRouter.getRoutingDecision(contractId, uploadedFile.size);
+      console.log(`[DOCKER-CLUSTER] Routing decision: ${routingDecision.reason}`);
 
-    if (!cid) {
-      console.error('[DOCKER-CLUSTER] Nu s-a putut extrage CID din raspuns');
-      console.error('[DOCKER-CLUSTER] Raspuns complet:', JSON.stringify(responseData, null, 2));
-      throw new Error('Nu s-a putut extrage CID-ul din raspuns');
+      if (routingDecision.useProvider && routingDecision.provider) {
+        // Try direct upload to provider
+        console.log(`[DOCKER-CLUSTER] 📤 Attempting direct upload to provider: ${routingDecision.provider.name}`);
+
+        providerUploadResult = await providerRouter.uploadFileToProvider(
+          routingDecision.provider,
+          tempPath,
+          {
+            name: uploadedFile.name,
+            size: uploadedFile.size,
+            mimetype: uploadedFile.mimetype
+          }
+        );
+
+        if (providerUploadResult.success) {
+          cid = providerUploadResult.cid;
+          storedOn = 'provider';
+          console.log(`[DOCKER-CLUSTER] ✅ File stored on provider: ${cid}`);
+        } else {
+          console.log(`[DOCKER-CLUSTER] ⚠️ Provider upload failed: ${providerUploadResult.error}`);
+          if (providerUploadResult.shouldFallback) {
+            console.log(`[DOCKER-CLUSTER] 📦 Falling back to cluster...`);
+          }
+        }
+      }
     }
 
-    console.log(`[DOCKER-CLUSTER] Fisier adaugat cu CID: ${cid}`);
+    // Step 2: Fallback to cluster if provider upload failed or no contract
+    if (!cid) {
+      console.log(`[DOCKER-CLUSTER] 📦 Uploading to backup cluster...`);
 
-    // Record upload
-    UserStorage.recordUpload(peerId, cid, uploadedFile.size, uploadedFile.name);
+      const form = new FormData();
+      form.append('file', fs.createReadStream(tempPath), {
+        filename: uploadedFile.name,
+        contentType: uploadedFile.mimetype
+      });
+
+      const responseData = await clusterClient.post('/add', form, {
+        headers: form.getHeaders(),
+        timeout: 60000
+      });
+
+      console.log('[DOCKER-CLUSTER] Raspuns cluster RAW:', JSON.stringify(responseData, null, 2));
+      console.log('[DOCKER-CLUSTER] Tip raspuns:', typeof responseData);
+      console.log('[DOCKER-CLUSTER] Chei raspuns:', responseData ? Object.keys(responseData) : 'null');
+
+      cid = clusterClient.extractCID(responseData);
+
+      if (!cid) {
+        console.error('[DOCKER-CLUSTER] Nu s-a putut extrage CID din raspuns');
+        console.error('[DOCKER-CLUSTER] Raspuns complet:', JSON.stringify(responseData, null, 2));
+        throw new Error('Nu s-a putut extrage CID-ul din raspuns');
+      }
+
+      storedOn = 'cluster';
+      console.log(`[DOCKER-CLUSTER] Fisier adaugat cu CID: ${cid}`);
+
+      UserStorage.recordUpload(peerId, cid, uploadedFile.size, uploadedFile.name);
+
+      if (fs.existsSync(tempPath)) {
+        fs.unlinkSync(tempPath);
+      }
+
+      replicationFactor = parseInt(req.body.replicationFactor) || 3;
+      console.log(`[DOCKER-CLUSTER] 📋 Configurare replicare: ${replicationFactor} copii...`);
+
+      try {
+        await clusterClient.post(`/pins/${cid}`, {
+          replication_factor_min: Math.min(replicationFactor, 2),
+          replication_factor_max: replicationFactor,
+          name: uploadedFile.name,
+          mode: 'recursive',
+          pin_options: {
+            replication: replicationFactor
+          }
+        });
+        console.log(`[DOCKER-CLUSTER] ✓ Replicare configurată: ${replicationFactor} noduri`);
+      } catch (repError) {
+        console.warn('[DOCKER-CLUSTER] ⚠️ Eroare la configurare replicare:', repError.message);
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      let pinStatus = null;
+      pinnedPeers = 0;
+      replicationStatus = 'pending';
+      try {
+        pinStatus = await clusterClient.get(`/pins/${cid}`);
+        if (pinStatus && pinStatus.peer_map) {
+          const pinnedNodes = Object.values(pinStatus.peer_map).filter(p => p.status === 'pinned');
+          pinnedPeers = pinnedNodes.length;
+
+          if (pinnedPeers >= replicationFactor) {
+            replicationStatus = 'complete';
+            console.log(`[DOCKER-CLUSTER] ✓ Replicare completă: ${pinnedPeers}/${replicationFactor} noduri`);
+          } else if (pinnedPeers > 0) {
+            replicationStatus = 'partial';
+            console.log(`[DOCKER-CLUSTER] ⏳ Replicare parțială: ${pinnedPeers}/${replicationFactor} noduri`);
+          }
+        }
+      } catch (e) {
+        console.warn('[DOCKER-CLUSTER] Nu s-a putut obtine status pin:', e.message);
+      }
+
+    } // End of if (!cid) block - cluster fallback
+
+    // At this point we should have a valid CID (from provider or cluster)
+    if (!cid) {
+      throw new Error('Failed to upload file to both provider and cluster');
+    }
 
     // Clean up temp file
     if (fs.existsSync(tempPath)) {
       fs.unlinkSync(tempPath);
     }
 
-    // Configure replication (default: 3 copies for redundancy)
-    const replicationFactor = parseInt(req.body.replicationFactor) || 3;
-    console.log(`[DOCKER-CLUSTER] 📋 Configurare replicare: ${replicationFactor} copii...`);
+    // Record upload
+    UserStorage.recordUpload(peerId, cid, uploadedFile.size, uploadedFile.name);
 
-    try {
-      // Update pin with replication settings
-      await clusterClient.post(`/pins/${cid}`, {
-        replication_factor_min: Math.min(replicationFactor, 2),
-        replication_factor_max: replicationFactor,
-        name: uploadedFile.name,
-        mode: 'recursive',
-        pin_options: {
-          replication: replicationFactor
-        }
-      });
-      console.log(`[DOCKER-CLUSTER] ✓ Replicare configurată: ${replicationFactor} noduri`);
-    } catch (repError) {
-      console.warn('[DOCKER-CLUSTER] ⚠️ Eroare la configurare replicare:', repError.message);
-    }
-
-    // Wait for replication to propagate
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    // Check pin status and replication
-    let pinStatus = null;
-    let pinnedPeers = 0;
-    let replicationStatus = 'pending';
-    try {
-      pinStatus = await clusterClient.get(`/pins/${cid}`);
-      if (pinStatus && pinStatus.peer_map) {
-        const pinnedNodes = Object.values(pinStatus.peer_map).filter(p => p.status === 'pinned');
-        pinnedPeers = pinnedNodes.length;
-        
-        if (pinnedPeers >= replicationFactor) {
-          replicationStatus = 'complete';
-          console.log(`[DOCKER-CLUSTER] ✓ Replicare completă: ${pinnedPeers}/${replicationFactor} noduri`);
-        } else if (pinnedPeers > 0) {
-          replicationStatus = 'partial';
-          console.log(`[DOCKER-CLUSTER] ⏳ Replicare parțială: ${pinnedPeers}/${replicationFactor} noduri`);
-        }
-      }
-    } catch (e) {
-      console.warn('[DOCKER-CLUSTER] Nu s-a putut obtine status pin:', e.message);
-    }
-
+    // Get gateways for access URLs
     const gateways = clusterClient.getIPFSGateways();
     const accessUrls = gateways.map(gw => `${gw}/ipfs/${cid}`);
 
-    // Save metadata with encryption and replication info
     const metadata = loadMetadata();
     const { description = '', tags = '', encryption } = req.body;
-    const parsedTags = typeof tags === 'string' && tags.trim() 
-      ? tags.split(',').map(t => t.trim()).filter(t => t) 
+    const parsedTags = typeof tags === 'string' && tags.trim()
+      ? tags.split(',').map(t => t.trim()).filter(t => t)
       : [];
 
     let encryptionInfo = null;
@@ -269,6 +331,23 @@ router.post('/add', async (req, res) => {
     };
     saveMetadata(metadata);
 
+    // Provider routing info (already set during upload)
+    let providerRouting = null;
+    if (storedOn === 'provider' && providerUploadResult) {
+      providerRouting = {
+        sentToProvider: true,
+        providerName: providerUploadResult.providerName,
+        providerStatus: 'online',
+        message: `✓ File stored on provider: ${providerUploadResult.providerName}`
+      };
+    } else {
+      providerRouting = {
+        sentToProvider: false,
+        storedOn: storedOn,
+        message: '📦 File stored in backup cluster'
+      };
+    }
+
     const updatedStorageInfo = UserStorage.getUserStorageInfo(peerId);
 
     res.json({
@@ -290,8 +369,8 @@ router.post('/add', async (req, res) => {
           factor: replicationFactor,
           status: replicationStatus,
           nodes: pinnedPeers,
-          message: pinnedPeers >= replicationFactor 
-            ? `✓ Fișier replicat pe ${pinnedPeers} noduri` 
+          message: pinnedPeers >= replicationFactor
+            ? `✓ Fișier replicat pe ${pinnedPeers} noduri`
             : `⏳ Replicare în curs: ${pinnedPeers}/${replicationFactor} noduri`
         },
         encryption: encryptionInfo ? {
@@ -300,6 +379,7 @@ router.post('/add', async (req, res) => {
           originalName: encryptionInfo.originalName
         } : { enabled: false }
       },
+      providerRouting: providerRouting,
       storageInfo: {
         usedGB: updatedStorageInfo.storage.usedGB,
         limitGB: updatedStorageInfo.storage.limitGB,
@@ -311,7 +391,7 @@ router.post('/add', async (req, res) => {
 
   } catch (error) {
     console.error('[DOCKER-CLUSTER] Eroare la add:', error.message);
-    
+
     if (fs.existsSync(tempPath)) {
       try {
         fs.unlinkSync(tempPath);
@@ -320,8 +400,8 @@ router.post('/add', async (req, res) => {
       }
     }
 
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       error: error.message,
       details: 'Verifica ca clusterul Docker ruleaza (docker-compose ps in folderul Infrastructura)'
     });
@@ -333,11 +413,11 @@ router.get('/pins', async (req, res) => {
   try {
     const pinsData = await clusterClient.get('/pins');
     const metadata = loadMetadata();
-    
+
     let cidList = [];
-    
+
     if (pinsData && typeof pinsData === 'object') {
-      cidList = Object.keys(pinsData).filter(key => 
+      cidList = Object.keys(pinsData).filter(key =>
         key.startsWith('Qm') || key.startsWith('baf') || key.startsWith('bafy')
       );
     }
@@ -359,9 +439,9 @@ router.get('/pins', async (req, res) => {
         uploadedBy: meta.uploadedBy || null
       };
     });
-    
+
     console.log(`[DOCKER-CLUSTER] ${filesWithMetadata.length} fisiere gasite in cluster`);
-    
+
     res.json({
       success: true,
       totalPins: filesWithMetadata.length,
@@ -378,7 +458,7 @@ router.get('/pin/:cid', async (req, res) => {
   try {
     const { cid } = req.params;
     const status = await clusterClient.get(`/pins/${cid}`);
-    
+
     res.json({
       success: true,
       cid: cid,
@@ -404,9 +484,9 @@ router.delete('/pin/:cid', async (req, res) => {
       delete metadata[cid];
       saveMetadata(metadata);
     }
-    
+
     console.log(`[DOCKER-CLUSTER] ✓ Fisier unpinuit: ${cid}`);
-    
+
     res.json({
       success: true,
       message: 'Fisier sters din cluster',
@@ -429,15 +509,15 @@ router.get('/download/:cid', async (req, res) => {
     const metadata = loadMetadata();
     const fileInfo = metadata[cid];
     let filename = fileInfo?.name || cid;
-    
+
     console.log(`[DOCKER-CLUSTER] Filename din metadata: ${filename}`);
-    
+
     let lastError;
     for (const gateway of gateways) {
       try {
         const gatewayUrl = `${gateway}/ipfs/${cid}`;
         console.log(`[DOCKER-CLUSTER] Descarcare de la: ${gatewayUrl}`);
-        
+
         const response = await axios.get(gatewayUrl, {
           responseType: 'stream',
           timeout: 30000,
@@ -449,25 +529,25 @@ router.get('/download/:cid', async (req, res) => {
         if (response.headers['content-length']) {
           res.setHeader('Content-Length', response.headers['content-length']);
         }
-        
+
         response.data.pipe(res);
-        return; 
-        
+        return;
+
       } catch (err) {
         lastError = err;
         console.warn(`[DOCKER-CLUSTER] Gateway ${gateway} indisponibil, incerc urmatorul...`);
         continue;
       }
     }
-    
+
     throw lastError || new Error('Toate gateway-urile IPFS sunt indisponibile');
 
   } catch (error) {
     console.error('[DOCKER-CLUSTER] Eroare la download:', error.message);
-    
+
     if (!res.headersSent) {
-      res.status(500).json({ 
-        success: false, 
+      res.status(500).json({
+        success: false,
         error: 'Nu s-a putut descarca fisierul',
         details: error.message,
         suggestion: 'Verifica ca nodurile IPFS din cluster ruleaza (docker-compose ps)'
@@ -478,7 +558,7 @@ router.get('/download/:cid', async (req, res) => {
 
 router.get('/health', async (req, res) => {
   console.log('[DOCKER-CLUSTER] Health check...');
-  
+
   try {
     const nodesHealth = await clusterClient.checkAllNodes();
     const nodeStatuses = Object.entries(nodesHealth).map(([node, healthy]) => ({
@@ -489,7 +569,7 @@ router.get('/health', async (req, res) => {
 
     const onlineNodes = nodeStatuses.filter(n => n.healthy).length;
     const totalNodes = nodeStatuses.length;
-    const isHealthy = onlineNodes >= Math.ceil(totalNodes / 2); 
+    const isHealthy = onlineNodes >= Math.ceil(totalNodes / 2);
 
     res.json({
       success: true,
@@ -518,16 +598,16 @@ router.get('/health', async (req, res) => {
 router.get('/file/:cid', async (req, res) => {
   const { cid } = req.params;
   console.log(`[DOCKER-CLUSTER] Cerere descarcare fisier: ${cid}`);
-  
+
   try {
     const { exec } = require('child_process');
     const { promisify } = require('util');
     const execPromise = promisify(exec);
     const fileType = require('file-type');
-    
+
     let fileName = cid;
     let mimeType = 'application/octet-stream';
-    
+
     try {
       const pinInfo = await clusterClient.get(`/pins/${cid}`);
       if (pinInfo && pinInfo.name) {
@@ -536,23 +616,23 @@ router.get('/file/:cid', async (req, res) => {
     } catch (e) {
       console.log('[DOCKER-CLUSTER] Nu s-au putut obtine informatii despre pin');
     }
-    
+
     const containers = ['ipfs-node-1', 'ipfs-node-2', 'ipfs-node-3', 'ipfs-node-4', 'ipfs-node-5'];
-    
+
     for (const container of containers) {
       try {
         console.log(`[DOCKER-CLUSTER] incercare descarcare de la container: ${container}`);
-        
+
         const command = `docker exec ${container} ipfs cat ${cid}`;
         const { stdout, stderr } = await execPromise(command, {
           encoding: 'buffer',
-          maxBuffer: 100 * 1024 * 1024 
+          maxBuffer: 100 * 1024 * 1024
         });
-        
+
         if (stderr && stderr.length > 0) {
           console.warn(`[DOCKER-CLUSTER] Stderr de la ${container}:`, stderr.toString());
         }
-        
+
         try {
           const detectedType = await fileType.fromBuffer(stdout);
           if (detectedType) {
@@ -565,24 +645,24 @@ router.get('/file/:cid', async (req, res) => {
         } catch (e) {
           console.log('[DOCKER-CLUSTER] Nu s-a putut detecta tipul fisierului');
         }
-        
+
         const inline = req.query.inline === 'true';
         const disposition = inline ? 'inline' : 'attachment';
-        
+
         res.setHeader('Content-Type', mimeType);
         res.setHeader('Content-Disposition', `${disposition}; filename="${fileName}"`);
         res.setHeader('Content-Length', stdout.length);
-        
+
         res.send(stdout);
         console.log(`[DOCKER-CLUSTER] Fisier servit cu succes de la ${container} (${stdout.length} bytes, ${mimeType})`);
         return;
-        
+
       } catch (containerError) {
         console.warn(`[DOCKER-CLUSTER] Container ${container} esuat:`, containerError.message);
         continue;
       }
     }
-    
+
     console.error(`[DOCKER-CLUSTER] Niciun container IPFS nu poate servi CID-ul: ${cid}`);
     res.status(404).json({
       success: false,
@@ -590,7 +670,7 @@ router.get('/file/:cid', async (req, res) => {
       cid: cid,
       hint: 'Verifica ca fisierul este pinned in cluster'
     });
-    
+
   } catch (error) {
     console.error('[DOCKER-CLUSTER] Eroare la descarcare fisier:', error.message);
     res.status(500).json({

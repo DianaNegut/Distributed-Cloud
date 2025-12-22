@@ -1,7 +1,4 @@
-/**
- * Authentication API Routes pentru Solid PODs
- * Endpoints pentru register, login, logout
- */
+
 
 const express = require('express');
 const router = express.Router();
@@ -11,17 +8,14 @@ const SolidIPFSAdapter = require('../utils/solidIPFSAdapter');
 const DockerClusterClient = require('../utils/dockerClusterClient');
 const { requireAuth } = require('../middleware/solidAuth');
 
-// Inițializare adapter
+
 const clusterClient = new DockerClusterClient();
 const solidAdapter = new SolidIPFSAdapter(clusterClient);
 
-/**
- * POST /api/auth/register
- * Înregistrare utilizator nou + creare POD
- */
+
 router.post('/register', async (req, res) => {
   console.log('[AUTH] Registration request...');
-  
+
   try {
     const { username, password, email, name, description } = req.body;
 
@@ -32,27 +26,27 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    // Înregistrează utilizatorul
+
     const user = SolidAuth.register(username, password, email);
 
-    // Creează POD automat pentru utilizator
+
     const pod = SolidPod.createPod({
       username,
-      ownerId: username, // Owner-ul este username-ul
+      ownerId: username,
       name: name || `${username}'s POD`,
       description: description || 'Personal data store'
     });
 
-    // Inițializează structura POD pe IPFS
+
     console.log('[AUTH] Initializing POD structure on IPFS...');
     const containerCids = await solidAdapter.initializePodStructure(pod);
 
-    // Actualizează CID-urile în POD
+
     for (const [container, cid] of Object.entries(containerCids)) {
       SolidPod.updateContainerCid(pod.id, container, cid);
     }
 
-    // Asociază POD-ul cu user-ul
+
     SolidAuth.setPodForUser(username, pod.id, pod.webId);
 
     console.log(`[AUTH] User registered successfully: ${username}`);
@@ -80,13 +74,10 @@ router.post('/register', async (req, res) => {
   }
 });
 
-/**
- * POST /api/auth/login
- * Autentificare utilizator
- */
+
 router.post('/login', (req, res) => {
   console.log('[AUTH] Login request...');
-  
+
   try {
     const { username, password } = req.body;
 
@@ -97,7 +88,7 @@ router.post('/login', (req, res) => {
       });
     }
 
-    // Autentifică utilizatorul
+
     const session = SolidAuth.login(username, password);
 
     console.log(`[AUTH] User logged in successfully: ${username}`);
@@ -116,10 +107,7 @@ router.post('/login', (req, res) => {
   }
 });
 
-/**
- * POST /api/auth/logout
- * Deconectare utilizator
- */
+
 router.post('/logout', requireAuth, (req, res) => {
   try {
     SolidAuth.logout(req.sessionToken);
@@ -136,15 +124,12 @@ router.post('/logout', requireAuth, (req, res) => {
   }
 });
 
-/**
- * GET /api/auth/me
- * Obține informații despre utilizatorul curent
- */
+
 router.get('/me', requireAuth, (req, res) => {
   try {
     const user = SolidAuth.getUser(req.user.username);
-    
-    // Obține și informații despre POD
+
+
     let pod = null;
     if (user.podId) {
       try {
@@ -173,10 +158,7 @@ router.get('/me', requireAuth, (req, res) => {
   }
 });
 
-/**
- * POST /api/auth/change-password
- * Schimbă parola utilizatorului
- */
+
 router.post('/change-password', requireAuth, (req, res) => {
   try {
     const { oldPassword, newPassword } = req.body;
@@ -202,10 +184,7 @@ router.post('/change-password', requireAuth, (req, res) => {
   }
 });
 
-/**
- * GET /api/auth/status
- * Status sistem autentificare
- */
+
 router.get('/status', (req, res) => {
   try {
     const stats = SolidAuth.getStatistics();

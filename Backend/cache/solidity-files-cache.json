@@ -1,0 +1,185 @@
+{
+  "_format": "hh-sol-cache-2",
+  "files": {
+    "C:\\ATM\\LICENTA\\Distributed-Cloud\\Backend\\blockchain\\DIDRegistry.sol": {
+      "lastModificationDate": 1765982696703,
+      "contentHash": "18c6c0961f7402e1b07174cd2fa5334e",
+      "sourceName": "blockchain/DIDRegistry.sol",
+      "solcConfig": {
+        "version": "0.8.20",
+        "settings": {
+          "evmVersion": "paris",
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.20"
+      ],
+      "artifacts": [
+        "DIDRegistry"
+      ]
+    },
+    "C:\\ATM\\LICENTA\\Distributed-Cloud\\Backend\\blockchain\\PaymentProcessor.sol": {
+      "lastModificationDate": 1765968513113,
+      "contentHash": "fe752a9e6b828913e105f5dd47ba81cd",
+      "sourceName": "blockchain/PaymentProcessor.sol",
+      "solcConfig": {
+        "version": "0.8.20",
+        "settings": {
+          "evmVersion": "paris",
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.20"
+      ],
+      "artifacts": [
+        "PaymentProcessor"
+      ]
+    },
+    "C:\\ATM\\LICENTA\\Distributed-Cloud\\Backend\\blockchain\\PaymentProcessorV2.sol": {
+      "lastModificationDate": 1765983479944,
+      "contentHash": "8c2bdbab5238c87254b98d416d40ef6c",
+      "sourceName": "blockchain/PaymentProcessorV2.sol",
+      "solcConfig": {
+        "version": "0.8.20",
+        "settings": {
+          "evmVersion": "paris",
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.0"
+      ],
+      "artifacts": [
+        "PaymentProcessorV2"
+      ]
+    },
+    "C:\\ATM\\LICENTA\\Distributed-Cloud\\Backend\\blockchain\\StorageContract.sol": {
+      "lastModificationDate": 1765983434556,
+      "contentHash": "b0fa7aba276b2edff3a4ee8be6322b77",
+      "sourceName": "blockchain/StorageContract.sol",
+      "solcConfig": {
+        "version": "0.8.20",
+        "settings": {
+          "evmVersion": "paris",
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.20"
+      ],
+      "artifacts": [
+        "StorageContract"
+      ]
+    },
+    "C:\\ATM\\LICENTA\\Distributed-Cloud\\Backend\\blockchain\\StorageContractV2.sol": {
+      "lastModificationDate": 1765971725187,
+      "contentHash": "a26ca333cb393c26ba77d0b886bc73fc",
+      "sourceName": "blockchain/StorageContractV2.sol",
+      "solcConfig": {
+        "version": "0.8.20",
+        "settings": {
+          "evmVersion": "paris",
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.0"
+      ],
+      "artifacts": [
+        "StorageContractV2"
+      ]
+    }
+  }
+}

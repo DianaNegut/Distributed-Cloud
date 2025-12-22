@@ -252,6 +252,26 @@ services:
       timeout: 5s
       retries: 3
 
+  server:
+    build: ../Backend
+    container_name: backend-server
+    environment:
+      - PORT=3001
+      - IPFS_API_URL=http://ipfs-1:5001
+      - CLUSTER_API_URL=http://cluster-1:9094
+      - IPFS_PATH=/app/data
+    volumes:
+      - backend-data:/app/data
+      - ../Backend:/app
+      - /app/node_modules
+    ports:
+      - "3001:3001"
+    networks:
+      - ipfs-net
+    depends_on:
+      - cluster-1
+    restart: unless-stopped
+
 volumes:
   ipfs-1-data:
   ipfs-2-data:
@@ -263,6 +283,7 @@ volumes:
   cluster-3-data:
   cluster-4-data:
   cluster-5-data:
+  backend-data:
 
 networks:
   ipfs-net:

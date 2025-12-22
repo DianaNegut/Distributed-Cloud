@@ -9,7 +9,7 @@ export default function PeersPanel({ peers }) {
       <div className="peers-container">
         {peers.map((peer, index) => (
           <div key={index} className="peer-item">
-            {peer}
+            {typeof peer === 'string' ? peer : (peer.peername || peer.id || 'Unknown')}
           </div>
         ))}
       </div>

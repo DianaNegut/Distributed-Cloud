@@ -4,11 +4,11 @@ import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card'
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Badge } from '../components/ui/Badge';
-import { 
-  Upload, 
-  Download, 
-  Trash2, 
-  FileText, 
+import {
+  Upload,
+  Download,
+  Trash2,
+  FileText,
   RefreshCw,
   File as FileIcon,
   FileImage,
@@ -48,7 +48,6 @@ export default function FilesPage() {
   const [storageInfo, setStorageInfo] = useState(null);
   const [contracts, setContracts] = useState([]);
   const [selectedContract, setSelectedContract] = useState(null);
-  const [encryptionEnabled, setEncryptionEnabled] = useState(true);
   const [encryptionProgress, setEncryptionProgress] = useState({ percent: 0, message: '' });
   const [previewFile, setPreviewFile] = useState(null);
   const [shareFile, setShareFile] = useState(null);
@@ -66,16 +65,16 @@ export default function FilesPage() {
       const response = await axios.get(`${API_URL}/storage-contracts`, {
         headers: { 'x-api-key': API_KEY }
       });
-      
+
       if (response.data.success) {
         // Filter only active contracts
         const activeContracts = (response.data.contracts || []).filter(c => c.status === 'active');
-        
+
         // Load or generate encryption keys for contracts
         for (const contract of activeContracts) {
           // First, try to load existing key from localStorage
           const storedKey = localStorage.getItem(`contract_key_${contract.id}`);
-          
+
           if (storedKey) {
             // Use existing key from localStorage
             contract.encryption = {
@@ -106,9 +105,9 @@ export default function FilesPage() {
             }
           }
         }
-        
+
         setContracts(activeContracts);
-        
+
         // Auto-select first contract if available
         if (activeContracts.length > 0 && !selectedContract) {
           setSelectedContract(activeContracts[0]);
@@ -133,7 +132,7 @@ export default function FilesPage() {
     if (!user) return;
     try {
       const response = await axios.get(`${API_URL}/user-storage/${user.username}`, {
-        headers: { 
+        headers: {
           'x-api-key': API_KEY,
           'x-session-token': sessionToken
         }
@@ -161,7 +160,7 @@ export default function FilesPage() {
       const response = await axios.post(`${API_URL}/user-storage/${user.username}/sync`, {
         files: filesToSync
       }, {
-        headers: { 
+        headers: {
           'x-api-key': API_KEY,
           'x-session-token': sessionToken
         }
@@ -189,19 +188,18 @@ export default function FilesPage() {
     setLoading(true);
     try {
       const response = await axios.get(`${API_URL}/docker-cluster/pins`, {
-        headers: { 
+        headers: {
           'x-api-key': API_KEY,
           'x-session-token': sessionToken
         }
       });
-      
+
       if (response.data.success) {
         const allFiles = response.data.pins || [];
         // Filter files to show only those uploaded by current user
         const myFiles = allFiles.filter(file => {
-          // Check if file has metadata with owner information
-          const metadata = file.metadata || {};
-          return metadata.owner === user.username || metadata.uploadedBy === user.username;
+          // Check uploadedBy field (stored at root level by backend)
+          return file.uploadedBy === user.username;
         });
         setFiles(myFiles);
         toast.success(`${myFiles.length} fișiere personale încărcate`);
@@ -228,7 +226,7 @@ export default function FilesPage() {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-    
+
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       setSelectedFile(e.dataTransfer.files[0]);
       toast.success(`File selected: ${e.dataTransfer.files[0].name}`);
@@ -244,7 +242,7 @@ export default function FilesPage() {
 
   const handleUpload = async (e) => {
     e.preventDefault();
-    
+
     if (!selectedFile) {
       toast.error('Selectează mai întâi un fișier');
       return;
@@ -282,15 +280,15 @@ export default function FilesPage() {
     let fileToUpload = selectedFile;
     let encryptionMetadata = null;
 
-    // Encrypt file if enabled and contract has encryption key
-    if (encryptionEnabled && selectedContract.encryption && selectedContract.encryption.key) {
+    // Always encrypt files when contract has encryption key
+    if (selectedContract.encryption && selectedContract.encryption.key) {
       const toastId = toast.loading('🔒 Criptare fișier...');
-      
+
       try {
         console.log('Starting encryption...');
         const cryptoKey = await FileEncryption.importKey(selectedContract.encryption.key);
         console.log('Key imported successfully');
-        
+
         const encryptionResult = await FileEncryption.encryptFile(
           selectedFile,
           cryptoKey,
@@ -348,7 +346,7 @@ export default function FilesPage() {
       if (response.data.success) {
         const cid = response.data.cid || response.data.file?.cid;
         const fileSizeGB = selectedFile.size / (1024 * 1024 * 1024);
-        
+
         // Update contract storage
         try {
           const fileMetadata = {
@@ -359,12 +357,12 @@ export default function FilesPage() {
             uploadedAt: new Date().toISOString(),
             contractId: selectedContract.id
           };
-          
+
           // Add encryption metadata if file was encrypted
           if (encryptionMetadata) {
             fileMetadata.encryption = encryptionMetadata;
           }
-          
+
           await axios.patch(`${API_URL}/storage-contracts/${selectedContract.id}/storage`, {
             usedGB: selectedContract.storage.usedGB + fileSizeGB,
             files: [...(selectedContract.storage.files || []), fileMetadata]
@@ -374,18 +372,18 @@ export default function FilesPage() {
         } catch (updateError) {
           console.error('Error updating contract storage:', updateError);
         }
-        
+
         const encryptionStatus = encryptionMetadata ? ' 🔒 Criptat' : '';
         toast.success(`✅ Fișier încărcat!${encryptionStatus}\nCID: ${cid}\nContract: ${selectedContract.id.slice(-8)}`, { duration: 5000 });
-        
+
         // Display storage warnings
         if (response.data.storageWarning) {
           if (response.data.storageWarning.status === 'critical') {
             toast.error(response.data.storageWarning.message, { duration: 6000 });
           } else if (response.data.storageWarning.status === 'warning') {
-            toast(response.data.storageWarning.message, { 
+            toast(response.data.storageWarning.message, {
               icon: '⚠️',
-              duration: 5000 
+              duration: 5000
             });
           }
         }
@@ -413,7 +411,7 @@ export default function FilesPage() {
 
   const handleDownload = async (file) => {
     const toastId = toast.loading(`📥 Descărcare ${file.name || file.hash}...`);
-    
+
     try {
       // Download encrypted file from IPFS
       const response = await axios.get(`${API_URL}/docker-cluster/download/${file.hash}`, {
@@ -426,19 +424,19 @@ export default function FilesPage() {
 
       // Check if file is encrypted
       const isEncrypted = file.name?.endsWith('.encrypted') || file.encryption?.encrypted;
-      
+
       if (isEncrypted && file.encryption) {
         try {
           toast.dismiss(toastId);
           const decryptToastId = toast.loading('🔓 Decriptare fișier...');
-          
+
           console.log('Decrypting file:', file);
           console.log('File encryption metadata:', file.encryption);
           console.log('Available contracts:', contracts.length);
-          
+
           // Find the contract that has the encryption key
-          let fileContract = contracts.find(c => 
-            c.id === file.contractId || 
+          let fileContract = contracts.find(c =>
+            c.id === file.contractId ||
             c.storage?.files?.some(f => f.cid === file.hash || f.cid === file.cid)
           );
 
@@ -452,8 +450,8 @@ export default function FilesPage() {
           if (!fileContract) {
             console.log('Reloading contracts to find the right one...');
             await loadContracts();
-            fileContract = contracts.find(c => 
-              c.id === file.contractId || 
+            fileContract = contracts.find(c =>
+              c.id === file.contractId ||
               c.storage?.files?.some(f => f.cid === file.hash || f.cid === file.cid)
             );
           }
@@ -471,16 +469,16 @@ export default function FilesPage() {
           // Import decryption key
           const cryptoKey = await FileEncryption.importKey(fileContract.encryption.key);
           console.log('Key imported successfully');
-          
+
           // Prepare external metadata
           const externalMetadata = {
             originalName: file.encryption.originalName || file.originalName,
             originalSize: file.encryption.originalSize || file.size,
             mimeType: file.mimetype || 'application/octet-stream'
           };
-          
+
           console.log('External metadata:', externalMetadata);
-          
+
           // Decrypt file with external metadata
           const decryptionResult = await FileEncryption.decryptFile(
             downloadBlob,
@@ -491,10 +489,10 @@ export default function FilesPage() {
 
           downloadBlob = decryptionResult.decryptedBlob;
           downloadName = decryptionResult.metadata.originalName || file.encryption.originalName;
-          
+
           toast.dismiss(decryptToastId);
           toast.success('✅ Fișier decriptat cu succes!');
-          
+
           console.log('Decryption successful:', decryptionResult.metadata);
         } catch (decryptError) {
           toast.dismiss();
@@ -554,7 +552,7 @@ export default function FilesPage() {
   return (
     <div className="flex-1 overflow-auto">
       <Toaster position="top-right" />
-      
+
       <div className="max-w-7xl mx-auto p-8">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -572,24 +570,21 @@ export default function FilesPage() {
             animate={{ opacity: 1, y: 0 }}
             className="mb-6"
           >
-            <Card className={`border-l-4 ${
-              storageInfo.status === 'critical' ? 'border-l-red-500' :
+            <Card className={`border-l-4 ${storageInfo.status === 'critical' ? 'border-l-red-500' :
               storageInfo.status === 'warning' ? 'border-l-yellow-500' :
-              'border-l-green-500'
-            }`}>
+                'border-l-green-500'
+              }`}>
               <CardContent className="pt-4 pb-4">
                 <div className="flex items-center justify-between flex-wrap gap-4">
                   <div className="flex items-center gap-4">
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                      storageInfo.status === 'critical' ? 'bg-red-500/20' :
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${storageInfo.status === 'critical' ? 'bg-red-500/20' :
                       storageInfo.status === 'warning' ? 'bg-yellow-500/20' :
-                      'bg-green-500/20'
-                    }`}>
-                      <HardDrive className={`w-6 h-6 ${
-                        storageInfo.status === 'critical' ? 'text-red-400' :
+                        'bg-green-500/20'
+                      }`}>
+                      <HardDrive className={`w-6 h-6 ${storageInfo.status === 'critical' ? 'text-red-400' :
                         storageInfo.status === 'warning' ? 'text-yellow-400' :
-                        'text-green-400'
-                      }`} />
+                          'text-green-400'
+                        }`} />
                     </div>
                     <div>
                       <p className="text-white font-medium">
@@ -600,29 +595,27 @@ export default function FilesPage() {
                       </p>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center gap-4">
                     <div className="w-48">
                       <div className="flex justify-between text-xs mb-1">
                         <span className="text-gray-400">Utilizare</span>
-                        <span className={`font-medium ${
-                          storageInfo.storage.usagePercent >= 95 ? 'text-red-400' :
+                        <span className={`font-medium ${storageInfo.storage.usagePercent >= 95 ? 'text-red-400' :
                           storageInfo.storage.usagePercent >= 80 ? 'text-yellow-400' :
-                          'text-green-400'
-                        }`}>{storageInfo.storage.usagePercent}%</span>
+                            'text-green-400'
+                          }`}>{storageInfo.storage.usagePercent}%</span>
                       </div>
                       <div className="w-full bg-dark-700 rounded-full h-2">
                         <div
-                          className={`h-2 rounded-full transition-all ${
-                            storageInfo.storage.usagePercent >= 95 ? 'bg-red-500' :
+                          className={`h-2 rounded-full transition-all ${storageInfo.storage.usagePercent >= 95 ? 'bg-red-500' :
                             storageInfo.storage.usagePercent >= 80 ? 'bg-yellow-500' :
-                            'bg-green-500'
-                          }`}
+                              'bg-green-500'
+                            }`}
                           style={{ width: `${Math.min(storageInfo.storage.usagePercent, 100)}%` }}
                         />
                       </div>
                     </div>
-                    
+
                     {storageInfo.storage.isDefault && (
                       <Button
                         variant="primary"
@@ -637,10 +630,9 @@ export default function FilesPage() {
                 </div>
 
                 {storageInfo.warning && (
-                  <div className={`mt-3 p-3 rounded-lg flex items-center gap-2 ${
-                    storageInfo.status === 'critical' ? 'bg-red-500/10 text-red-400' :
+                  <div className={`mt-3 p-3 rounded-lg flex items-center gap-2 ${storageInfo.status === 'critical' ? 'bg-red-500/10 text-red-400' :
                     'bg-yellow-500/10 text-yellow-400'
-                  }`}>
+                    }`}>
                     <AlertTriangle className="w-4 h-4 flex-shrink-0" />
                     <p className="text-sm">{storageInfo.warning}</p>
                   </div>
@@ -682,32 +674,29 @@ export default function FilesPage() {
                         );
                       })}
                     </select>
-                    
+
                     {selectedContract && (
-                      <div className={`p-3 rounded-lg border ${
-                        selectedContract.storage.usedGB / selectedContract.storage.allocatedGB >= 0.9 
-                          ? 'bg-red-500/10 border-red-500/30' 
-                          : selectedContract.storage.usedGB / selectedContract.storage.allocatedGB >= 0.8
+                      <div className={`p-3 rounded-lg border ${selectedContract.storage.usedGB / selectedContract.storage.allocatedGB >= 0.9
+                        ? 'bg-red-500/10 border-red-500/30'
+                        : selectedContract.storage.usedGB / selectedContract.storage.allocatedGB >= 0.8
                           ? 'bg-yellow-500/10 border-yellow-500/30'
                           : 'bg-green-500/10 border-green-500/30'
-                      }`}>
+                        }`}>
                         <div className="flex justify-between items-center mb-2">
                           <span className="text-gray-400 text-xs">Stocare contract</span>
-                          <span className={`text-xs font-semibold ${
-                            selectedContract.storage.usedGB / selectedContract.storage.allocatedGB >= 0.9 ? 'text-red-400' :
+                          <span className={`text-xs font-semibold ${selectedContract.storage.usedGB / selectedContract.storage.allocatedGB >= 0.9 ? 'text-red-400' :
                             selectedContract.storage.usedGB / selectedContract.storage.allocatedGB >= 0.8 ? 'text-yellow-400' :
-                            'text-green-400'
-                          }`}>
+                              'text-green-400'
+                            }`}>
                             {selectedContract.storage.usedGB.toFixed(2)} / {selectedContract.storage.allocatedGB} GB
                           </span>
                         </div>
                         <div className="w-full bg-dark-800 rounded-full h-1.5">
                           <div
-                            className={`h-1.5 rounded-full transition-all ${
-                              selectedContract.storage.usedGB / selectedContract.storage.allocatedGB >= 0.9 ? 'bg-red-500' :
+                            className={`h-1.5 rounded-full transition-all ${selectedContract.storage.usedGB / selectedContract.storage.allocatedGB >= 0.9 ? 'bg-red-500' :
                               selectedContract.storage.usedGB / selectedContract.storage.allocatedGB >= 0.8 ? 'bg-yellow-500' :
-                              'bg-green-500'
-                            }`}
+                                'bg-green-500'
+                              }`}
                             style={{ width: `${Math.min((selectedContract.storage.usedGB / selectedContract.storage.allocatedGB * 100), 100)}%` }}
                           />
                         </div>
@@ -730,53 +719,6 @@ export default function FilesPage() {
                   </div>
                 )}
 
-                {/* Encryption Toggle */}
-                {selectedContract && selectedContract.encryption && (
-                  <div className="p-3 bg-dark-700 rounded-lg border border-dark-600">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-white">🔐 Criptare End-to-End</span>
-                        <button
-                          type="button"
-                          onClick={() => setEncryptionEnabled(!encryptionEnabled)}
-                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                            encryptionEnabled ? 'bg-green-500' : 'bg-gray-600'
-                          }`}
-                        >
-                          <span
-                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                              encryptionEnabled ? 'translate-x-6' : 'translate-x-1'
-                            }`}
-                          />
-                        </button>
-                      </div>
-                      <span className={`text-xs font-semibold ${
-                        encryptionEnabled ? 'text-green-400' : 'text-gray-500'
-                      }`}>
-                        {encryptionEnabled ? 'ACTIVAT' : 'DEZACTIVAT'}
-                      </span>
-                    </div>
-                    <p className="text-xs text-gray-400">
-                      {encryptionEnabled 
-                        ? '✓ Fișierele sunt criptate AES-256 înainte de upload. Nimeni, nici providerul, nu le poate citi.'
-                        : '⚠️ Fișierele vor fi stocate necriptate. Provider-ul le poate accesa.'}
-                    </p>
-                    {encryptionProgress.percent > 0 && encryptionProgress.percent < 100 && (
-                      <div className="mt-2">
-                        <div className="flex justify-between text-xs mb-1">
-                          <span className="text-gray-400">{encryptionProgress.message}</span>
-                          <span className="text-primary-400">{encryptionProgress.percent}%</span>
-                        </div>
-                        <div className="w-full bg-dark-800 rounded-full h-1.5">
-                          <div
-                            className="bg-primary-500 h-1.5 rounded-full transition-all"
-                            style={{ width: `${encryptionProgress.percent}%` }}
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
 
                 {/* Drag & Drop Zone */}
                 <div
@@ -787,8 +729,8 @@ export default function FilesPage() {
                   className={`
                     relative border-2 border-dashed rounded-xl p-8
                     transition-all duration-200 cursor-pointer
-                    ${dragActive 
-                      ? 'border-primary-500 bg-primary-500/10' 
+                    ${dragActive
+                      ? 'border-primary-500 bg-primary-500/10'
                       : 'border-dark-600 hover:border-primary-500/50'
                     }
                   `}
@@ -800,7 +742,7 @@ export default function FilesPage() {
                     onChange={handleFileSelect}
                     className="hidden"
                   />
-                  
+
                   <div className="text-center">
                     <Upload className={`w-12 h-12 mx-auto mb-4 ${dragActive ? 'text-primary-500' : 'text-gray-500'}`} />
                     {selectedFile ? (
@@ -840,12 +782,12 @@ export default function FilesPage() {
                   icon={Upload}
                   className="w-full"
                 >
-                  {!selectedContract && contracts.length > 0 ? 'Selectează Contract' : 
-                   contracts.length === 0 ? 'Lipsește Contract' :
-                   !selectedFile ? 'Selectează Fișier' :
-                   'Încărcare pe IPFS'}
+                  {!selectedContract && contracts.length > 0 ? 'Selectează Contract' :
+                    contracts.length === 0 ? 'Lipsește Contract' :
+                      !selectedFile ? 'Selectează Fișier' :
+                        'Încărcare pe IPFS'}
                 </Button>
-                
+
                 {selectedFile && selectedContract && (
                   <div className="text-xs text-gray-500 text-center">
                     📦 Fișierul va fi salvat în contractul: {selectedContract.id.slice(-8)}
@@ -871,8 +813,8 @@ export default function FilesPage() {
             </CardHeader>
             <CardContent>
               {/* Search and Filter */}
-              <FileSearchFilter 
-                files={files} 
+              <FileSearchFilter
+                files={files}
                 onFilterChange={setFilteredFiles}
               />
 
@@ -897,7 +839,7 @@ export default function FilesPage() {
                           <div className="w-10 h-10 bg-gradient-to-br from-primary-600 to-primary-500 rounded-lg flex items-center justify-center flex-shrink-0">
                             <FileIcon className="w-5 h-5 text-white" />
                           </div>
-                          
+
                           <div className="flex-1 min-w-0">
                             <h4 className="text-white font-medium truncate">{file.name}</h4>
                             <div className="flex items-center gap-2 mt-1">

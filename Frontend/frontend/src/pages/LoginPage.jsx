@@ -70,7 +70,7 @@ const LoginPage = () => {
     );
 
     if (result.success) {
-      setSuccess('Account created successfully! Your POD is ready. Please login.');
+      setSuccess('Account created successfully! Please login.');
       setIsRegister(false);
       setLoginForm({ username: registerForm.username, password: '' });
       setRegisterForm({
@@ -106,7 +106,7 @@ const LoginPage = () => {
           </motion.div>
           <h1 className="text-4xl font-bold text-white mb-2">IPFS Cloud</h1>
           <p className="text-gray-400">
-            {isRegister ? 'Create your Solid POD' : 'Sign in to your POD'}
+            {isRegister ? 'Create your account' : 'Sign in to your account'}
           </p>
         </div>
 
@@ -121,11 +121,10 @@ const LoginPage = () => {
                   setError('');
                   setSuccess('');
                 }}
-                className={`flex-1 py-2 px-4 rounded-md transition-all font-medium ${
-                  !isRegister
+                className={`flex-1 py-2 px-4 rounded-md transition-all font-medium ${!isRegister
                     ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white'
                     : 'text-gray-400 hover:text-white'
-                }`}
+                  }`}
               >
                 <LogIn className="w-4 h-4 inline mr-2" />
                 Login
@@ -136,11 +135,10 @@ const LoginPage = () => {
                   setError('');
                   setSuccess('');
                 }}
-                className={`flex-1 py-2 px-4 rounded-md transition-all font-medium ${
-                  isRegister
+                className={`flex-1 py-2 px-4 rounded-md transition-all font-medium ${isRegister
                     ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white'
                     : 'text-gray-400 hover:text-white'
-                }`}
+                  }`}
               >
                 <UserPlus className="w-4 h-4 inline mr-2" />
                 Register
@@ -328,11 +326,11 @@ const LoginPage = () => {
                     disabled={loading}
                     className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
                   >
-                    {loading ? 'Creating POD...' : 'Create Account & POD'}
+                    {loading ? 'Creating account...' : 'Create Account'}
                   </Button>
 
                   <p className="text-xs text-gray-500 text-center mt-4">
-                    By registering, a Solid POD will be automatically created for you on IPFS
+                    Your data will be stored securely on IPFS
                   </p>
                 </motion.form>
               )}

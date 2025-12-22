@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  Server, 
-  HardDrive, 
-  MapPin, 
+import {
+  Server,
+  HardDrive,
+  MapPin,
   Award,
   Filter,
   Search,
@@ -66,13 +66,13 @@ const MarketplacePage = () => {
     try {
       setLoading(true);
       const response = await axios.get(`${API_URL}/storage-providers`, {
-        headers: { 
+        headers: {
           'x-api-key': API_KEY,
           'x-session-token': sessionToken
         },
-        params: { 
+        params: {
           status: 'active',
-          sortBy: sortBy 
+          sortBy: sortBy
         }
       });
       setProviders(response.data.providers || []);
@@ -85,16 +85,18 @@ const MarketplacePage = () => {
   };
 
   const filterProviders = () => {
-    if (!searchTerm) {
-      setFilteredProviders(providers);
-      return;
+    // First filter out user's own providers (prevent self-rental)
+    let available = providers.filter(p => p.peerId !== user?.username);
+
+    // Then apply search filter
+    if (searchTerm) {
+      available = available.filter(p =>
+        p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.metadata.location.toLowerCase().includes(searchTerm.toLowerCase())
+      );
     }
 
-    const filtered = providers.filter(p => 
-      p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.metadata.location.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    setFilteredProviders(filtered);
+    setFilteredProviders(available);
   };
 
   const calculatePrice = async () => {
@@ -111,7 +113,7 @@ const MarketplacePage = () => {
         }
       });
       setCalculatedPrice(response.data.pricing);
-      
+
       // Calculate FIL cost
       const filResponse = await filecoinService.calculateStorageCost(
         rentForm.allocatedGB,
@@ -156,7 +158,7 @@ const MarketplacePage = () => {
         renterName: user.username,
         providerId: selectedProvider.id
       }, {
-        headers: { 
+        headers: {
           'x-api-key': API_KEY,
           'x-session-token': sessionToken
         }
@@ -424,7 +426,7 @@ const MarketplacePage = () => {
                         <span>Total cost:</span>
                         <span className="text-primary-400">{calculatedFilCost.totalCost.toFixed(6)} FIL</span>
                       </div>
-                      
+
                       {/* Balance check */}
                       <div className="mt-3 pt-3 border-t border-gray-600">
                         <div className="flex justify-between items-center">
@@ -444,7 +446,7 @@ const MarketplacePage = () => {
                           </div>
                         )}
                       </div>
-                      
+
                       <div className="mt-2 p-2 bg-orange-500/20 border border-orange-500/50 rounded text-orange-300 text-xs">
                         💡 Fondurile vor fi blocate în escrow până la finalizarea contractului
                       </div>

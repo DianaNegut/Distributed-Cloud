@@ -1,12 +1,3 @@
-/**
- * Solid POD Model
- * 
- * Un POD (Personal Online Datastore) este un container de date personal
- * conform specificației Solid (https://solidproject.org/)
- * 
- * Acest model stochează metadata POD-urilor și utilizează IPFS pentru persistență
- */
-
 const fs = require('fs');
 const path = require('path');
 const { IPFS_PATH } = require('../config/paths');
@@ -19,9 +10,6 @@ class SolidPod {
     this.loadData();
   }
 
-  /**
-   * Încarcă date POD-uri din storage
-   */
   loadData() {
     try {
       if (fs.existsSync(PODS_FILE)) {
@@ -37,9 +25,6 @@ class SolidPod {
     }
   }
 
-  /**
-   * Salvează date POD-uri în storage
-   */
   saveData() {
     try {
       const dir = path.dirname(PODS_FILE);
@@ -60,34 +45,15 @@ class SolidPod {
     }
   }
 
-  /**
-   * Generează WebID pentru utilizator
-   * WebID este un URI unic care identifică un utilizator în ecosistema Solid
-   * 
-   * @param {string} username - Numele utilizatorului
-   * @param {string} baseUrl - URL-ul de bază al serverului
-   * @returns {string} WebID URI
-   */
   generateWebId(username, baseUrl = 'http://localhost:3001') {
     return `${baseUrl}/solid/${username}/profile/card#me`;
   }
 
-  /**
-   * Creează un POD nou pentru utilizator
-   * 
-   * @param {Object} params
-   * @param {string} params.username - Numele utilizatorului (unic)
-   * @param {string} params.ownerId - ID-ul proprietarului (userId/peerId)
-   * @param {string} params.name - Nume afișat
-   * @param {string} params.description - Descriere POD
-   * @returns {Object} POD creat
-   */
   createPod({ username, ownerId, name, description = '' }) {
     if (!username || !ownerId) {
       throw new Error('username and ownerId are required');
     }
 
-    // Verifică dacă username-ul există deja
     for (const pod of this.pods.values()) {
       if (pod.username === username) {
         throw new Error(`POD with username '${username}' already exists`);
@@ -104,16 +70,14 @@ class SolidPod {
       name: name || username,
       description,
       webId,
-      
-      // Storage info
+
       storage: {
-        rootCid: null, // CID-ul root al POD-ului în IPFS
+        rootCid: null,
         totalBytes: 0,
         fileCount: 0,
         lastSync: null
       },
 
-      // Structura standard Solid
       containers: {
         profile: { cid: null, path: '/profile/' },
         private: { cid: null, path: '/private/' },
@@ -122,21 +86,18 @@ class SolidPod {
         settings: { cid: null, path: '/settings/' }
       },
 
-      // ACL (Access Control List)
       acl: {
         owner: ownerId,
-        public: [], // Resurse accesibile public
-        readers: [], // Utilizatori cu permisiuni de citire
-        writers: [], // Utilizatori cu permisiuni de scriere
-        controllers: [ownerId] // Utilizatori cu control complet
+        public: [],
+        readers: [],
+        writers: [],
+        controllers: [ownerId]
       },
 
-      // Metadata
       created: new Date().toISOString(),
       updated: new Date().toISOString(),
       status: 'active',
-      
-      // Versioning pentru LDP compatibility
+
       version: 1
     };
 
@@ -147,9 +108,6 @@ class SolidPod {
     return pod;
   }
 
-  /**
-   * Obține POD după ID
-   */
   getPod(podId) {
     const pod = this.pods.get(podId);
     if (!pod) {
@@ -158,9 +116,6 @@ class SolidPod {
     return pod;
   }
 
-  /**
-   * Obține POD după username
-   */
   getPodByUsername(username) {
     for (const pod of this.pods.values()) {
       if (pod.username === username) {
@@ -170,9 +125,6 @@ class SolidPod {
     throw new Error('POD not found');
   }
 
-  /**
-   * Obține POD după WebID
-   */
   getPodByWebId(webId) {
     for (const pod of this.pods.values()) {
       if (pod.webId === webId) {
@@ -182,9 +134,6 @@ class SolidPod {
     throw new Error('POD not found');
   }
 
-  /**
-   * Obține toate POD-urile unui proprietar
-   */
   getPodsByOwner(ownerId) {
     const pods = [];
     for (const pod of this.pods.values()) {
@@ -195,9 +144,6 @@ class SolidPod {
     return pods;
   }
 
-  /**
-   * Obține toate POD-urile (cu filtrare opțională)
-   */
   getAllPods(filters = {}) {
     let pods = Array.from(this.pods.values());
 
@@ -212,13 +158,9 @@ class SolidPod {
     return pods;
   }
 
-  /**
-   * Actualizează un POD
-   */
   updatePod(podId, updates) {
     const pod = this.getPod(podId);
 
-    // Nu permite schimbarea anumitor câmpuri
     const immutableFields = ['id', 'webId', 'ownerId', 'created'];
     immutableFields.forEach(field => delete updates[field]);
 
@@ -231,12 +173,9 @@ class SolidPod {
     return pod;
   }
 
-  /**
-   * Actualizează storage info pentru POD
-   */
   updateStorage(podId, storageInfo) {
     const pod = this.getPod(podId);
-    
+
     pod.storage = {
       ...pod.storage,
       ...storageInfo,
@@ -245,16 +184,13 @@ class SolidPod {
 
     pod.updated = new Date().toISOString();
     this.saveData();
-    
+
     return pod;
   }
 
-  /**
-   * Actualizează CID pentru un container
-   */
   updateContainerCid(podId, containerName, cid) {
     const pod = this.getPod(podId);
-    
+
     if (!pod.containers[containerName]) {
       throw new Error(`Container '${containerName}' not found`);
     }
@@ -267,23 +203,13 @@ class SolidPod {
     return pod;
   }
 
-  /**
-   * Verifică permisiuni de acces pentru un utilizator
-   * 
-   * @param {string} podId - ID POD
-   * @param {string} userId - ID utilizator
-   * @param {string} permission - Tip permisiune ('read', 'write', 'control')
-   * @returns {boolean} True dacă utilizatorul are permisiunea
-   */
   checkPermission(podId, userId, permission = 'read') {
     const pod = this.getPod(podId);
 
-    // Owner și controllers au toate permisiunile
     if (pod.ownerId === userId || pod.acl.controllers.includes(userId)) {
       return true;
     }
 
-    // Verifică permisiuni specifice
     switch (permission) {
       case 'read':
         return pod.acl.readers.includes(userId) || pod.acl.writers.includes(userId);
@@ -296,9 +222,6 @@ class SolidPod {
     }
   }
 
-  /**
-   * Acordă permisiune unui utilizator
-   */
   grantPermission(podId, userId, permission = 'read') {
     const pod = this.getPod(podId);
 
@@ -332,9 +255,6 @@ class SolidPod {
     return pod;
   }
 
-  /**
-   * Revocă permisiune pentru un utilizator
-   */
   revokePermission(podId, userId, permission = 'read') {
     const pod = this.getPod(podId);
 
@@ -364,12 +284,9 @@ class SolidPod {
     return pod;
   }
 
-  /**
-   * Marchează resurse ca publice
-   */
   setPublicResource(podId, resourcePath) {
     const pod = this.getPod(podId);
-    
+
     if (!pod.acl.public.includes(resourcePath)) {
       pod.acl.public.push(resourcePath);
     }
@@ -381,9 +298,6 @@ class SolidPod {
     return pod;
   }
 
-  /**
-   * Șterge un POD
-   */
   deletePod(podId) {
     const pod = this.getPod(podId);
     this.pods.delete(podId);
@@ -398,7 +312,7 @@ class SolidPod {
    */
   getStatistics() {
     const pods = Array.from(this.pods.values());
-    
+
     return {
       totalPods: pods.length,
       activePods: pods.filter(p => p.status === 'active').length,

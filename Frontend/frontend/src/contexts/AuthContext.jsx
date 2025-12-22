@@ -89,6 +89,7 @@ export const AuthProvider = ({ children }) => {
       setUser({
         username: session.username,
         email: session.email,
+        role: session.role,
         podId: session.podId,
         webId: session.webId
       });
@@ -157,6 +158,7 @@ export const AuthProvider = ({ children }) => {
     sessionToken,
     loading,
     isAuthenticated: !!user,
+    isAdmin: user?.role === 'admin',
     register,
     login,
     logout,

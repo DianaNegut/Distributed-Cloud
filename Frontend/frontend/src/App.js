@@ -10,7 +10,7 @@ import ContractsPage from './pages/ContractsPage';
 import NetworkPage from './pages/NetworkPage';
 import FilesPage from './pages/FilesPage';
 import ClusterPage from './pages/ClusterPage';
-import SolidPodsPage from './pages/SolidPodsPage';
+
 import MonitoringDashboard from './pages/MonitoringDashboard';
 import LoginPage from './pages/LoginPage';
 
@@ -30,6 +30,32 @@ const ProtectedRoute = ({ children }) => {
   }
 
   return isAuthenticated ? children : <Navigate to="/login" replace />;
+};
+
+// Admin Route Component - for admin-only pages
+const AdminRoute = ({ children }) => {
+  const { isAuthenticated, isAdmin, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-400 mx-auto mb-4"></div>
+          <p className="text-gray-400">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (!isAdmin) {
+    return <Navigate to="/" replace />;
+  }
+
+  return children;
 };
 
 function AppContent() {
@@ -96,20 +122,13 @@ function AppContent() {
             </ProtectedRoute>
           }
         />
-        <Route
-          path="/solid-pods"
-          element={
-            <ProtectedRoute>
-              <SolidPodsPage />
-            </ProtectedRoute>
-          }
-        />
+
         <Route
           path="/monitoring"
           element={
-            <ProtectedRoute>
+            <AdminRoute>
               <MonitoringDashboard />
-            </ProtectedRoute>
+            </AdminRoute>
           }
         />
       </Routes>

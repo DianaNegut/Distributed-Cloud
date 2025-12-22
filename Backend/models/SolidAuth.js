@@ -108,7 +108,7 @@ class SolidAuth {
   cleanupExpiredSessions() {
     const now = new Date();
     let cleaned = 0;
-    
+
     for (const [token, session] of this.sessions.entries()) {
       if (new Date(session.expiresAt) < now) {
         this.sessions.delete(token);
@@ -168,11 +168,16 @@ class SolidAuth {
       throw new Error('Password must be at least 6 characters');
     }
 
+    // Determine role - first user or username 'admin' gets admin role
+    const isFirstUser = this.users.size === 0;
+    const role = (isFirstUser || username.toLowerCase() === 'admin') ? 'admin' : 'user';
+
     // Creează user
     const user = {
       username,
       passwordHash: this.hashPassword(password),
       email,
+      role, // 'admin' or 'user'
       podId: null, // Va fi setat când se creează POD-ul
       webId: null,
       createdAt: new Date().toISOString(),
@@ -184,7 +189,7 @@ class SolidAuth {
     this.saveData();
 
     console.log(`[SOLID-AUTH] Registered user: ${username}`);
-    
+
     return {
       username: user.username,
       email: user.email,
@@ -233,6 +238,7 @@ class SolidAuth {
       token: sessionToken,
       username: user.username,
       email: user.email,
+      role: user.role,
       podId: user.podId,
       webId: user.webId,
       expiresAt: session.expiresAt
@@ -255,7 +261,7 @@ class SolidAuth {
     this.sessions.delete(token);
     this.saveSessions();
     console.log(`[SOLID-AUTH] User logged out: ${session.username}`);
-    
+
     return { success: true };
   }
 
@@ -286,6 +292,7 @@ class SolidAuth {
     return {
       username: user.username,
       email: user.email,
+      role: user.role,
       podId: user.podId,
       webId: user.webId
     };
@@ -321,6 +328,7 @@ class SolidAuth {
     return {
       username: user.username,
       email: user.email,
+      role: user.role,
       podId: user.podId,
       webId: user.webId,
       createdAt: user.createdAt,
@@ -365,7 +373,7 @@ class SolidAuth {
     }
 
     this.users.delete(username);
-    
+
     // Șterge toate sesiunile utilizatorului
     for (const [token, session] of this.sessions.entries()) {
       if (session.username === username) {

@@ -40,20 +40,35 @@ let pinCheckInterval = null;
  * Main startup sequence
  */
 async function main() {
+    // Clear config cache and reload (for hot-reload support)
+    delete require.cache[require.resolve('./config')];
+    const config = require('./config');
+
     // Check configuration - need either token or username
     if (!config.PROVIDER_TOKEN && !config.PROVIDER_USERNAME) {
-        console.log(chalk.red('❌ Error: No provider configuration found!'));
+        console.log(chalk.yellow('⏳ No provider configuration found - Waiting for setup...'));
         console.log('');
-        console.log(chalk.yellow('   To fix this:'));
-        console.log(chalk.white('   1. Go to the web interface (http://localhost:3000)'));
-        console.log(chalk.white('   2. Navigate to "Provider" page'));
-        console.log(chalk.white('   3. Register as a provider'));
-        console.log(chalk.white('   4. Click "Download Config" button'));
-        console.log(chalk.white('   5. Copy the downloaded provider-config.json to this folder'));
+        console.log(chalk.white('   To configure this Provider Agent:'));
+        console.log(chalk.cyan('   1. Go to the web interface (http://localhost:3000)'));
+        console.log(chalk.cyan('   2. Navigate to "Provider" page'));
+        console.log(chalk.cyan('   3. Register as a provider (or find your existing one)'));
+        console.log(chalk.cyan('   4. Click the "Setup" button'));
         console.log('');
-        console.log(chalk.gray('   Or set PROVIDER_USERNAME manually:'));
-        console.log(chalk.gray('   PROVIDER_USERNAME=your_username npm start'));
-        process.exit(1);
+        console.log(chalk.gray('   The configuration will be downloaded automatically.'));
+        console.log('');
+
+        // Start HTTP server anyway to receive Magic Link setup
+        const { startServer, PORT } = require('./httpServer');
+        await startServer();
+
+        console.log('');
+        console.log(chalk.green('🔗 Waiting for Magic Link setup at:'));
+        console.log(chalk.cyan(`   http://localhost:${PORT}/setup?token=YOUR_TOKEN`));
+        console.log('');
+        console.log(chalk.gray('   Press Ctrl+C to stop'));
+
+        // Keep process alive
+        return;
     }
 
     // Show auth method being used
@@ -251,8 +266,13 @@ async function shutdown() {
     process.exit(0);
 }
 
-// Run!
-main().catch(error => {
-    console.error(chalk.red('Fatal error:'), error);
-    process.exit(1);
-});
+// Export for hot-reload from httpServer
+module.exports = { runMain: main };
+
+// Run only if this is the main module
+if (require.main === module) {
+    main().catch(error => {
+        console.error(chalk.red('Fatal error:'), error);
+        process.exit(1);
+    });
+}

@@ -12,7 +12,10 @@ import {
   Coins,
   BarChart3,
   Shield,
-  Download
+  Download,
+  Link,
+  ExternalLink,
+  AlertTriangle
 } from 'lucide-react';
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -107,6 +110,29 @@ const ProviderPage = () => {
     URL.revokeObjectURL(url);
   };
 
+  // Magic Link - deschide ProviderAgent setup direct în browser
+  const openMagicLink = (provider) => {
+    if (!provider.providerToken) {
+      alert('Token-ul nu este disponibil. Te rog reînregistrează provider-ul.');
+      return;
+    }
+
+    const magicUrl = `http://localhost:4000/setup?token=${provider.providerToken}`;
+
+    // Deschide într-o fereastră nouă
+    const popup = window.open(magicUrl, 'ProviderSetup', 'width=700,height=500');
+
+    if (!popup) {
+      // Dacă popup-ul e blocat, copiază link-ul în clipboard
+      navigator.clipboard.writeText(magicUrl).then(() => {
+        alert(
+          'Link-ul a fost copiat \u00een clipboard!\n\n' +
+          'Asigur\u0103-te c\u0103 ProviderAgent ruleaz\u0103 (npm start), apoi lipesc link-ul \u00een browser.'
+        );
+      });
+    }
+  };
+
   const handleRegister = async () => {
     if (!user || !registerForm.name || !registerForm.totalCapacityGB) {
       alert('Te rog completează toate câmpurile obligatorii!');
@@ -128,16 +154,12 @@ const ProviderPage = () => {
       });
 
       if (response.data.success) {
-        const provider = response.data.provider;
-
-        // Întreabă dacă vrea să descarce config-ul pentru ProviderAgent
-        if (window.confirm(
-          `Provider înregistrat cu succes!\n\n` +
-          `Vrei să descarci fișierul de configurare pentru ProviderAgent?\n\n` +
-          `(Copiază-l în folderul ProviderAgent și rulează npm start)`
-        )) {
-          downloadProviderConfig(provider);
-        }
+        alert(
+          `✅ Provider înregistrat cu succes!\n\n` +
+          `Pentru a porni ProviderAgent:\n` +
+          `1. Pornește ProviderAgent (npm start)\n` +
+          `2. Apasă butonul "Setup" de lângă provider-ul tău`
+        );
 
         setShowRegisterModal(false);
         loadProviders();
@@ -325,6 +347,21 @@ const ProviderPage = () => {
                                 {provider.capacity.availableGB.toFixed(1)} GB disponibil
                               </p>
                             </div>
+
+                            {/* Warning dacă spațiu disponibil < 10% */}
+                            {provider.capacity.availableGB < (provider.capacity.totalGB * 0.1) && (
+                              <div className="col-span-2 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg flex items-center gap-2">
+                                <AlertTriangle className="w-5 h-5 text-yellow-500 flex-shrink-0" />
+                                <div>
+                                  <p className="text-yellow-400 text-sm font-medium">
+                                    Spațiu de stocare scăzut!
+                                  </p>
+                                  <p className="text-yellow-500/70 text-xs">
+                                    Mai ai doar {provider.capacity.availableGB.toFixed(1)} GB din {provider.capacity.totalGB} GB ({((provider.capacity.availableGB / provider.capacity.totalGB) * 100).toFixed(0)}%)
+                                  </p>
+                                </div>
+                              </div>
+                            )}
                             <div className="p-3 bg-dark-800/50 rounded-lg">
                               <p className="text-gray-400 text-xs mb-1">Preț</p>
                               <div className="flex items-center gap-1">
@@ -373,8 +410,17 @@ const ProviderPage = () => {
                             <Button
                               variant="primary"
                               size="sm"
+                              onClick={() => openMagicLink(provider)}
+                              title="Setup automat - deschide link în browser (ProviderAgent trebuie să ruleze)"
+                            >
+                              <ExternalLink className="w-4 h-4 mr-2" />
+                              Setup
+                            </Button>
+                            <Button
+                              variant="secondary"
+                              size="sm"
                               onClick={() => downloadProviderConfig(provider)}
-                              title="Descarcă fișierul de configurare pentru ProviderAgent"
+                              title="Descărcă fișierul de config manual"
                             >
                               <Download className="w-4 h-4 mr-2" />
                               Config
@@ -387,10 +433,6 @@ const ProviderPage = () => {
                             >
                               <Trash2 className="w-4 h-4 mr-2" />
                               Șterge
-                            </Button>
-                            <Button variant="secondary" size="sm" disabled>
-                              <Settings className="w-4 h-4 mr-2" />
-                              Configurare
                             </Button>
                           </div>
                         </CardContent>

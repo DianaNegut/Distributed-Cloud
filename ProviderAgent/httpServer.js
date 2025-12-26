@@ -34,6 +34,207 @@ app.get('/health', (req, res) => {
 });
 
 /**
+ * GET /setup - Magic Link setup endpoint
+ * Receives token from browser, fetches config from backend, saves it locally
+ */
+app.get('/setup', async (req, res) => {
+    const { token } = req.query;
+
+    console.log(chalk.cyan('🔗 Magic Link setup request received'));
+
+    if (!token) {
+        return res.status(400).send(`
+            <!DOCTYPE html>
+            <html><head><title>Setup Error</title>
+            <style>body{font-family:Arial,sans-serif;max-width:600px;margin:50px auto;padding:20px;background:#1a1a2e;color:#fff;}</style>
+            </head><body>
+            <h1>❌ Setup Error</h1>
+            <p>Missing token parameter. Please use the correct setup link from the web interface.</p>
+            </body></html>
+        `);
+    }
+
+    try {
+        const axios = require('axios');
+        const fs = require('fs');
+        const path = require('path');
+
+        // Fetch config from backend
+        const backendUrl = config.BACKEND_URL || 'http://localhost:3001/api';
+        console.log(chalk.gray(`   Fetching config from: ${backendUrl}/provider-agent/config/${token.substring(0, 8)}...`));
+
+        const response = await axios.get(`${backendUrl}/provider-agent/config/${token}`, {
+            timeout: 10000
+        });
+
+        if (!response.data.success) {
+            throw new Error(response.data.error || 'Failed to get config');
+        }
+
+        const newConfig = response.data.config;
+        const providerInfo = response.data.provider;
+
+        // Save config to file
+        const configPath = path.join(__dirname, 'provider-config.json');
+        fs.writeFileSync(configPath, JSON.stringify(newConfig, null, 2));
+
+        console.log(chalk.green(`   ✓ Config saved for provider: ${providerInfo.username}`));
+        console.log(chalk.cyan('   🔄 Auto-restarting ProviderAgent...'));
+
+        // Return success page
+        res.send(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Setup Complete!</title>
+                <style>
+                    body {
+                        font-family: 'Segoe UI', Arial, sans-serif;
+                        max-width: 600px;
+                        margin: 50px auto;
+                        padding: 20px;
+                        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+                        color: #fff;
+                        min-height: 100vh;
+                    }
+                    .success-box {
+                        background: rgba(16, 185, 129, 0.2);
+                        border: 1px solid #10b981;
+                        border-radius: 12px;
+                        padding: 30px;
+                        text-align: center;
+                    }
+                    h1 { color: #10b981; margin-bottom: 20px; }
+                    .provider-name { 
+                        font-size: 24px; 
+                        color: #8b5cf6; 
+                        margin: 20px 0;
+                    }
+                    .instruction {
+                        background: rgba(139, 92, 246, 0.2);
+                        border-radius: 8px;
+                        padding: 15px;
+                        margin-top: 20px;
+                    }
+                    .restart-info {
+                        background: rgba(59, 130, 246, 0.2);
+                        border: 1px solid #3b82f6;
+                        border-radius: 8px;
+                        padding: 15px;
+                        margin-top: 20px;
+                    }
+                    .spinner {
+                        display: inline-block;
+                        width: 20px;
+                        height: 20px;
+                        border: 3px solid #3b82f6;
+                        border-top: 3px solid transparent;
+                        border-radius: 50%;
+                        animation: spin 1s linear infinite;
+                    }
+                    .connected {
+                        background: rgba(16, 185, 129, 0.3);
+                        border: 1px solid #10b981;
+                    }
+                    .connected .spinner { display: none; }
+                    .connected .checkmark { display: inline-block; }
+                    .checkmark { 
+                        display: none; 
+                        color: #10b981; 
+                        font-size: 24px; 
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="success-box">
+                    <h1>✅ Setup Complete!</h1>
+                    <p>Provider Agent has been configured successfully.</p>
+                    <div class="provider-name">
+                        👤 ${providerInfo.name}<br>
+                        <small style="color:#888">@${providerInfo.username}</small>
+                    </div>
+                    <div id="status-box" class="restart-info">
+                        <span class="spinner"></span>
+                        <span class="checkmark">✓</span>
+                        <p id="status-text"><strong>Provider Agent se repornește...</strong></p>
+                        <p id="status-detail" style="font-size:14px;color:#888">Verificăm conexiunea...</p>
+                    </div>
+                </div>
+                <script>
+                    let attempts = 0;
+                    const maxAttempts = 20;
+                    
+                    function checkHealth() {
+                        attempts++;
+                        fetch('http://localhost:4000/health')
+                            .then(res => res.json())
+                            .then(data => {
+                                if (data.success) {
+                                    // Connected!
+                                    document.getElementById('status-box').classList.add('connected');
+                                    document.getElementById('status-text').innerHTML = '<strong>✅ Provider Agent conectat!</strong>';
+                                    document.getElementById('status-detail').innerHTML = 'Poți închide această fereastră.';
+                                }
+                            })
+                            .catch(err => {
+                                // Still restarting...
+                                if (attempts < maxAttempts) {
+                                    document.getElementById('status-detail').innerHTML = 'Se repornește... (' + attempts + 's)';
+                                    setTimeout(checkHealth, 1000);
+                                } else {
+                                    document.getElementById('status-text').innerHTML = '<strong>⚠️ Timeout</strong>';
+                                    document.getElementById('status-detail').innerHTML = 'Verifică terminalul manual.';
+                                }
+                            });
+                    }
+                    
+                    // Start checking after 3 seconds (give time for restart)
+                    setTimeout(checkHealth, 3000);
+                </script>
+            </body>
+            </html>
+        `);
+
+        // Hot-reload: clear config cache and run main again
+        setTimeout(async () => {
+            console.log(chalk.cyan('🔄 Hot-reloading ProviderAgent with new config...'));
+            console.log('');
+
+            // Clear the config module cache to force reload
+            delete require.cache[require.resolve('./config')];
+
+            // Re-run the main startup sequence
+            const main = require('./index').runMain;
+            if (main) {
+                await main();
+            } else {
+                // Fallback: if runMain not exported, just log success
+                console.log(chalk.green('✅ Config loaded! Agent is now configured.'));
+                console.log(chalk.yellow('   Note: Full functionality requires manual restart.'));
+            }
+        }, 1500);
+
+    } catch (error) {
+        console.log(chalk.red(`   ✗ Setup failed: ${error.message}`));
+        res.status(500).send(`
+            <!DOCTYPE html>
+            <html><head><title>Setup Failed</title>
+            <style>
+                body{font-family:Arial,sans-serif;max-width:600px;margin:50px auto;padding:20px;background:#1a1a2e;color:#fff;}
+                .error{background:rgba(239,68,68,0.2);border:1px solid #ef4444;border-radius:8px;padding:20px;}
+            </style>
+            </head><body>
+            <div class="error">
+                <h1>❌ Setup Failed</h1>
+                <p>${error.message}</p>
+                <p>Please try again or download the config file manually from the web interface.</p>
+            </div>
+            </body></html>
+        `);
+    }
+});
+
+/**
  * Get provider capacity info
  */
 app.get('/capacity', async (req, res) => {

@@ -292,4 +292,50 @@ router.get('/status/:username', (req, res) => {
     }
 });
 
+/**
+ * GET /api/provider-agent/config/:token
+ * Get provider configuration by token (for Magic Link setup)
+ * This endpoint is used by ProviderAgent to auto-configure itself
+ */
+router.get('/config/:token', (req, res) => {
+    try {
+        const { token } = req.params;
+
+        if (!token) {
+            return res.status(400).json({ success: false, error: 'Token required' });
+        }
+
+        // Find provider by token
+        const provider = StorageProvider.getProviderByToken(token);
+
+        if (!provider) {
+            return res.status(404).json({
+                success: false,
+                error: 'Invalid token. Please get a new setup link from the web interface.'
+            });
+        }
+
+        console.log(`[PROVIDER-AGENT] Config request for provider: ${provider.peerId}`);
+
+        // Return config for ProviderAgent
+        res.json({
+            success: true,
+            config: {
+                BACKEND_URL: `http://${req.get('host')?.replace(':3001', ':3001')}/api` || 'http://localhost:3001/api',
+                PROVIDER_TOKEN: provider.providerToken,
+                PROVIDER_USERNAME: provider.peerId,
+                API_KEY: process.env.API_KEY || 'supersecret'
+            },
+            provider: {
+                id: provider.id,
+                name: provider.name,
+                username: provider.peerId
+            }
+        });
+    } catch (error) {
+        console.error('[PROVIDER-AGENT] Config error:', error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 module.exports = router;

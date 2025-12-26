@@ -1,0 +1,6 @@
+{
+  "BACKEND_URL": "http://localhost:3001/api",
+  "PROVIDER_USERNAME": "dianam",
+  "API_KEY": "supersecret",
+  "_instructions": "Copiază acest fișier în folderul ProviderAgent și rulează: npm start"
+}

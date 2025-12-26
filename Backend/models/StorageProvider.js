@@ -1,5 +1,6 @@
 ﻿const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const { IPFS_PATH } = require('../config/paths');
 
 const PROVIDERS_FILE = path.join(IPFS_PATH, 'storage-providers.json');
@@ -29,7 +30,7 @@ class StorageProvider {
 
   static registerProvider(providerData) {
     const data = this.loadProviders();
-    
+
     const existing = data.providers.find(p => p.peerId === providerData.peerId);
     if (existing) {
       throw new Error('Provider with this Peer ID already registered');
@@ -37,6 +38,7 @@ class StorageProvider {
 
     const provider = {
       id: `provider-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      providerToken: crypto.randomUUID(), // Token pentru ProviderAgent auth
       peerId: providerData.peerId,
       name: providerData.name || 'Anonymous Provider',
       description: providerData.description || '',
@@ -100,6 +102,11 @@ class StorageProvider {
     return data.providers.find(p => p.peerId === peerId);
   }
 
+  static getProviderByToken(providerToken) {
+    const data = this.loadProviders();
+    return data.providers.find(p => p.providerToken === providerToken);
+  }
+
   static getAllProviders(filters = {}) {
     const data = this.loadProviders();
     let providers = data.providers;
@@ -111,7 +118,7 @@ class StorageProvider {
       providers = providers.filter(p => p.capacity.availableGB >= filters.minAvailableGB);
     }
     if (filters.location) {
-      providers = providers.filter(p => 
+      providers = providers.filter(p =>
         p.metadata.location.toLowerCase().includes(filters.location.toLowerCase())
       );
     }
@@ -129,7 +136,7 @@ class StorageProvider {
   static updateProvider(providerId, updates) {
     const data = this.loadProviders();
     const index = data.providers.findIndex(p => p.id === providerId);
-    
+
     if (index === -1) return null;
 
     data.providers[index] = {
@@ -284,16 +291,16 @@ class StorageProvider {
   static deleteProvider(providerId) {
     const data = this.loadProviders();
     const provider = data.providers.find(p => p.id === providerId);
-    
+
     if (!provider) return { success: false, error: 'Provider not found' };
-    
+
     if (provider.statistics.activeContracts > 0) {
       return { success: false, error: 'Cannot delete provider with active contracts' };
     }
 
     data.providers = data.providers.filter(p => p.id !== providerId);
     this.saveProviders(data);
-    
+
     console.log(`[PROVIDER] Deleted provider: ${providerId}`);
     return { success: true };
   }

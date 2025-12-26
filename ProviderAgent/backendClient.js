@@ -29,11 +29,13 @@ class BackendClient {
 
     /**
      * Register or update provider with IPFS peer info
+     * Uses providerToken (preferred) or username (legacy) for authentication
      */
     async registerProvider(providerData) {
         try {
             const client = this.getClient();
             const response = await client.post('/provider-agent/register', {
+                providerToken: config.PROVIDER_TOKEN || undefined,
                 username: providerData.username,
                 ipfsPeerId: providerData.ipfsPeerId,
                 multiaddress: providerData.multiaddress,
@@ -43,12 +45,17 @@ class BackendClient {
 
             if (response.data.success) {
                 this.providerId = response.data.provider?.id;
+                // Store username from response for future requests
+                this.providerUsername = response.data.provider?.username;
             }
 
             return response.data;
         } catch (error) {
+            if (error.response?.status === 401) {
+                throw new Error('Invalid provider token. Download a fresh config from the web interface.');
+            }
             if (error.response?.status === 404) {
-                throw new Error('Provider agent endpoint not found. Backend may need updating.');
+                throw new Error('Provider not found. Register as provider first via the web interface.');
             }
             throw new Error(`Registration failed: ${error.response?.data?.error || error.message}`);
         }
@@ -60,12 +67,14 @@ class BackendClient {
     async sendHeartbeat(statusData) {
         try {
             const client = this.getClient();
+            // Use stored username from registration response, or fall back to config
+            const username = this.providerUsername || config.PROVIDER_USERNAME;
             const response = await client.post('/provider-agent/heartbeat', {
-                username: config.PROVIDER_USERNAME,
+                username: username,
                 ipfsPeerId: statusData.ipfsPeerId,
                 repoStats: statusData.repoStats,
                 pinnedFiles: statusData.pinnedFilesCount,
-                status: 'online'
+                status: statusData.status || 'online'
             });
 
             return response.data;
@@ -81,8 +90,9 @@ class BackendClient {
     async getPendingPins() {
         try {
             const client = this.getClient();
+            const username = this.providerUsername || config.PROVIDER_USERNAME;
             const response = await client.get('/provider-agent/pending-pins', {
-                params: { username: config.PROVIDER_USERNAME }
+                params: { username: username }
             });
             return response.data.pins || [];
         } catch (error) {
@@ -97,8 +107,9 @@ class BackendClient {
     async confirmPin(cid) {
         try {
             const client = this.getClient();
+            const username = this.providerUsername || config.PROVIDER_USERNAME;
             const response = await client.post('/provider-agent/confirm-pin', {
-                username: config.PROVIDER_USERNAME,
+                username: username,
                 cid: cid
             });
             return response.data;

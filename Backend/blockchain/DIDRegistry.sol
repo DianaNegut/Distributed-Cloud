@@ -1,37 +1,23 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-/**
- * DIDRegistry.sol
- * 
- * Registru on-chain pentru Identități Descentralizate (DID)
- * Permite maparea între o adresă Ethereum și un DID Document Hash (IPFS CID)
- */
-
 contract DIDRegistry {
     
     struct DIDRecord {
         address owner;
-        string didFragment; // partea unică din did:ethereum:addr#fragment
-        string docCID;      // IPFS CID unde este stocat documentul JSON complet
+        string didFragment;
+        string docCID;
         bool active;
         uint256 createdAt;
         uint256 updatedAt;
     }
 
-    // Mapping: Address -> DID Record
     mapping(address => DIDRecord) public dids;
     
-    // Events
     event DIDRegistered(address indexed owner, string did, string docCID);
     event DIDUpdated(address indexed owner, string newDocCID);
     event DIDDeactivated(address indexed owner);
 
-    /**
-     * Înregistrează un nou DID
-     * @param _didFragment - identificatorul unic
-     * @param _docCID - IPFS CID-ul documentului JSON
-     */
     function registerDID(string memory _didFragment, string memory _docCID) public {
         require(dids[msg.sender].createdAt == 0, "DID already registered for this address");
         
@@ -48,9 +34,6 @@ contract DIDRegistry {
         emit DIDRegistered(msg.sender, fullDID, _docCID);
     }
 
-    /**
-     * Actualizează documentul DID (ex: rotire chei)
-     */
     function updateDIDDocument(string memory _newDocCID) public {
         require(dids[msg.sender].active, "DID not active or not found");
         
@@ -60,9 +43,6 @@ contract DIDRegistry {
         emit DIDUpdated(msg.sender, _newDocCID);
     }
 
-    /**
-     * Dezactivează DID
-     */
     function deactivateDID() public {
         require(dids[msg.sender].active, "DID not active");
         
@@ -72,9 +52,6 @@ contract DIDRegistry {
         emit DIDDeactivated(msg.sender);
     }
 
-    /**
-     * Verifică dacă o adresă are un DID valid
-     */
     function resolveDID(address _owner) public view returns (string memory did, string memory docCID, bool active) {
         DIDRecord memory record = dids[_owner];
         if (record.createdAt == 0) return ("", "", false);
@@ -83,7 +60,6 @@ contract DIDRegistry {
         return (fullDID, record.docCID, record.active);
     }
 
-    // Helper: Address to String
     function toAsciiString(address x) internal pure returns (string memory) {
         bytes memory s = new bytes(40);
         for (uint i = 0; i < 20; i++) {

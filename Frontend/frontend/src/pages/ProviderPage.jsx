@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  Server, 
-  HardDrive, 
-  DollarSign, 
+import {
+  Server,
+  HardDrive,
+  DollarSign,
   Award,
   Settings,
   Plus,
@@ -11,7 +11,8 @@ import {
   CheckCircle,
   Coins,
   BarChart3,
-  Shield
+  Shield,
+  Download
 } from 'lucide-react';
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -56,7 +57,7 @@ const ProviderPage = () => {
     try {
       setLoading(true);
       const response = await axios.get(`${API_URL}/storage-providers`, {
-        headers: { 
+        headers: {
           'x-api-key': API_KEY,
           'x-session-token': sessionToken
         }
@@ -84,6 +85,28 @@ const ProviderPage = () => {
     }
   };
 
+  // Funcție pentru descărcarea config-ului ProviderAgent
+  const downloadProviderConfig = (provider) => {
+    const config = {
+      BACKEND_URL: API_URL,
+      PROVIDER_TOKEN: provider.providerToken,
+      PROVIDER_USERNAME: provider.peerId,
+      API_KEY: API_KEY,
+      // Instrucțiuni
+      _instructions: 'Copiază acest fișier în folderul ProviderAgent și rulează: npm start'
+    };
+
+    const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'provider-config.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   const handleRegister = async () => {
     if (!user || !registerForm.name || !registerForm.totalCapacityGB) {
       alert('Te rog completează toate câmpurile obligatorii!');
@@ -98,14 +121,24 @@ const ProviderPage = () => {
         pricePerGBPerMonth: parseFloat(registerForm.pricePerGBPerMonth),
         uptimeGuarantee: parseFloat(registerForm.uptimeGuarantee)
       }, {
-        headers: { 
+        headers: {
           'x-api-key': API_KEY,
           'x-session-token': sessionToken
         }
       });
 
       if (response.data.success) {
-        alert(`Provider înregistrat cu succes! ID: ${response.data.provider.id}`);
+        const provider = response.data.provider;
+
+        // Întreabă dacă vrea să descarce config-ul pentru ProviderAgent
+        if (window.confirm(
+          `Provider înregistrat cu succes!\n\n` +
+          `Vrei să descarci fișierul de configurare pentru ProviderAgent?\n\n` +
+          `(Copiază-l în folderul ProviderAgent și rulează npm start)`
+        )) {
+          downloadProviderConfig(provider);
+        }
+
         setShowRegisterModal(false);
         loadProviders();
         setRegisterForm({
@@ -130,7 +163,7 @@ const ProviderPage = () => {
 
     try {
       await axios.delete(`${API_URL}/storage-providers/${providerId}`, {
-        headers: { 
+        headers: {
           'x-api-key': API_KEY,
           'x-session-token': sessionToken
         }
@@ -177,11 +210,10 @@ const ProviderPage = () => {
         <div className="flex space-x-4 mb-6 border-b border-gray-700">
           <button
             onClick={() => setActiveTab('providers')}
-            className={`px-4 py-3 font-medium transition-colors ${
-              activeTab === 'providers'
-                ? 'text-purple-500 border-b-2 border-purple-500'
-                : 'text-gray-400 hover:text-white'
-            }`}
+            className={`px-4 py-3 font-medium transition-colors ${activeTab === 'providers'
+              ? 'text-purple-500 border-b-2 border-purple-500'
+              : 'text-gray-400 hover:text-white'
+              }`}
           >
             <div className="flex items-center space-x-2">
               <Server className="w-5 h-5" />
@@ -190,11 +222,10 @@ const ProviderPage = () => {
           </button>
           <button
             onClick={() => setActiveTab('analytics')}
-            className={`px-4 py-3 font-medium transition-colors ${
-              activeTab === 'analytics'
-                ? 'text-purple-500 border-b-2 border-purple-500'
-                : 'text-gray-400 hover:text-white'
-            }`}
+            className={`px-4 py-3 font-medium transition-colors ${activeTab === 'analytics'
+              ? 'text-purple-500 border-b-2 border-purple-500'
+              : 'text-gray-400 hover:text-white'
+              }`}
           >
             <div className="flex items-center space-x-2">
               <BarChart3 className="w-5 h-5" />
@@ -203,11 +234,10 @@ const ProviderPage = () => {
           </button>
           <button
             onClick={() => setActiveTab('backup')}
-            className={`px-4 py-3 font-medium transition-colors ${
-              activeTab === 'backup'
-                ? 'text-purple-500 border-b-2 border-purple-500'
-                : 'text-gray-400 hover:text-white'
-            }`}
+            className={`px-4 py-3 font-medium transition-colors ${activeTab === 'backup'
+              ? 'text-purple-500 border-b-2 border-purple-500'
+              : 'text-gray-400 hover:text-white'
+              }`}
           >
             <div className="flex items-center space-x-2">
               <Shield className="w-5 h-5" />
@@ -218,310 +248,319 @@ const ProviderPage = () => {
 
         {/* Tab Content */}
         {activeTab === 'providers' && (
-        <div>
+          <div>
 
-        {myProviders.length > 0 && (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-6">
-              <StatCard
-                title="Venit Total"
-                value={`${totalEarnings.toFixed(6)} FIL`}
-                icon={Coins}
-                color="success"
-              />
-              <StatCard
-                title="Wallet FIL"
-                value={walletLoading ? 'Se încarcă...' : `${(filBalance || 0).toFixed(6)} FIL`}
-                icon={DollarSign}
-                color="purple"
-              />
-              <StatCard
-                title="Capacitate Totală"
-                value={`${totalCapacity.toFixed(0)} GB`}
-                icon={HardDrive}
-                color="primary"
-              />
-              <StatCard
-                title="Spațiu Utilizat"
-                value={`${totalUsed.toFixed(1)} GB`}
-                icon={Server}
-                color="warning"
-              />
-              <StatCard
-                title="Contracte Active"
-                value={activeContracts}
-                icon={Award}
-                color="info"
-              />
-            </div>
+            {myProviders.length > 0 && (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-6">
+                  <StatCard
+                    title="Venit Total"
+                    value={`${totalEarnings.toFixed(6)} FIL`}
+                    icon={Coins}
+                    color="success"
+                  />
+                  <StatCard
+                    title="Wallet FIL"
+                    value={walletLoading ? 'Se încarcă...' : `${(filBalance || 0).toFixed(6)} FIL`}
+                    icon={DollarSign}
+                    color="purple"
+                  />
+                  <StatCard
+                    title="Capacitate Totală"
+                    value={`${totalCapacity.toFixed(0)} GB`}
+                    icon={HardDrive}
+                    color="primary"
+                  />
+                  <StatCard
+                    title="Spațiu Utilizat"
+                    value={`${totalUsed.toFixed(1)} GB`}
+                    icon={Server}
+                    color="warning"
+                  />
+                  <StatCard
+                    title="Contracte Active"
+                    value={activeContracts}
+                    icon={Award}
+                    color="info"
+                  />
+                </div>
 
-            {/* My Providers */}
-            <h2 className="text-2xl font-bold text-white mb-4">Providerii Tăi</h2>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {myProviders.map((provider) => (
+                {/* My Providers */}
+                <h2 className="text-2xl font-bold text-white mb-4">Providerii Tăi</h2>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {myProviders.map((provider) => (
+                    <motion.div
+                      key={provider.id}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                    >
+                      <Card>
+                        <CardContent className="pt-6">
+                          <div className="flex items-start justify-between mb-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-12 h-12 bg-primary-500/20 rounded-lg flex items-center justify-center">
+                                <Server className="w-6 h-6 text-primary-400" />
+                              </div>
+                              <div>
+                                <h3 className="text-lg font-bold text-white">{provider.name}</h3>
+                                <p className="text-gray-400 text-sm">{provider.metadata.location}</p>
+                              </div>
+                            </div>
+                            <Badge variant={provider.status === 'active' ? 'success' : 'warning'}>
+                              {provider.status}
+                            </Badge>
+                          </div>
+
+                          {provider.description && (
+                            <p className="text-gray-400 text-sm mb-4">{provider.description}</p>
+                          )}
+
+                          <div className="grid grid-cols-2 gap-4 mb-4">
+                            <div className="p-3 bg-dark-800/50 rounded-lg">
+                              <p className="text-gray-400 text-xs mb-1">Capacitate</p>
+                              <p className="text-white font-bold">
+                                {provider.capacity.totalGB} GB
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {provider.capacity.availableGB.toFixed(1)} GB disponibil
+                              </p>
+                            </div>
+                            <div className="p-3 bg-dark-800/50 rounded-lg">
+                              <p className="text-gray-400 text-xs mb-1">Preț</p>
+                              <div className="flex items-center gap-1">
+                                <Coins className="w-4 h-4 text-green-400" />
+                                <p className="text-green-400 font-bold">
+                                  {(provider.pricing?.pricePerGBPerMonth || 0.10).toFixed(6)}
+                                </p>
+                              </div>
+                              <p className="text-xs text-gray-500">FIL per GB/lună</p>
+                            </div>
+                            <div className="p-3 bg-dark-800/50 rounded-lg">
+                              <p className="text-gray-400 text-xs mb-1">Venit Total</p>
+                              <div className="flex items-center gap-1">
+                                <Coins className="w-4 h-4 text-green-400" />
+                                <p className="text-green-400 font-bold">
+                                  {(provider.earnings?.totalEarned || 0).toFixed(6)}
+                                </p>
+                              </div>
+                              <p className="text-xs text-gray-500">FIL câștigat</p>
+                            </div>
+                            <div className="p-3 bg-dark-800/50 rounded-lg">
+                              <p className="text-gray-400 text-xs mb-1">Contracte</p>
+                              <p className="text-white font-bold">
+                                {provider.statistics.activeContracts}
+                              </p>
+                              <p className="text-xs text-gray-500">active</p>
+                            </div>
+                          </div>
+
+                          <div className="mb-4">
+                            <div className="flex justify-between text-sm mb-1">
+                              <span className="text-gray-400">Utilizare storage</span>
+                              <span className="text-white">
+                                {((provider.capacity.usedGB / provider.capacity.totalGB) * 100).toFixed(1)}%
+                              </span>
+                            </div>
+                            <div className="w-full bg-dark-700 rounded-full h-2">
+                              <div
+                                className="bg-gradient-to-r from-primary-500 to-primary-400 h-2 rounded-full"
+                                style={{ width: `${(provider.capacity.usedGB / provider.capacity.totalGB) * 100}%` }}
+                              />
+                            </div>
+                          </div>
+
+                          <div className="flex gap-2 flex-wrap">
+                            <Button
+                              variant="primary"
+                              size="sm"
+                              onClick={() => downloadProviderConfig(provider)}
+                              title="Descarcă fișierul de configurare pentru ProviderAgent"
+                            >
+                              <Download className="w-4 h-4 mr-2" />
+                              Config
+                            </Button>
+                            <Button
+                              variant="danger"
+                              size="sm"
+                              onClick={() => deleteProvider(provider.id)}
+                              disabled={provider.statistics.activeContracts > 0}
+                            >
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Șterge
+                            </Button>
+                            <Button variant="secondary" size="sm" disabled>
+                              <Settings className="w-4 h-4 mr-2" />
+                              Configurare
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {myProviders.length === 0 && (
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="text-center py-12">
+                    <Server className="w-16 h-16 mx-auto mb-4 text-gray-600" />
+                    <h3 className="text-xl font-bold text-white mb-2">Nu ești încă provider</h3>
+                    <p className="text-gray-400 mb-6">
+                      Înregistrează-te ca provider pentru a oferi spațiu de stocare și a câștiga bani
+                    </p>
+                    <Button variant="primary" onClick={() => setShowRegisterModal(true)}>
+                      <Plus className="w-4 h-4 mr-2" />
+                      Înregistrează-te acum
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Register Modal */}
+            {showRegisterModal && (
+              <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
                 <motion.div
-                  key={provider.id}
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
+                  className="bg-dark-800 rounded-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
                 >
-                  <Card>
-                    <CardContent className="pt-6">
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 bg-primary-500/20 rounded-lg flex items-center justify-center">
-                            <Server className="w-6 h-6 text-primary-400" />
-                          </div>
-                          <div>
-                            <h3 className="text-lg font-bold text-white">{provider.name}</h3>
-                            <p className="text-gray-400 text-sm">{provider.metadata.location}</p>
-                          </div>
-                        </div>
-                        <Badge variant={provider.status === 'active' ? 'success' : 'warning'}>
-                          {provider.status}
-                        </Badge>
-                      </div>
+                  <h2 className="text-2xl font-bold text-white mb-4">
+                    Înregistrează-te ca Storage Provider
+                  </h2>
 
-                      {provider.description && (
-                        <p className="text-gray-400 text-sm mb-4">{provider.description}</p>
-                      )}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="md:col-span-2">
+                      <label className="block text-gray-400 mb-2">Username *</label>
+                      <Input
+                        value={user?.username || ''}
+                        disabled
+                        className="bg-dark-700"
+                      />
+                      <p className="text-xs text-green-400 mt-1">✓ Vei fi înregistrat ca provider cu username-ul tău</p>
+                    </div>
 
-                      <div className="grid grid-cols-2 gap-4 mb-4">
-                        <div className="p-3 bg-dark-800/50 rounded-lg">
-                          <p className="text-gray-400 text-xs mb-1">Capacitate</p>
-                          <p className="text-white font-bold">
-                            {provider.capacity.totalGB} GB
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {provider.capacity.availableGB.toFixed(1)} GB disponibil
-                          </p>
-                        </div>
-                        <div className="p-3 bg-dark-800/50 rounded-lg">
-                          <p className="text-gray-400 text-xs mb-1">Preț</p>
-                          <div className="flex items-center gap-1">
-                            <Coins className="w-4 h-4 text-green-400" />
-                            <p className="text-green-400 font-bold">
-                              {(provider.pricing?.pricePerGBPerMonth || 0.10).toFixed(6)}
-                            </p>
-                          </div>
-                          <p className="text-xs text-gray-500">FIL per GB/lună</p>
-                        </div>
-                        <div className="p-3 bg-dark-800/50 rounded-lg">
-                          <p className="text-gray-400 text-xs mb-1">Venit Total</p>
-                          <div className="flex items-center gap-1">
-                            <Coins className="w-4 h-4 text-green-400" />
-                            <p className="text-green-400 font-bold">
-                              {(provider.earnings?.totalEarned || 0).toFixed(6)}
-                            </p>
-                          </div>
-                          <p className="text-xs text-gray-500">FIL câștigat</p>
-                        </div>
-                        <div className="p-3 bg-dark-800/50 rounded-lg">
-                          <p className="text-gray-400 text-xs mb-1">Contracte</p>
-                          <p className="text-white font-bold">
-                            {provider.statistics.activeContracts}
-                          </p>
-                          <p className="text-xs text-gray-500">active</p>
-                        </div>
-                      </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-gray-400 mb-2">Nume Provider *</label>
+                      <Input
+                        value={registerForm.name}
+                        onChange={(e) => setRegisterForm({ ...registerForm, name: e.target.value })}
+                        placeholder="Ex: FastStorage Pro"
+                      />
+                    </div>
 
-                      <div className="mb-4">
-                        <div className="flex justify-between text-sm mb-1">
-                          <span className="text-gray-400">Utilizare storage</span>
-                          <span className="text-white">
-                            {((provider.capacity.usedGB / provider.capacity.totalGB) * 100).toFixed(1)}%
-                          </span>
+                    <div className="md:col-span-2">
+                      <label className="block text-gray-400 mb-2">Descriere</label>
+                      <textarea
+                        value={registerForm.description}
+                        onChange={(e) => setRegisterForm({ ...registerForm, description: e.target.value })}
+                        placeholder="Descriere scurtă despre serviciul tău..."
+                        className="w-full bg-dark-700 text-white px-4 py-2 rounded-lg border border-dark-600"
+                        rows="3"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-400 mb-2">Capacitate Totală (GB) *</label>
+                      <Input
+                        type="number"
+                        value={registerForm.totalCapacityGB}
+                        onChange={(e) => setRegisterForm({ ...registerForm, totalCapacityGB: e.target.value })}
+                        min="1"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-400 mb-2">Locație</label>
+                      <Input
+                        value={registerForm.location}
+                        onChange={(e) => setRegisterForm({ ...registerForm, location: e.target.value })}
+                        placeholder="Ex: București, Romania"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-400 mb-2">Preț ($/GB/lună) *</label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={registerForm.pricePerGBPerMonth}
+                        onChange={(e) => setRegisterForm({ ...registerForm, pricePerGBPerMonth: e.target.value })}
+                        min="0.01"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-400 mb-2">Uptime Garantat (%)</label>
+                      <Input
+                        type="number"
+                        value={registerForm.uptimeGuarantee}
+                        onChange={(e) => setRegisterForm({ ...registerForm, uptimeGuarantee: e.target.value })}
+                        min="0"
+                        max="100"
+                      />
+                    </div>
+
+                    <div className="md:col-span-2 p-4 bg-dark-700/50 rounded-lg">
+                      <h3 className="text-white font-bold mb-3">Reduceri pentru contracte pe termen lung</h3>
+                      <div className="grid grid-cols-3 gap-4">
+                        <div>
+                          <label className="block text-gray-400 text-sm mb-2">3 luni (%)</label>
+                          <Input
+                            type="number"
+                            value={registerForm.discountThreeMonths}
+                            onChange={(e) => setRegisterForm({ ...registerForm, discountThreeMonths: e.target.value })}
+                            min="0"
+                            max="50"
+                          />
                         </div>
-                        <div className="w-full bg-dark-700 rounded-full h-2">
-                          <div
-                            className="bg-gradient-to-r from-primary-500 to-primary-400 h-2 rounded-full"
-                            style={{ width: `${(provider.capacity.usedGB / provider.capacity.totalGB) * 100}%` }}
+                        <div>
+                          <label className="block text-gray-400 text-sm mb-2">6 luni (%)</label>
+                          <Input
+                            type="number"
+                            value={registerForm.discountSixMonths}
+                            onChange={(e) => setRegisterForm({ ...registerForm, discountSixMonths: e.target.value })}
+                            min="0"
+                            max="50"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-gray-400 text-sm mb-2">12 luni (%)</label>
+                          <Input
+                            type="number"
+                            value={registerForm.discountTwelveMonths}
+                            onChange={(e) => setRegisterForm({ ...registerForm, discountTwelveMonths: e.target.value })}
+                            min="0"
+                            max="50"
                           />
                         </div>
                       </div>
-
-                      <div className="flex gap-2">
-                        <Button
-                          variant="danger"
-                          size="sm"
-                          onClick={() => deleteProvider(provider.id)}
-                          disabled={provider.statistics.activeContracts > 0}
-                        >
-                          <Trash2 className="w-4 h-4 mr-2" />
-                          Șterge
-                        </Button>
-                        <Button variant="secondary" size="sm" disabled>
-                          <Settings className="w-4 h-4 mr-2" />
-                          Configurare
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              ))}
-            </div>
-          </>
-        )}
-
-        {myProviders.length === 0 && (
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-center py-12">
-                <Server className="w-16 h-16 mx-auto mb-4 text-gray-600" />
-                <h3 className="text-xl font-bold text-white mb-2">Nu ești încă provider</h3>
-                <p className="text-gray-400 mb-6">
-                  Înregistrează-te ca provider pentru a oferi spațiu de stocare și a câștiga bani
-                </p>
-                <Button variant="primary" onClick={() => setShowRegisterModal(true)}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Înregistrează-te acum
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Register Modal */}
-        {showRegisterModal && (
-          <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="bg-dark-800 rounded-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
-            >
-              <h2 className="text-2xl font-bold text-white mb-4">
-                Înregistrează-te ca Storage Provider
-              </h2>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="md:col-span-2">
-                  <label className="block text-gray-400 mb-2">Username *</label>
-                  <Input
-                    value={user?.username || ''}
-                    disabled
-                    className="bg-dark-700"
-                  />
-                  <p className="text-xs text-green-400 mt-1">✓ Vei fi înregistrat ca provider cu username-ul tău</p>
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="block text-gray-400 mb-2">Nume Provider *</label>
-                  <Input
-                    value={registerForm.name}
-                    onChange={(e) => setRegisterForm({ ...registerForm, name: e.target.value })}
-                    placeholder="Ex: FastStorage Pro"
-                  />
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="block text-gray-400 mb-2">Descriere</label>
-                  <textarea
-                    value={registerForm.description}
-                    onChange={(e) => setRegisterForm({ ...registerForm, description: e.target.value })}
-                    placeholder="Descriere scurtă despre serviciul tău..."
-                    className="w-full bg-dark-700 text-white px-4 py-2 rounded-lg border border-dark-600"
-                    rows="3"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-gray-400 mb-2">Capacitate Totală (GB) *</label>
-                  <Input
-                    type="number"
-                    value={registerForm.totalCapacityGB}
-                    onChange={(e) => setRegisterForm({ ...registerForm, totalCapacityGB: e.target.value })}
-                    min="1"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-gray-400 mb-2">Locație</label>
-                  <Input
-                    value={registerForm.location}
-                    onChange={(e) => setRegisterForm({ ...registerForm, location: e.target.value })}
-                    placeholder="Ex: București, Romania"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-gray-400 mb-2">Preț ($/GB/lună) *</label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={registerForm.pricePerGBPerMonth}
-                    onChange={(e) => setRegisterForm({ ...registerForm, pricePerGBPerMonth: e.target.value })}
-                    min="0.01"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-gray-400 mb-2">Uptime Garantat (%)</label>
-                  <Input
-                    type="number"
-                    value={registerForm.uptimeGuarantee}
-                    onChange={(e) => setRegisterForm({ ...registerForm, uptimeGuarantee: e.target.value })}
-                    min="0"
-                    max="100"
-                  />
-                </div>
-
-                <div className="md:col-span-2 p-4 bg-dark-700/50 rounded-lg">
-                  <h3 className="text-white font-bold mb-3">Reduceri pentru contracte pe termen lung</h3>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-gray-400 text-sm mb-2">3 luni (%)</label>
-                      <Input
-                        type="number"
-                        value={registerForm.discountThreeMonths}
-                        onChange={(e) => setRegisterForm({ ...registerForm, discountThreeMonths: e.target.value })}
-                        min="0"
-                        max="50"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-gray-400 text-sm mb-2">6 luni (%)</label>
-                      <Input
-                        type="number"
-                        value={registerForm.discountSixMonths}
-                        onChange={(e) => setRegisterForm({ ...registerForm, discountSixMonths: e.target.value })}
-                        min="0"
-                        max="50"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-gray-400 text-sm mb-2">12 luni (%)</label>
-                      <Input
-                        type="number"
-                        value={registerForm.discountTwelveMonths}
-                        onChange={(e) => setRegisterForm({ ...registerForm, discountTwelveMonths: e.target.value })}
-                        min="0"
-                        max="50"
-                      />
                     </div>
                   </div>
-                </div>
-              </div>
 
-              <div className="flex gap-3 mt-6">
-                <Button
-                  variant="secondary"
-                  className="flex-1"
-                  onClick={() => setShowRegisterModal(false)}
-                >
-                  Anulează
-                </Button>
-                <Button
-                  variant="primary"
-                  className="flex-1"
-                  onClick={handleRegister}
-                >
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                  Înregistrează Provider
-                </Button>
+                  <div className="flex gap-3 mt-6">
+                    <Button
+                      variant="secondary"
+                      className="flex-1"
+                      onClick={() => setShowRegisterModal(false)}
+                    >
+                      Anulează
+                    </Button>
+                    <Button
+                      variant="primary"
+                      className="flex-1"
+                      onClick={handleRegister}
+                    >
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Înregistrează Provider
+                    </Button>
+                  </div>
+                </motion.div>
               </div>
-            </motion.div>
+            )}
           </div>
-        )}
-        </div>
         )}
 
         {/* Analytics Tab */}

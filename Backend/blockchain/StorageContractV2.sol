@@ -1,15 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-/**
- * Storage Contract v2 - Real Deployment
- * 
- * Features:
- * - Create storage agreements between renters and providers
- * - Escrow management
- * - Automatic payment processing
- * - Storage usage tracking
- */
 contract StorageContractV2 {
     struct StorageAgreement {
         address renter;
@@ -29,7 +20,6 @@ contract StorageContractV2 {
     mapping(uint256 => StorageAgreement) public agreements;
     uint256 public nextAgreementId = 1;
     
-    // Events
     event AgreementCreated(
         uint256 indexed agreementId,
         address indexed renter,
@@ -61,9 +51,6 @@ contract StorageContractV2 {
         uint256 indexed agreementId
     );
 
-    /**
-     * Create new storage agreement
-     */
     function createAgreement(
         address _provider,
         uint256 _allocatedGB,
@@ -101,9 +88,6 @@ contract StorageContractV2 {
         return agreementId;
     }
 
-    /**
-     * Deposit additional funds to escrow
-     */
     function depositEscrow(uint256 _agreementId) external payable {
         StorageAgreement storage agreement = agreements[_agreementId];
         require(agreement.active, "Agreement not active");
@@ -113,9 +97,6 @@ contract StorageContractV2 {
         emit EscrowDeposited(_agreementId, msg.sender, msg.value);
     }
 
-    /**
-     * Process monthly payment to provider
-     */
     function processPayment(uint256 _agreementId) external {
         StorageAgreement storage agreement = agreements[_agreementId];
         require(agreement.active, "Agreement not active");
@@ -129,7 +110,6 @@ contract StorageContractV2 {
 
         emit PaymentProcessed(_agreementId, agreement.renter, agreement.provider, monthlyPayment);
 
-        // Check if agreement is fulfilled
         if (agreement.escrowBalance == 0 || block.timestamp >= agreement.expiresAt) {
             agreement.active = false;
             agreement.fulfilled = true;
@@ -137,21 +117,14 @@ contract StorageContractV2 {
         }
     }
 
-    /**
-     * Calculate monthly payment based on usage
-     */
     function calculateMonthlyPayment(uint256 _agreementId) public view returns (uint256) {
         StorageAgreement storage agreement = agreements[_agreementId];
         
-        // Payment based on allocated GB (not usage) to incentivize reservation
         uint256 payment = agreement.allocatedGB * agreement.pricePerGBPerMonth;
         
         return payment;
     }
 
-    /**
-     * Update storage usage (provider only)
-     */
     function updateStorageUsage(uint256 _agreementId, uint256 _newUsedGB) external {
         StorageAgreement storage agreement = agreements[_agreementId];
         require(agreement.active, "Agreement not active");
@@ -164,9 +137,6 @@ contract StorageContractV2 {
         emit StorageUsageUpdated(_agreementId, oldUsage, _newUsedGB);
     }
 
-    /**
-     * Get agreement details
-     */
     function getAgreement(uint256 _agreementId) external view returns (
         address renter,
         address provider,
@@ -190,9 +160,6 @@ contract StorageContractV2 {
         );
     }
 
-    /**
-     * Withdraw remaining escrow (renter only, after expiry)
-     */
     function withdrawEscrow(uint256 _agreementId) external {
         StorageAgreement storage agreement = agreements[_agreementId];
         require(msg.sender == agreement.renter, "Only renter can withdraw");

@@ -1,15 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-/**
- * Payment Processor v2 - Real Deployment
- * 
- * Features:
- * - Send payments between users
- * - Batch payments
- * - Payment settlement
- * - Balance tracking
- */
 contract PaymentProcessorV2 {
     struct Payment {
         address from;
@@ -24,10 +15,9 @@ contract PaymentProcessorV2 {
     mapping(uint256 => Payment) public payments;
     mapping(address => uint256) public balances;
     uint256 public nextPaymentId = 1;
-    uint256 public feePercentage = 1; // 1% fee
+    uint256 public feePercentage = 1;
     address public feeCollector;
 
-    // Events
     event PaymentReceived(
         uint256 indexed paymentId,
         address indexed from,
@@ -52,9 +42,6 @@ contract PaymentProcessorV2 {
         feeCollector = msg.sender;
     }
 
-    /**
-     * Send payment
-     */
     function sendPayment(
         address _recipient,
         uint256 _amount,
@@ -87,9 +74,6 @@ contract PaymentProcessorV2 {
         return paymentId;
     }
 
-    /**
-     * Batch payment to multiple recipients
-     */
     function batchPayment(
         address[] memory _recipients,
         uint256[] memory _amounts,
@@ -112,9 +96,6 @@ contract PaymentProcessorV2 {
         emit BatchPaymentProcessed(msg.sender, totalAmount, _recipients.length);
     }
 
-    /**
-     * Settle payment (transfer from balance to wallet)
-     */
     function settle(uint256 _paymentId) external {
         Payment storage payment = payments[_paymentId];
         require(msg.sender == payment.to, "Only recipient can settle");
@@ -130,9 +111,6 @@ contract PaymentProcessorV2 {
         emit PaymentSettled(_paymentId, msg.sender, amount);
     }
 
-    /**
-     * Withdraw balance
-     */
     function withdraw(uint256 _amount) external {
         require(balances[msg.sender] >= _amount, "Insufficient balance");
         
@@ -140,19 +118,13 @@ contract PaymentProcessorV2 {
         payable(msg.sender).transfer(_amount);
     }
 
-    /**
-     * Get balance
-     */
     function getBalance(address _user) external view returns (uint256) {
         return balances[_user];
     }
 
-    /**
-     * Update fee percentage (owner only)
-     */
     function setFeePercentage(uint256 _newFee) external {
         require(msg.sender == feeCollector, "Only owner");
-        require(_newFee <= 10, "Fee too high"); // Max 10%
+        require(_newFee <= 10, "Fee too high");
         feePercentage = _newFee;
     }
 }

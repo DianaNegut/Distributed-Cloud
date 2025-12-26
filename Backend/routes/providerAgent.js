@@ -38,29 +38,48 @@ function savePendingPins(data) {
 /**
  * POST /api/provider-agent/register
  * Provider Agent registers/updates with IPFS peer info
+ * Supports both providerToken (preferred) and username (legacy) authentication
  */
 router.post('/register', async (req, res) => {
     console.log('[PROVIDER-AGENT] Registration request received');
 
     try {
-        const { username, ipfsPeerId, multiaddress, capacityGB, agentVersion } = req.body;
+        const { providerToken, username, ipfsPeerId, multiaddress, capacityGB, agentVersion } = req.body;
 
-        if (!username || !ipfsPeerId) {
+        if (!ipfsPeerId) {
             return res.status(400).json({
                 success: false,
-                error: 'username and ipfsPeerId are required'
+                error: 'ipfsPeerId is required'
             });
         }
 
-        // Find provider by username (peerId field)
-        const data = StorageProvider.loadProviders();
-        const provider = data.providers.find(p => p.peerId === username);
-
-        if (!provider) {
-            return res.status(404).json({
+        if (!providerToken && !username) {
+            return res.status(400).json({
                 success: false,
-                error: `No provider found for username: ${username}. Register as provider first via the web interface.`
+                error: 'providerToken or username is required'
             });
+        }
+
+        // Find provider by token (preferred) or username (legacy)
+        let provider;
+        if (providerToken) {
+            provider = StorageProvider.getProviderByToken(providerToken);
+            if (!provider) {
+                return res.status(401).json({
+                    success: false,
+                    error: 'Invalid providerToken. Download a fresh config from the web interface.'
+                });
+            }
+        } else {
+            // Legacy username-based lookup
+            const data = StorageProvider.loadProviders();
+            provider = data.providers.find(p => p.peerId === username);
+            if (!provider) {
+                return res.status(404).json({
+                    success: false,
+                    error: `No provider found for username: ${username}. Register as provider first via the web interface.`
+                });
+            }
         }
 
         // Update provider with IPFS info
@@ -75,7 +94,7 @@ router.post('/register', async (req, res) => {
 
         const updated = StorageProvider.updateProvider(provider.id, updates);
 
-        console.log(`[PROVIDER-AGENT] Provider ${username} registered with IPFS Peer ID: ${ipfsPeerId.substring(0, 20)}...`);
+        console.log(`[PROVIDER-AGENT] Provider ${provider.peerId} registered with IPFS Peer ID: ${ipfsPeerId.substring(0, 20)}...`);
 
         res.json({
             success: true,
@@ -83,6 +102,7 @@ router.post('/register', async (req, res) => {
             provider: {
                 id: updated.id,
                 name: updated.name,
+                username: updated.peerId,
                 ipfsPeerId: updated.ipfsPeerId,
                 status: updated.status,
                 agentStatus: updated.agentStatus

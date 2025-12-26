@@ -1,16 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-/**
- * StorageContract.sol
- * 
- * Smart contract pentru gestionarea contractelor de stocare
- * - Storage allocation between users
- * - Pricing management
- * - Payment escrow
- * - Contract lifecycle management
- */
-
 contract StorageContract {
     
     struct Storage {
@@ -18,7 +8,7 @@ contract StorageContract {
         address provider;
         uint256 allocatedGB;
         uint256 usedGB;
-        uint256 pricePerGBPerMonth; // in wei
+        uint256 pricePerGBPerMonth;
         uint256 startTime;
         uint256 endTime;
         bool active;
@@ -34,16 +24,13 @@ contract StorageContract {
         bool processed;
     }
 
-    // Contract mappings
     mapping(uint256 => Storage) public contracts;
     mapping(uint256 => Payment[]) public contractPayments;
     mapping(address => uint256[]) public userContracts;
     mapping(address => uint256) public escrowBalance;
 
-    // Counter for contract IDs
     uint256 public contractCounter = 0;
 
-    // Events
     event ContractCreated(
         uint256 indexed contractId,
         address indexed renter,
@@ -75,9 +62,6 @@ contract StorageContract {
         bool completed
     );
 
-    /**
-     * Creează contract nou de stocare
-     */
     function createContract(
         address provider,
         uint256 allocatedGB,
@@ -117,9 +101,6 @@ contract StorageContract {
         return contractId;
     }
 
-    /**
-     * Depozitează FIL în escrow pentru contract
-     */
     function depositEscrow(uint256 contractId) public payable {
         require(contractId < contractCounter, "Contract not found");
         Storage memory contractData = contracts[contractId];
@@ -128,9 +109,6 @@ contract StorageContract {
         escrowBalance[msg.sender] += msg.value;
     }
 
-    /**
-     * Calculează cuantumul plății lunar
-     */
     function calculateMonthlyPayment(uint256 contractId) public view returns (uint256) {
         require(contractId < contractCounter, "Contract not found");
         Storage memory contractData = contracts[contractId];
@@ -139,9 +117,6 @@ contract StorageContract {
         return usedGB * contractData.pricePerGBPerMonth;
     }
 
-    /**
-     * Procesează plată din escrow
-     */
     function processPayment(uint256 contractId) public {
         require(contractId < contractCounter, "Contract not found");
         Storage storage contracts_var = contracts[contractId];
@@ -157,11 +132,9 @@ contract StorageContract {
 
         require(escrowBalance[renter] >= amount, "Insufficient escrow balance");
 
-        // Transfer from escrow
         escrowBalance[renter] -= amount;
         escrowBalance[provider] += amount;
 
-        // Log payment
         contractPayments[contractId].push(Payment({
             contractId: contractId,
             from: renter,
@@ -174,18 +147,12 @@ contract StorageContract {
         emit PaymentProcessed(contractId, renter, provider, amount);
     }
 
-    /**
-     * HYBRID MODE: Marchează manual o plată ca fiind efectuată (pentru plăți off-chain/simulate)
-     * Doar providerul sau adminul poate apela asta
-     */
     function markPaid(uint256 contractId) public {
         require(contractId < contractCounter, "Contract not found");
         Storage storage contracts_var = contracts[contractId];
         
         require(msg.sender == contracts_var.provider || msg.sender == contracts_var.renter, "Not authorized");
-        // In realitate ar trebui sa verificam ca msg.sender este backend-ul autorizat
         
-        // Nu mutam fonduri reale, doar emitem evenimentul
         uint256 amount = calculateMonthlyPayment(contractId);
         
         contractPayments[contractId].push(Payment({
@@ -200,9 +167,6 @@ contract StorageContract {
         emit PaymentProcessed(contractId, contracts_var.renter, contracts_var.provider, amount);
     }
 
-    /**
-     * Actualizează storage usage
-     */
     function updateStorageUsage(uint256 contractId, uint256 newUsedGB) public {
         require(contractId < contractCounter, "Contract not found");
         Storage storage contracts_var = contracts[contractId];
@@ -214,9 +178,6 @@ contract StorageContract {
         emit StorageUpdated(contractId, newUsedGB);
     }
 
-    /**
-     * Dispute contract
-     */
     function disputeContract(uint256 contractId, string memory reason) public {
         require(contractId < contractCounter, "Contract not found");
         Storage storage contracts_var = contracts[contractId];
@@ -230,9 +191,6 @@ contract StorageContract {
         emit ContractDisputed(contractId, msg.sender, reason);
     }
 
-    /**
-     * Închide contract
-     */
     function closeContract(uint256 contractId) public {
         require(contractId < contractCounter, "Contract not found");
         Storage storage contracts_var = contracts[contractId];
@@ -246,9 +204,6 @@ contract StorageContract {
         emit ContractClosed(contractId, true);
     }
 
-    /**
-     * Retrage from escrow
-     */
     function withdrawEscrow(uint256 amount) public {
         require(escrowBalance[msg.sender] >= amount, "Insufficient balance");
         
@@ -256,24 +211,15 @@ contract StorageContract {
         payable(msg.sender).transfer(amount);
     }
 
-    /**
-     * Obține contract details
-     */
     function getContract(uint256 contractId) public view returns (Storage memory) {
         require(contractId < contractCounter, "Contract not found");
         return contracts[contractId];
     }
 
-    /**
-     * Obține user contracts
-     */
     function getUserContracts(address user) public view returns (uint256[] memory) {
         return userContracts[user];
     }
 
-    /**
-     * Obține payment history
-     */
     function getPaymentHistory(uint256 contractId) public view returns (Payment[] memory) {
         return contractPayments[contractId];
     }

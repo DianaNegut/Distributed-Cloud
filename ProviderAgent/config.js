@@ -1,17 +1,39 @@
 /**
  * Provider Agent Configuration
- * Edit these values before running the agent
+ * 
+ * Priority: provider-config.json > environment variables > defaults
+ * Download provider-config.json from the web interface after registering as a provider
  */
+
+const fs = require('fs');
+const path = require('path');
+
+// Try to load config from provider-config.json first
+let fileConfig = {};
+const configPath = path.join(__dirname, 'provider-config.json');
+
+if (fs.existsSync(configPath)) {
+    try {
+        const configData = fs.readFileSync(configPath, 'utf8');
+        fileConfig = JSON.parse(configData);
+        console.log('✓ Loaded configuration from provider-config.json');
+    } catch (error) {
+        console.error('⚠ Error reading provider-config.json:', error.message);
+    }
+}
 
 module.exports = {
     // Backend server URL - change this to your server address
-    BACKEND_URL: process.env.BACKEND_URL || 'http://localhost:3001/api',
+    BACKEND_URL: fileConfig.BACKEND_URL || process.env.BACKEND_URL || 'http://localhost:3001/api',
 
     // API Key for authentication
-    API_KEY: process.env.API_KEY || 'supersecret',
+    API_KEY: fileConfig.API_KEY || process.env.API_KEY || 'supersecret',
 
-    // Your provider username (same as registered on the platform)
-    PROVIDER_USERNAME: process.env.PROVIDER_USERNAME || '',
+    // Provider Token (preferred auth method - from web registration)
+    PROVIDER_TOKEN: fileConfig.PROVIDER_TOKEN || process.env.PROVIDER_TOKEN || '',
+
+    // Your provider username (legacy auth method)
+    PROVIDER_USERNAME: fileConfig.PROVIDER_USERNAME || process.env.PROVIDER_USERNAME || '',
 
     // IPFS Configuration
     IPFS: {
@@ -33,5 +55,8 @@ module.exports = {
     AGENT_HTTP_PORT: process.env.AGENT_HTTP_PORT || 4000,
 
     // Verbose logging
-    VERBOSE: process.argv.includes('--verbose')
+    VERBOSE: process.argv.includes('--verbose'),
+
+    // Flag to check if config was loaded from file
+    CONFIG_FROM_FILE: Object.keys(fileConfig).length > 0
 };

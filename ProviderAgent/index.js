@@ -40,15 +40,29 @@ let pinCheckInterval = null;
  * Main startup sequence
  */
 async function main() {
-    // Check configuration
-    if (!config.PROVIDER_USERNAME) {
-        console.log(chalk.red('❌ Error: PROVIDER_USERNAME not set!'));
-        console.log(chalk.yellow('   Edit config.js and set your username, or use:'));
+    // Check configuration - need either token or username
+    if (!config.PROVIDER_TOKEN && !config.PROVIDER_USERNAME) {
+        console.log(chalk.red('❌ Error: No provider configuration found!'));
+        console.log('');
+        console.log(chalk.yellow('   To fix this:'));
+        console.log(chalk.white('   1. Go to the web interface (http://localhost:3000)'));
+        console.log(chalk.white('   2. Navigate to "Provider" page'));
+        console.log(chalk.white('   3. Register as a provider'));
+        console.log(chalk.white('   4. Click "Download Config" button'));
+        console.log(chalk.white('   5. Copy the downloaded provider-config.json to this folder'));
+        console.log('');
+        console.log(chalk.gray('   Or set PROVIDER_USERNAME manually:'));
         console.log(chalk.gray('   PROVIDER_USERNAME=your_username npm start'));
         process.exit(1);
     }
 
-    console.log(chalk.white(`📋 Provider: ${chalk.cyan(config.PROVIDER_USERNAME)}`));
+    // Show auth method being used
+    if (config.PROVIDER_TOKEN) {
+        console.log(chalk.green('🔐 Auth:     Token-based (from provider-config.json)'));
+    } else {
+        console.log(chalk.yellow('🔐 Auth:     Username-based (legacy)'));
+    }
+    console.log(chalk.white(`📋 Provider: ${chalk.cyan(config.PROVIDER_USERNAME || 'Will be retrieved from token')}`));
     console.log(chalk.white(`🔗 Backend:  ${chalk.cyan(config.BACKEND_URL)}`));
     console.log('');
 

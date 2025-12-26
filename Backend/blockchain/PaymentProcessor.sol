@@ -1,15 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-/**
- * PaymentProcessor.sol
- * 
- * Smart contract pentru procesarea plăților în rețea
- * - Automatic payment settlement
- * - Fee management
- * - Payment routing
- */
-
 contract PaymentProcessor {
     
     struct PaymentRecord {
@@ -21,8 +12,7 @@ contract PaymentProcessor {
         bool settled;
     }
 
-    // Fee percentage (e.g., 100 = 1%)
-    uint256 public feePercentage = 100; // 1%
+    uint256 public feePercentage = 100;
     address public feeCollector;
 
     mapping(address => uint256) public balances;
@@ -58,9 +48,6 @@ contract PaymentProcessor {
         feeCollector = msg.sender;
     }
 
-    /**
-     * Trimite plată cu fee automatic
-     */
     function sendPayment(
         address recipient,
         uint256 amount,
@@ -84,7 +71,6 @@ contract PaymentProcessor {
             settled: false
         });
 
-        // Add to balances
         balances[recipient] += netAmount;
         balances[feeCollector] += fee;
 
@@ -93,9 +79,6 @@ contract PaymentProcessor {
         return paymentId;
     }
 
-    /**
-     * Batch payments
-     */
     function batchPayment(
         address[] memory recipients,
         uint256[] memory amounts,
@@ -115,16 +98,10 @@ contract PaymentProcessor {
         }
     }
 
-    /**
-     * Calculează fee
-     */
     function calculateFee(uint256 amount) public view returns (uint256) {
         return (amount * feePercentage) / 10000;
     }
 
-    /**
-     * Settle payment (renter aprobă)
-     */
     function settlePayment(uint256 paymentId) public {
         require(paymentId < paymentCounter, "Payment not found");
         PaymentRecord storage record = paymentRecords[paymentId];
@@ -136,9 +113,6 @@ contract PaymentProcessor {
         emit PaymentSettled(paymentId, record.to, record.amount);
     }
 
-    /**
-     * Retrage balance
-     */
     function withdraw(uint256 amount) public {
         require(balances[msg.sender] >= amount, "Insufficient balance");
         
@@ -149,38 +123,25 @@ contract PaymentProcessor {
         emit Withdrawal(msg.sender, amount, block.timestamp);
     }
 
-    /**
-     * Obține user balance
-     */
     function getBalance(address user) public view returns (uint256) {
         return balances[user];
     }
 
-    /**
-     * Obține payment record
-     */
     function getPaymentRecord(uint256 paymentId) public view returns (PaymentRecord memory) {
         require(paymentId < paymentCounter, "Payment not found");
         return paymentRecords[paymentId];
     }
 
-    /**
-     * Set fee percentage (owner only)
-     */
     function setFeePercentage(uint256 newFee) public onlyFeeCollector {
         require(newFee <= 500, "Fee too high (max 5%)");
         feePercentage = newFee;
     }
 
-    /**
-     * Emergency withdrawal (owner only)
-     */
     function emergencyWithdraw() public onlyFeeCollector {
         uint256 balance = address(this).balance;
         (bool success, ) = payable(feeCollector).call{value: balance}("");
         require(success, "Withdrawal failed");
     }
 
-    // Fallback
     receive() external payable {}
 }

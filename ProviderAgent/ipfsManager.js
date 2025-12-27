@@ -164,6 +164,52 @@ class IPFSManager {
             throw new Error(`Failed to add content: ${error.message}`);
         }
     }
+
+    /**
+     * Retrieve file from provider folder and add to IPFS
+     * This is used when Backend sends a pin_request for a file stored locally
+     */
+    async retrieveFromProviderFolder(fileId, providerPath) {
+        try {
+            const fs = require('fs');
+            const path = require('path');
+
+            // Strip 'file-' prefix if present (Backend sends file-xxx, but filename starts with xxx)
+            const searchId = fileId.startsWith('file-') ? fileId.substring(5) : fileId;
+
+            // Find file in provider folder by fileId
+            const files = fs.readdirSync(providerPath);
+            const targetFile = files.find(f => f.includes(searchId));
+
+            if (!targetFile) {
+                throw new Error(`File ${fileId} not found in provider folder`);
+            }
+
+            const filePath = path.join(providerPath, targetFile);
+            console.log(`   📂 Found file: ${targetFile}`);
+
+            // Read file and add to IPFS
+            const FormData = require('form-data');
+            const form = new FormData();
+            form.append('file', fs.createReadStream(filePath), { filename: targetFile });
+
+            const response = await axios.post(
+                `${this.apiUrl}/add`,
+                form,
+                {
+                    headers: form.getHeaders(),
+                    timeout: 120000
+                }
+            );
+
+            const cid = response.data.Hash;
+            console.log(`   ✅ Added to IPFS: ${cid}`);
+
+            return { success: true, cid, filename: targetFile };
+        } catch (error) {
+            throw new Error(`Failed to retrieve from provider folder: ${error.message}`);
+        }
+    }
 }
 
 module.exports = new IPFSManager();

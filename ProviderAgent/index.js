@@ -81,7 +81,61 @@ async function main() {
     console.log(chalk.white(`🔗 Backend:  ${chalk.cyan(config.BACKEND_URL)}`));
     console.log('');
 
-    // Step 1: Check IPFS daemon
+    // ========================================
+    // NEW: Use AgentCore for WebSocket-based architecture
+    // ========================================
+    const AgentCore = require('./agentCore');
+    const agentCore = new AgentCore();
+
+    try {
+        await agentCore.start();
+    } catch (error) {
+        console.error(chalk.red('❌ Failed to start AgentCore:'), error.message);
+        console.log('');
+        console.log(chalk.yellow('Falling back to legacy HTTP mode...'));
+        console.log('');
+
+        // Fallback to legacy mode
+        await startLegacyMode();
+        return;
+    }
+
+    console.log('');
+    console.log(chalk.green('═══════════════════════════════════════════════════════════'));
+    console.log(chalk.green('  ✓ Provider Agent is now ONLINE and ready!'));
+    console.log(chalk.green('═══════════════════════════════════════════════════════════'));
+    console.log('');
+
+    // Start HTTP server for direct uploads (optional, for backward compatibility)
+    try {
+        await startServer();
+    } catch (error) {
+        console.log(chalk.yellow(`⚠️ HTTP server start failed: ${error.message}`));
+    }
+
+    console.log('');
+    console.log(chalk.gray('Press Ctrl+C to stop the agent'));
+    console.log('');
+
+    // Handle shutdown
+    const shutdown = async () => {
+        console.log('');
+        console.log(chalk.yellow('🛑 Shutting down Provider Agent...'));
+
+        await agentCore.stop();
+
+        console.log(chalk.gray('Goodbye! 👋'));
+        process.exit(0);
+    };
+
+    process.on('SIGINT', shutdown);
+    process.on('SIGTERM', shutdown);
+}
+
+/**
+ * Legacy mode - HTTP polling (fallback)
+ */
+async function startLegacyMode() {
     const ipfsSpinner = ora('Checking IPFS daemon...').start();
 
     const ipfsRunning = await ipfsManager.isRunning();
@@ -149,7 +203,7 @@ async function main() {
 
     console.log('');
     console.log(chalk.green('═══════════════════════════════════════════════════════════'));
-    console.log(chalk.green('  ✓ Provider Agent is now ONLINE and ready!'));
+    console.log(chalk.green('  ✓ Provider Agent is now ONLINE (Legacy Mode)'));
     console.log(chalk.green('═══════════════════════════════════════════════════════════'));
     console.log('');
 

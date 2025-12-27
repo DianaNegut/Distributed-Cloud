@@ -99,10 +99,24 @@ app.use((req, res) => {
   });
 });
 
-app.listen(PORT, async () => {
+const server = app.listen(PORT, async () => {
   console.log(`\n[SERVER] Pornit pe http://localhost:${PORT}`);
   console.log(`[SERVER] API disponibil la http://localhost:${PORT}/api`);
   console.log(`[SERVER] API Key: ${process.env.API_KEY || 'supersecret'}\n`);
+
+  // ========================================
+  // Inițializare Provider WebSocket Server
+  // ========================================
+  try {
+    const providerSocketServer = require('./websocket/providerSocket');
+    providerSocketServer.initialize(server);
+    console.log('[SERVER] Provider WebSocket server initialized');
+    console.log(`[SERVER] WebSocket endpoint: ws://localhost:${PORT}/provider-ws\n`);
+  } catch (error) {
+    console.error('[SERVER] Provider WebSocket initialization failed:', error.message);
+    console.error('[SERVER] Stack:', error.stack);
+    console.log('[SERVER] Continuing without WebSocket support...\n');
+  }
 
   // Inițializare Filecoin service
   try {

@@ -237,6 +237,31 @@ class StorageProvider {
     return this.updateProvider(providerId, { status });
   }
 
+  /**
+   * Update provider heartbeat timestamp
+   */
+  static updateHeartbeat(providerId) {
+    return this.updateProvider(providerId, {
+      lastHeartbeat: new Date().toISOString()
+    });
+  }
+
+  /**
+   * Update provider capacity information
+   */
+  static updateCapacity(providerId, capacityData) {
+    const { totalGB, usedGB, availableGB, pinnedFiles, lastUpdate } = capacityData;
+    return this.updateProvider(providerId, {
+      capacity: {
+        totalGB: totalGB || 0,
+        usedGB: usedGB || 0,
+        availableGB: availableGB || 0
+      },
+      pinnedFiles: pinnedFiles || 0,
+      lastCapacityUpdate: lastUpdate || new Date().toISOString()
+    });
+  }
+
   static heartbeat(providerId) {
     const provider = this.getProvider(providerId);
     if (!provider) return null;

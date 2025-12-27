@@ -254,11 +254,42 @@ router.post('/add', async (req, res) => {
           return res.status(400).json(result);
         }
 
+
         // 6. Update provider tracking
         StorageReservation.updateUsedSpace(contract.providerId, newUsedGB);
         StorageProvider.updateUsedStorage(contract.providerId, newUsedGB);
 
-        // 7. Record upload for user storage tracking
+        // ========================================
+        // 7. Send pin request to provider via WebSocket
+        // ========================================
+        try {
+          const providerSocketServer = require('../websocket/providerSocket');
+
+          // Check if provider is connected via WebSocket
+          if (providerSocketServer.isProviderConnected(contract.providerId)) {
+            console.log(`[DOCKER-CLUSTER] 📌 Sending pin request to provider via WebSocket...`);
+
+            // Send pin request with file info
+            const pinSent = providerSocketServer.requestPin(
+              contract.providerId,
+              fileId, // Using fileId as CID for now
+              contractId
+            );
+
+            if (pinSent) {
+              console.log(`[DOCKER-CLUSTER] ✅ Pin request sent to provider ${contract.providerId}`);
+            } else {
+              console.log(`[DOCKER-CLUSTER] ⚠️ Failed to send pin request (provider may be offline)`);
+            }
+          } else {
+            console.log(`[DOCKER-CLUSTER] ℹ️ Provider ${contract.providerId} not connected via WebSocket, file stored locally`);
+          }
+        } catch (wsError) {
+          console.warn(`[DOCKER-CLUSTER] WebSocket pin request failed: ${wsError.message}`);
+          // Continue anyway - file is already stored locally
+        }
+
+        // 8. Record upload for user storage tracking
         UserStorage.recordUpload(peerId, fileId, uploadedFile.size, uploadedFile.name);
 
         // 8. Save metadata

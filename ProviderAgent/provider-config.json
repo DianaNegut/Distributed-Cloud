@@ -1,6 +1,6 @@
 {
   "BACKEND_URL": "http://localhost:3001/api",
-  "PROVIDER_TOKEN": "8583716d-d3c8-4ad2-9aaa-b6d8294435f1",
+  "PROVIDER_TOKEN": "47a9627e-80b1-47bb-8c3c-6a3abbdf1e96",
   "PROVIDER_USERNAME": "dianam",
   "API_KEY": "supersecret"
 }

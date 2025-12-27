@@ -35,14 +35,15 @@ module.exports = {
     // Your provider username (legacy auth method)
     PROVIDER_USERNAME: fileConfig.PROVIDER_USERNAME || process.env.PROVIDER_USERNAME || '',
 
-    // IPFS Configuration
+    // IPFS Configuration - HARDCODED to use local Kubo (port 5002)
+    // NOT from provider-config.json because Magic Link overwrites it
     IPFS: {
-        // IPFS API port (default kubo port)
-        API_PORT: process.env.IPFS_API_PORT || 5001,
+        // Local kubo port - NOT Docker's 5001
+        API_PORT: process.env.IPFS_API_PORT || 5002,
         API_HOST: process.env.IPFS_API_HOST || 'localhost',
 
-        // Gateway port for serving files
-        GATEWAY_PORT: process.env.IPFS_GATEWAY_PORT || 8080
+        // Local kubo gateway
+        GATEWAY_PORT: process.env.IPFS_GATEWAY_PORT || 8081
     },
 
     // Heartbeat interval in milliseconds (30 seconds)

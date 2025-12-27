@@ -2,6 +2,7 @@
 const path = require('path');
 const crypto = require('crypto');
 const { IPFS_PATH } = require('../config/paths');
+const StorageReservation = require('./StorageReservationManager');
 
 const PROVIDERS_FILE = path.join(IPFS_PATH, 'storage-providers.json');
 
@@ -36,12 +37,32 @@ class StorageProvider {
       throw new Error('Provider with this Peer ID already registered');
     }
 
+    // ===== VERIFICARE SPAȚIU FIZIC =====
+    const requestedGB = providerData.totalCapacityGB || 0;
+    const canAllocate = StorageReservation.canAllocate(requestedGB);
+
+    if (!canAllocate.success) {
+      throw new Error(canAllocate.error);
+    }
+    // ===================================
+
+    const providerId = `provider-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+    // ===== ÎNREGISTRARE REZERVARE ȘI CREARE FOLDER =====
+    const reservation = StorageReservation.registerAllocation(
+      providerId,
+      requestedGB,
+      providerData.peerId
+    );
+    // ===================================================
+
     const provider = {
-      id: `provider-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: providerId,
       providerToken: crypto.randomUUID(), // Token pentru ProviderAgent auth
       peerId: providerData.peerId,
       name: providerData.name || 'Anonymous Provider',
       description: providerData.description || '',
+      storagePath: reservation.storagePath, // Calea către folderul dedicat
       capacity: {
         totalGB: providerData.totalCapacityGB || 0,
         usedGB: 0,
@@ -88,7 +109,7 @@ class StorageProvider {
 
     data.providers.push(provider);
     this.saveProviders(data);
-    console.log(`[PROVIDER] Registered new provider: ${provider.id} (${provider.name})`);
+    console.log(`[PROVIDER] Registered new provider: ${provider.id} (${provider.name}) with ${requestedGB}GB reserved`);
     return provider;
   }
 
@@ -298,10 +319,13 @@ class StorageProvider {
       return { success: false, error: 'Cannot delete provider with active contracts' };
     }
 
+    // Eliberează rezervarea de stocare
+    StorageReservation.removeAllocation(providerId);
+
     data.providers = data.providers.filter(p => p.id !== providerId);
     this.saveProviders(data);
 
-    console.log(`[PROVIDER] Deleted provider: ${providerId}`);
+    console.log(`[PROVIDER] Deleted provider: ${providerId} and released storage allocation`);
     return { success: true };
   }
 }

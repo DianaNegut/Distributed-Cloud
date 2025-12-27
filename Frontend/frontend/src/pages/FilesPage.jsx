@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -21,7 +22,8 @@ import {
   AlertTriangle,
   ShoppingCart,
   Eye,
-  Share2
+  Share2,
+  Search
 } from 'lucide-react';
 import axios from 'axios';
 import toast, { Toaster } from 'react-hot-toast';
@@ -36,8 +38,10 @@ const API_KEY = process.env.REACT_APP_API_KEY || 'supersecret';
 
 export default function FilesPage() {
   const { user, sessionToken } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [files, setFiles] = useState([]);
   const [filteredFiles, setFilteredFiles] = useState([]);
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
@@ -52,6 +56,29 @@ export default function FilesPage() {
   const [previewFile, setPreviewFile] = useState(null);
   const [shareFile, setShareFile] = useState(null);
   const fileInputRef = useRef(null);
+
+  // Filter files when searchQuery or files change
+  useEffect(() => {
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      const filtered = files.filter(f =>
+        (f.name && f.name.toLowerCase().includes(query)) ||
+        (f.hash && f.hash.toLowerCase().includes(query))
+      );
+      setFilteredFiles(filtered);
+    } else {
+      setFilteredFiles(files);
+    }
+  }, [searchQuery, files]);
+
+  // Update URL when search changes
+  useEffect(() => {
+    if (searchQuery.trim()) {
+      setSearchParams({ search: searchQuery });
+    } else {
+      setSearchParams({});
+    }
+  }, [searchQuery]);
 
   useEffect(() => {
     if (user) {

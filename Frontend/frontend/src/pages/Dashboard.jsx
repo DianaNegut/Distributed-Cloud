@@ -1,22 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { 
-  Activity, 
-  HardDrive, 
-  Users, 
-  Zap, 
-  TrendingUp,
+import { Link } from 'react-router-dom';
+import {
+  Upload,
+  FileText,
+  FolderOpen,
+  Clock,
+  Star,
+  Trash2,
+  HardDrive,
+  ShoppingCart,
   Server,
-  Database,
-  Cloud,
-  AlertTriangle,
-  ShoppingCart
+  Plus,
+  Image,
+  FileVideo,
+  FileAudio,
+  Archive
 } from 'lucide-react';
-import { StatCard } from '../components/ui/StatCard';
-import { Card, CardContent } from '../components/ui/Card';
-import { Button } from '../components/ui/Button';
-import StorageChart from '../components/analytics/StorageChart';
-import ActivityChart from '../components/analytics/ActivityChart';
 import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
 
@@ -25,32 +24,22 @@ const API_KEY = process.env.REACT_APP_API_KEY || 'supersecret';
 
 const Dashboard = () => {
   const { user, sessionToken } = useAuth();
-  const [stats, setStats] = useState({
-    totalFiles: 0,
-    totalPeers: 0,
-    networkStatus: 'checking',
-    clusterNodes: 0,
-    totalProviders: 0,
-    activeContracts: 0,
-    totalStorageGB: 0,
-    availableStorageGB: 0
-  });
   const [userStorage, setUserStorage] = useState(null);
+  const [recentFiles, setRecentFiles] = useState([]);
+  const [stats, setStats] = useState({ totalFiles: 0, activeContracts: 0 });
 
   useEffect(() => {
     if (user) {
-      loadDashboardData();
       loadUserStorage();
-      const interval = setInterval(loadDashboardData, 10000);
-      return () => clearInterval(interval);
+      loadRecentFiles();
+      loadStats();
     }
   }, [user]);
 
   const loadUserStorage = async () => {
-    if (!user) return;
     try {
       const response = await axios.get(`${API_URL}/user-storage/${user.username}`, {
-        headers: { 
+        headers: {
           'x-api-key': API_KEY,
           'x-session-token': sessionToken
         }
@@ -63,348 +52,368 @@ const Dashboard = () => {
     }
   };
 
-  const loadDashboardData = async () => {
+  const loadRecentFiles = async () => {
     try {
-      const filesRes = await axios.get(`${API_URL}/files/list`, {
-        headers: { 'x-api-key': API_KEY }
+      const response = await axios.get(`${API_URL}/docker-cluster/pins`, {
+        headers: { 'x-api-key': API_KEY, 'x-session-token': sessionToken }
       });
-
-      const peersRes = await axios.get(`${API_URL}/peers`, {
-        headers: { 'x-api-key': API_KEY }
-      });
-
-      const clusterRes = await axios.get(`${API_URL}/docker-cluster/status`, {
-        headers: { 'x-api-key': API_KEY }
-      }).catch(() => ({ data: { success: false, cluster: { totalNodes: 0 } } }));
-
-      const providersRes = await axios.get(`${API_URL}/storage-providers`, {
-        headers: { 'x-api-key': API_KEY }
-      }).catch(() => ({ data: { providers: [] } }));
-
-      const contractsRes = await axios.get(`${API_URL}/storage-contracts`, {
-        headers: { 'x-api-key': API_KEY }
-      }).catch(() => ({ data: { contracts: [] } }));
-
-      const providers = providersRes.data?.providers || [];
-      const contracts = contractsRes.data?.contracts || [];
-      
-      const totalStorage = providers.reduce((sum, p) => sum + p.capacity.totalGB, 0);
-      const availableStorage = providers.reduce((sum, p) => sum + p.capacity.availableGB, 0);
-      const activeContracts = contracts.filter(c => c.status === 'active').length;
-
-      // Verifică dacă rețeaua este activă
-      const totalPeers = peersRes.data?.peers?.length || 0;
-      const clusterNodesCount = clusterRes.data?.cluster?.totalNodes || 0;
-      const isNetworkActive = (totalPeers > 0 || clusterNodesCount > 0) && clusterRes.data?.success !== false;
-
-      setStats({
-        totalFiles: filesRes.data?.totalFiles || 0,
-        totalPeers: totalPeers,
-        networkStatus: isNetworkActive ? 'active' : 'offline',
-        clusterNodes: clusterNodesCount,
-        totalProviders: providers.length,
-        activeContracts: activeContracts,
-        totalStorageGB: totalStorage,
-        availableStorageGB: availableStorage
-      });
+      if (response.data.success) {
+        const myFiles = (response.data.pins || [])
+          .filter(f => f.uploadedBy === user.username)
+          .slice(0, 6);
+        setRecentFiles(myFiles);
+      }
     } catch (error) {
-      console.error('Error loading dashboard:', error);
+      console.error('Error loading files:', error);
     }
   };
 
+  const loadStats = async () => {
+    try {
+      const [filesRes, contractsRes] = await Promise.all([
+        axios.get(`${API_URL}/files/list`, { headers: { 'x-api-key': API_KEY } }),
+        axios.get(`${API_URL}/storage-contracts`, { headers: { 'x-api-key': API_KEY } })
+      ]);
+
+      const activeContracts = (contractsRes.data?.contracts || [])
+        .filter(c => c.status === 'active').length;
+
+      setStats({
+        totalFiles: filesRes.data?.totalFiles || 0,
+        activeContracts
+      });
+    } catch (error) {
+      console.error('Error loading stats:', error);
+    }
+  };
+
+  const getFileIcon = (filename) => {
+    if (!filename) return FileText;
+    const ext = filename.split('.').pop()?.toLowerCase();
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) return Image;
+    if (['mp4', 'avi', 'mov', 'mkv'].includes(ext)) return FileVideo;
+    if (['mp3', 'wav', 'ogg'].includes(ext)) return FileAudio;
+    if (['zip', 'rar', '7z'].includes(ext)) return Archive;
+    return FileText;
+  };
+
+  const storagePercent = userStorage
+    ? (userStorage.storage.usedGB / userStorage.storage.limitGB) * 100
+    : 0;
+
   return (
-    <div className="flex-1 overflow-auto">
-      <div className="max-w-7xl mx-auto p-8">
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
-        >
-          <h1 className="text-4xl font-bold text-white mb-2">Panou Principal</h1>
-          <p className="text-gray-400">Monitorizează și gestionează rețeaua ta IPFS distribuită</p>
-        </motion.div>
-
-      {/* User Storage Card */}
-      {userStorage && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-6"
-        >
-          <Card className={`border-l-4 ${
-            userStorage.status === 'critical' ? 'border-l-red-500' :
-            userStorage.status === 'warning' ? 'border-l-yellow-500' :
-            'border-l-green-500'
-          }`}>
-            <CardContent className="pt-4 pb-4">
-              <div className="flex items-center justify-between flex-wrap gap-4">
-                <div className="flex items-center gap-4">
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                    userStorage.status === 'critical' ? 'bg-red-500/20' :
-                    userStorage.status === 'warning' ? 'bg-yellow-500/20' :
-                    'bg-green-500/20'
-                  }`}>
-                    <HardDrive className={`w-6 h-6 ${
-                      userStorage.status === 'critical' ? 'text-red-400' :
-                      userStorage.status === 'warning' ? 'text-yellow-400' :
-                      'text-green-400'
-                    }`} />
-                  </div>
-                  <div>
-                    <p className="text-white font-medium">
-                      Stocare Personală: {userStorage.storage.usedGB} GB / {userStorage.storage.limitGB} GB
-                    </p>
-                    <p className="text-gray-400 text-sm">
-                      {userStorage.storage.remainingGB} GB disponibili • {userStorage.storage.filesCount} fișiere
-                      {userStorage.storage.isDefault && ' • Plan Gratuit (1 GB)'}
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-4">
-                  <div className="w-48">
-                    <div className="flex justify-between text-xs mb-1">
-                      <span className="text-gray-400">Utilizare</span>
-                      <span className={`font-medium ${
-                        userStorage.storage.usagePercent >= 95 ? 'text-red-400' :
-                        userStorage.storage.usagePercent >= 80 ? 'text-yellow-400' :
-                        'text-green-400'
-                      }`}>{userStorage.storage.usagePercent}%</span>
-                    </div>
-                    <div className="w-full bg-dark-700 rounded-full h-2">
-                      <div
-                        className={`h-2 rounded-full transition-all ${
-                          userStorage.storage.usagePercent >= 95 ? 'bg-red-500' :
-                          userStorage.storage.usagePercent >= 80 ? 'bg-yellow-500' :
-                          'bg-green-500'
-                        }`}
-                        style={{ width: `${Math.min(userStorage.storage.usagePercent, 100)}%` }}
-                      />
-                    </div>
-                  </div>
-                  
-                  {userStorage.storage.isDefault && (
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      onClick={() => window.location.href = '/marketplace'}
-                    >
-                      <ShoppingCart className="w-4 h-4 mr-2" />
-                      Cumpără Spațiu
-                    </Button>
-                  )}
-                </div>
-              </div>
-
-              {userStorage.warning && (
-                <div className={`mt-3 p-3 rounded-lg flex items-center gap-2 ${
-                  userStorage.status === 'critical' ? 'bg-red-500/10 text-red-400' :
-                  'bg-yellow-500/10 text-yellow-400'
-                }`}>
-                  <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-                  <p className="text-sm">{userStorage.warning}</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </motion.div>
-      )}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard
-          title="Fișiere în IPFS"
-          value={stats.totalFiles}
-          icon={HardDrive}
-          trend={12}
-          color="primary"
-        />
-        <StatCard
-          title="Peers Conectați"
-          value={stats.totalPeers}
-          icon={Users}
-          trend={8}
-          color="success"
-        />
-        <StatCard
-          title="Noduri Cluster"
-          value={stats.clusterNodes}
-          icon={Server}
-          color="warning"
-        />
-        <StatCard
-          title="Status Rețea"
-          value={stats.networkStatus === 'active' ? 'Activ' : 'Inactiv'}
-          icon={Activity}
-          color={stats.networkStatus === 'active' ? 'success' : 'danger'}
-        />
+    <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
+      {/* Welcome Header */}
+      <div style={{ marginBottom: '32px' }}>
+        <h1 style={{
+          fontSize: '28px',
+          fontWeight: '400',
+          color: 'var(--text-primary)',
+          marginBottom: '8px'
+        }}>
+          Bine ai venit, {user?.username}!
+        </h1>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
+          Gestionează fișierele tale în cloud
+        </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6">
-        <StatCard
-          title="Provideri Activi"
-          value={stats.totalProviders}
-          icon={Database}
-          color="info"
-        />
-        <StatCard
-          title="Contracte Active"
-          value={stats.activeContracts}
-          icon={TrendingUp}
-          color="success"
-        />
-        <StatCard
-          title="Stocare Marketplace"
-          value={`${stats.totalStorageGB.toFixed(0)} GB`}
-          subtitle="Oferită de provideri"
-          icon={HardDrive}
-          color="primary"
-        />
-        <StatCard
-          title="Disponibil în Piață"
-          value={`${stats.availableStorageGB.toFixed(0)} GB`}
-          subtitle="De cumpărat"
-          icon={Cloud}
-          color="warning"
-        />
+      {/* Quick Actions */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+        gap: '16px',
+        marginBottom: '32px'
+      }}>
+        <Link to="/files" style={{ textDecoration: 'none' }}>
+          <div style={{
+            background: 'var(--bg-primary)',
+            border: '1px solid var(--border)',
+            borderRadius: '12px',
+            padding: '20px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '16px',
+            cursor: 'pointer',
+            transition: 'box-shadow 0.2s, border-color 0.2s'
+          }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.boxShadow = 'var(--shadow-md)';
+              e.currentTarget.style.borderColor = 'var(--accent)';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.boxShadow = 'none';
+              e.currentTarget.style.borderColor = 'var(--border)';
+            }}
+          >
+            <div style={{
+              width: '48px',
+              height: '48px',
+              borderRadius: '12px',
+              background: '#e8f0fe',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <Upload size={24} color="#1a73e8" />
+            </div>
+            <div>
+              <p style={{ fontWeight: '500', color: 'var(--text-primary)' }}>Încarcă Fișier</p>
+              <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Adaugă fișiere noi</p>
+            </div>
+          </div>
+        </Link>
+
+        <Link to="/marketplace" style={{ textDecoration: 'none' }}>
+          <div style={{
+            background: 'var(--bg-primary)',
+            border: '1px solid var(--border)',
+            borderRadius: '12px',
+            padding: '20px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '16px',
+            cursor: 'pointer',
+            transition: 'box-shadow 0.2s, border-color 0.2s'
+          }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.boxShadow = 'var(--shadow-md)';
+              e.currentTarget.style.borderColor = 'var(--accent)';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.boxShadow = 'none';
+              e.currentTarget.style.borderColor = 'var(--border)';
+            }}
+          >
+            <div style={{
+              width: '48px',
+              height: '48px',
+              borderRadius: '12px',
+              background: '#e6f4ea',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <ShoppingCart size={24} color="#34a853" />
+            </div>
+            <div>
+              <p style={{ fontWeight: '500', color: 'var(--text-primary)' }}>Cumpără Spațiu</p>
+              <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Extinde stocarea</p>
+            </div>
+          </div>
+        </Link>
+
+        <Link to="/provider" style={{ textDecoration: 'none' }}>
+          <div style={{
+            background: 'var(--bg-primary)',
+            border: '1px solid var(--border)',
+            borderRadius: '12px',
+            padding: '20px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '16px',
+            cursor: 'pointer',
+            transition: 'box-shadow 0.2s, border-color 0.2s'
+          }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.boxShadow = 'var(--shadow-md)';
+              e.currentTarget.style.borderColor = 'var(--accent)';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.boxShadow = 'none';
+              e.currentTarget.style.borderColor = 'var(--border)';
+            }}
+          >
+            <div style={{
+              width: '48px',
+              height: '48px',
+              borderRadius: '12px',
+              background: '#fef7e0',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <Server size={24} color="#f9ab00" />
+            </div>
+            <div>
+              <p style={{ fontWeight: '500', color: 'var(--text-primary)' }}>Devino Provider</p>
+              <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Câștigă oferind spațiu</p>
+            </div>
+          </div>
+        </Link>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-        <Card>
-          <CardContent className="pt-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-white flex items-center gap-2">
-              <Activity className="w-6 h-6 text-primary-400" />
-              Sănătate Rețea
+      {/* Storage Overview */}
+      <div style={{
+        background: 'var(--bg-primary)',
+        border: '1px solid var(--border)',
+        borderRadius: '12px',
+        padding: '24px',
+        marginBottom: '32px'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <HardDrive size={24} color="var(--accent)" />
+            <h2 style={{ fontSize: '18px', fontWeight: '500', color: 'var(--text-primary)' }}>
+              Stocarea Ta
             </h2>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-              <span className="text-sm text-green-400 font-medium">Online</span>
-            </div>
           </div>
-
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 bg-dark-800/50 rounded-lg">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-primary-500/20 rounded-lg flex items-center justify-center">
-                  <Database className="w-5 h-5 text-primary-400" />
-                </div>
-                <div>
-                  <p className="text-white font-medium">Nod IPFS</p>
-                  <p className="text-gray-400 text-sm">Configurare privată</p>
-                </div>
-              </div>
-              <div className="w-16 h-2 bg-dark-700 rounded-full overflow-hidden">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: '85%' }}
-                  transition={{ duration: 1, delay: 0.2 }}
-                  className="h-full bg-gradient-to-r from-green-500 to-green-400"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between p-4 bg-dark-800/50 rounded-lg">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
-                  <Cloud className="w-5 h-5 text-blue-400" />
-                </div>
-                <div>
-                  <p className="text-white font-medium">Cluster Docker</p>
-                  <p className="text-gray-400 text-sm">{stats.clusterNodes} noduri active</p>
-                </div>
-              </div>
-              <div className="w-16 h-2 bg-dark-700 rounded-full overflow-hidden">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: '70%' }}
-                  transition={{ duration: 1, delay: 0.4 }}
-                  className="h-full bg-gradient-to-r from-blue-500 to-blue-400"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between p-4 bg-dark-800/50 rounded-lg">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center">
-                  <Zap className="w-5 h-5 text-purple-400" />
-                </div>
-                <div>
-                  <p className="text-white font-medium">Performanță</p>
-                  <p className="text-gray-400 text-sm">Optimă</p>
-                </div>
-              </div>
-              <div className="w-16 h-2 bg-dark-700 rounded-full overflow-hidden">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: '92%' }}
-                  transition={{ duration: 1, delay: 0.6 }}
-                  className="h-full bg-gradient-to-r from-purple-500 to-purple-400"
-                />
-              </div>
-            </div>
-          </div>
-          </CardContent>
-        </Card>
-
-        {/* Analytics Charts */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          <Card>
-            <CardContent className="pt-6">
-              <h2 className="text-xl font-bold text-white mb-4">Utilizare Stocare</h2>
-              <StorageChart />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <h2 className="text-xl font-bold text-white mb-4">Activitate Fișiere</h2>
-              <ActivityChart />
-            </CardContent>
-          </Card>
+          {userStorage?.storage?.isDefault && (
+            <Link to="/marketplace" style={{
+              padding: '8px 16px',
+              background: 'var(--accent)',
+              color: 'white',
+              borderRadius: '8px',
+              textDecoration: 'none',
+              fontSize: '14px',
+              fontWeight: '500'
+            }}>
+              Cumpără mai mult
+            </Link>
+          )}
         </div>
 
-        <Card>
-          <CardContent className="pt-6">
-          <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-            <Zap className="w-6 h-6 text-yellow-400" />
-            Acțiuni Rapide
-          </h2>
-
-          <div className="grid grid-cols-3 gap-4">
-            <motion.a
-              href="/files"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="p-4 bg-gradient-to-br from-primary-600 to-primary-500 rounded-xl text-white text-center shadow-lg shadow-primary-500/30 cursor-pointer"
-            >
-              <HardDrive className="w-8 h-8 mx-auto mb-2" />
-              <p className="font-medium">Încarcă Fișier</p>
-            </motion.a>
-
-            <motion.a
-              href="/network"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="p-4 bg-gradient-to-br from-green-600 to-green-500 rounded-xl text-white text-center shadow-lg shadow-green-500/30 cursor-pointer"
-            >
-              <Users className="w-8 h-8 mx-auto mb-2" />
-              <p className="font-medium">Vezi Peers</p>
-            </motion.a>
-
-            <motion.a
-              href="/cluster"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="p-4 bg-gradient-to-br from-purple-600 to-purple-500 rounded-xl text-white text-center shadow-lg shadow-purple-500/30 cursor-pointer"
-            >
-              <Server className="w-8 h-8 mx-auto mb-2" />
-              <p className="font-medium">Gestionează Cluster</p>
-            </motion.a>
+        <div style={{ marginBottom: '12px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+            <span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
+              {userStorage?.storage?.usedGB || 0} GB folosiți din {userStorage?.storage?.limitGB || 1} GB
+            </span>
+            <span style={{
+              color: storagePercent > 80 ? '#ea4335' : 'var(--text-secondary)',
+              fontSize: '14px',
+              fontWeight: '500'
+            }}>
+              {storagePercent.toFixed(0)}%
+            </span>
           </div>
-          </CardContent>
-        </Card>
+          <div style={{
+            height: '8px',
+            background: 'var(--bg-tertiary)',
+            borderRadius: '4px',
+            overflow: 'hidden'
+          }}>
+            <div style={{
+              height: '100%',
+              width: `${Math.min(storagePercent, 100)}%`,
+              background: storagePercent > 80 ? '#ea4335' : 'var(--accent)',
+              borderRadius: '4px',
+              transition: 'width 0.3s'
+            }} />
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <FileText size={16} color="var(--text-muted)" />
+            <span style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
+              {recentFiles.length} fișiere
+            </span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <FolderOpen size={16} color="var(--text-muted)" />
+            <span style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
+              {stats.activeContracts} contracte active
+            </span>
+          </div>
+        </div>
       </div>
 
+      {/* Recent Files */}
+      <div style={{
+        background: 'var(--bg-primary)',
+        border: '1px solid var(--border)',
+        borderRadius: '12px',
+        padding: '24px'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <Clock size={24} color="var(--accent)" />
+            <h2 style={{ fontSize: '18px', fontWeight: '500', color: 'var(--text-primary)' }}>
+              Fișiere Recente
+            </h2>
+          </div>
+          <Link to="/files" style={{
+            color: 'var(--accent)',
+            textDecoration: 'none',
+            fontSize: '14px',
+            fontWeight: '500'
+          }}>
+            Vezi toate →
+          </Link>
+        </div>
+
+        {recentFiles.length > 0 ? (
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+            gap: '16px'
+          }}>
+            {recentFiles.map((file, index) => {
+              const Icon = getFileIcon(file.name);
+              return (
+                <div key={index} style={{
+                  border: '1px solid var(--border)',
+                  borderRadius: '8px',
+                  overflow: 'hidden',
+                  cursor: 'pointer',
+                  transition: 'box-shadow 0.2s'
+                }}
+                  onMouseOver={(e) => e.currentTarget.style.boxShadow = 'var(--shadow-md)'}
+                  onMouseOut={(e) => e.currentTarget.style.boxShadow = 'none'}
+                >
+                  <div style={{
+                    height: '100px',
+                    background: 'var(--bg-tertiary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    <Icon size={40} color="var(--text-muted)" />
+                  </div>
+                  <div style={{ padding: '12px' }}>
+                    <p style={{
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      color: 'var(--text-primary)',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      {file.name || 'Fișier'}
+                    </p>
+                    <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                      {file.size ? `${(file.size / 1024 / 1024).toFixed(2)} MB` : 'N/A'}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div style={{
+            textAlign: 'center',
+            padding: '48px 24px',
+            color: 'var(--text-muted)'
+          }}>
+            <FolderOpen size={64} style={{ opacity: 0.3, marginBottom: '16px' }} />
+            <p style={{ fontSize: '16px', marginBottom: '8px' }}>Nu ai încă fișiere</p>
+            <p style={{ fontSize: '14px', marginBottom: '16px' }}>Încarcă primul tău fișier pentru a începe</p>
+            <Link to="/files" style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '12px 24px',
+              background: 'var(--accent)',
+              color: 'white',
+              borderRadius: '8px',
+              textDecoration: 'none',
+              fontWeight: '500'
+            }}>
+              <Plus size={20} />
+              Încarcă Fișier
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   );

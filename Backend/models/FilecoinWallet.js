@@ -1,10 +1,92 @@
 // Filecoin Wallet pentru utilizatori - sistem intern de FIL
 // Fiecare utilizator are un wallet cu balanță FIL pentru plăți storage
+// PERSISTENT: Salvează datele pe disc pentru a nu le pierde la restart
+
+const fs = require('fs');
+const path = require('path');
+const { IPFS_PATH } = require('../config/paths');
+
+const WALLETS_FILE = path.join(IPFS_PATH, 'filecoin-wallets.json');
+const TRANSACTIONS_FILE = path.join(IPFS_PATH, 'filecoin-transactions.json');
 
 class FilecoinWallet {
   constructor() {
-    // In-memory storage pentru wallets (pentru producție: MongoDB/PostgreSQL)
+    // In-memory storage pentru wallets (backed by file)
     this.wallets = new Map();
+    this.transactions = [];
+
+    // Încarcă datele de pe disc la inițializare
+    this.loadFromDisk();
+  }
+
+  // Încarcă wallet-urile și tranzacțiile de pe disc
+  loadFromDisk() {
+    try {
+      // Încarcă wallet-urile
+      if (fs.existsSync(WALLETS_FILE)) {
+        const data = JSON.parse(fs.readFileSync(WALLETS_FILE, 'utf8'));
+        if (data.wallets && Array.isArray(data.wallets)) {
+          data.wallets.forEach(wallet => {
+            this.wallets.set(wallet.userId, wallet);
+          });
+          console.log(`[FILECOIN-WALLET] Loaded ${this.wallets.size} wallets from disk`);
+        }
+      }
+
+      // Încarcă tranzacțiile
+      if (fs.existsSync(TRANSACTIONS_FILE)) {
+        const data = JSON.parse(fs.readFileSync(TRANSACTIONS_FILE, 'utf8'));
+        if (data.transactions && Array.isArray(data.transactions)) {
+          this.transactions = data.transactions;
+          console.log(`[FILECOIN-WALLET] Loaded ${this.transactions.length} transactions from disk`);
+        }
+      }
+
+      // Asigură-te că există wallet-ul escrow
+      if (!this.wallets.has('escrow')) {
+        this.wallets.set('escrow', {
+          userId: 'escrow',
+          address: 't1escrow000000000000000000000000000000',
+          balance: 0,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          transactions: []
+        });
+        this.saveToDisk();
+      }
+    } catch (error) {
+      console.error('[FILECOIN-WALLET] Error loading from disk:', error.message);
+      // Inițializează cu escrow wallet dacă nu există date
+      this.wallets.set('escrow', {
+        userId: 'escrow',
+        address: 't1escrow000000000000000000000000000000',
+        balance: 0,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        transactions: []
+      });
+    }
+  }
+
+  // Salvează wallet-urile și tranzacțiile pe disc
+  saveToDisk() {
+    try {
+      // Salvează wallet-urile
+      const walletsData = {
+        wallets: Array.from(this.wallets.values()),
+        lastUpdated: new Date().toISOString()
+      };
+      fs.writeFileSync(WALLETS_FILE, JSON.stringify(walletsData, null, 2));
+
+      // Salvează tranzacțiile
+      const transactionsData = {
+        transactions: this.transactions,
+        lastUpdated: new Date().toISOString()
+      };
+      fs.writeFileSync(TRANSACTIONS_FILE, JSON.stringify(transactionsData, null, 2));
+    } catch (error) {
+      console.error('[FILECOIN-WALLET] Error saving to disk:', error.message);
+    }
   }
 
   // Generează adresă FIL unică pentru utilizator
@@ -33,6 +115,26 @@ class FilecoinWallet {
     };
 
     this.wallets.set(userId, wallet);
+
+    // Înregistrează tranzacția de bonus inițial dacă există
+    if (initialBalance > 0) {
+      const transaction = {
+        id: `tx-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        from: 'system',
+        to: address,
+        fromUserId: 'system',
+        toUserId: userId,
+        amount: initialBalance,
+        timestamp: new Date().toISOString(),
+        type: 'initial_bonus',
+        status: 'completed',
+        note: 'Bonus inițial la crearea wallet-ului'
+      };
+      this.transactions.push(transaction);
+      wallet.transactions.push(transaction.id);
+    }
+
+    this.saveToDisk(); // Persistă pe disc
     return wallet;
   }
 
@@ -43,6 +145,11 @@ class FilecoinWallet {
       throw new Error('Wallet not found');
     }
     return wallet;
+  }
+
+  // Verifică dacă există wallet
+  async hasWallet(userId) {
+    return this.wallets.has(userId);
   }
 
   // Obține wallet după address
@@ -65,13 +172,14 @@ class FilecoinWallet {
   async updateBalance(userId, amount) {
     const wallet = await this.getWallet(userId);
     wallet.balance += amount;
-    
+
     if (wallet.balance < 0) {
       wallet.balance -= amount; // Rollback
       throw new Error('Insufficient balance');
     }
 
     wallet.updatedAt = new Date().toISOString();
+    this.saveToDisk(); // Persistă pe disc
     return wallet;
   }
 
@@ -84,8 +192,8 @@ class FilecoinWallet {
     const fromWallet = await this.getWallet(fromUserId);
     const toWallet = await this.getWallet(toUserId);
 
-    // Verifică balanță suficientă
-    if (fromWallet.balance < amount) {
+    // Verifică balanță suficientă (escrow poate avea balanță negativă)
+    if (fromUserId !== 'escrow' && fromWallet.balance < amount) {
       throw new Error(`Insufficient balance. Available: ${fromWallet.balance} FIL, Required: ${amount} FIL`);
     }
 
@@ -99,15 +207,25 @@ class FilecoinWallet {
 
     // Crează înregistrarea tranzacției
     const transaction = {
+      id: `tx-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       from: fromWallet.address,
       to: toWallet.address,
+      fromUserId,
+      toUserId,
       amount,
       timestamp,
       type: metadata.type || 'transfer',
       contractId: metadata.contractId || null,
+      note: metadata.note || null,
       status: 'completed'
     };
 
+    // Adaugă tranzacția la lista globală și la wallet-uri
+    this.transactions.push(transaction);
+    fromWallet.transactions.push(transaction.id);
+    toWallet.transactions.push(transaction.id);
+
+    this.saveToDisk(); // Persistă pe disc
     return transaction;
   }
 
@@ -140,17 +258,35 @@ class FilecoinWallet {
     return Array.from(this.wallets.values());
   }
 
+  // Obține tranzacțiile unui utilizator
+  async getUserTransactions(userId) {
+    const wallet = await this.getWallet(userId);
+    return this.transactions.filter(tx =>
+      tx.fromUserId === userId || tx.toUserId === userId
+    );
+  }
+
+  // Obține toate tranzacțiile
+  async getAllTransactions() {
+    return this.transactions;
+  }
+
   // Statistici generale
   async getStatistics() {
-    const wallets = Array.from(this.wallets.values());
+    const wallets = Array.from(this.wallets.values()).filter(w => w.userId !== 'escrow');
     const totalWallets = wallets.length;
     const totalBalance = wallets.reduce((sum, w) => sum + w.balance, 0);
     const averageBalance = totalWallets > 0 ? totalBalance / totalWallets : 0;
+
+    const totalTransactions = this.transactions.length;
+    const totalVolume = this.transactions.reduce((sum, tx) => sum + tx.amount, 0);
 
     return {
       totalWallets,
       totalBalance: totalBalance.toFixed(6),
       averageBalance: averageBalance.toFixed(6),
+      totalTransactions,
+      totalVolume: totalVolume.toFixed(6),
       currency: 'FIL'
     };
   }
@@ -158,15 +294,5 @@ class FilecoinWallet {
 
 // Singleton instance
 const walletInstance = new FilecoinWallet();
-
-// Creare wallet pentru escrow system (balanță virtuală infinită)
-walletInstance.wallets.set('escrow', {
-  userId: 'escrow',
-  address: 't1escrow000000000000000000000000000000',
-  balance: 0, // Se poate face negativă pentru escrow
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
-  transactions: []
-});
 
 module.exports = walletInstance;

@@ -396,33 +396,74 @@ router.post('/:id/complete', async (req, res) => {
   }
 });
 
-router.post('/:id/pay', (req, res) => {
+router.post('/:id/pay', async (req, res) => {
   console.log(`[STORAGE-CONTRACTS] Procesare plata pentru contract ${req.params.id}...`);
   try {
-    const { paymentMethod, transactionId } = req.body;
-
     const contract = StorageContract.getContract(req.params.id);
     if (!contract) {
       return res.status(404).json({ success: false, error: 'Contract not found' });
     }
 
-    const result = StorageContract.processPayment(req.params.id, {
-      amount: contract.pricing.totalPrice,
-      method: paymentMethod || 'filecoin',
-      transactionId: transactionId
-    });
-
-    if (!result.success) {
-      return res.status(400).json(result);
+    if (contract.status !== 'pending_payment') {
+      return res.status(400).json({
+        success: false,
+        error: `Contract is not pending payment (status: ${contract.status})`
+      });
     }
 
-    StorageProvider.updateEarnings(contract.providerId, contract.pricing.totalPrice);
+    const filCost = contract.pricing?.priceInFIL || contract.pricing?.totalPrice || 0;
 
-    res.json({
-      success: true,
-      message: 'Payment processed successfully',
-      contract: result.contract
-    });
+    // Check balance first
+    try {
+      const clientBalance = await filecoinService.getBalance(contract.renterId);
+      if (clientBalance.balance < filCost) {
+        return res.status(400).json({
+          success: false,
+          error: `Insufficient FIL balance. Available: ${clientBalance.balance} FIL, Required: ${filCost} FIL`,
+          required: filCost,
+          available: clientBalance.balance
+        });
+      }
+    } catch (error) {
+      console.warn('[STORAGE-CONTRACTS] Balance check failed:', error.message);
+      return res.status(400).json({ success: false, error: 'Could not verify balance' });
+    }
+
+    // Deposit to escrow
+    try {
+      const escrowResult = await filecoinService.depositEscrow(contract.renterId, contract.id, filCost);
+      console.log('[STORAGE-CONTRACTS] Escrow deposit:', escrowResult);
+
+      // Update contract status
+      const data = StorageContract.loadContracts();
+      const contractToUpdate = data.contracts.find(c => c.id === contract.id);
+      if (contractToUpdate) {
+        contractToUpdate.payment.escrowStatus = 'deposited';
+        contractToUpdate.payment.escrowAmount = filCost;
+        contractToUpdate.payment.escrowTxId = escrowResult.transaction.id;
+        contractToUpdate.payment.status = 'paid';
+        contractToUpdate.payment.paymentDate = new Date().toISOString();
+        contractToUpdate.status = 'active';
+        contractToUpdate.updatedAt = new Date().toISOString();
+        StorageContract.saveContracts(data);
+      }
+
+      res.json({
+        success: true,
+        message: 'Payment processed successfully - contract is now active',
+        contract: contractToUpdate,
+        escrow: {
+          amount: filCost,
+          transactionId: escrowResult.transaction.id
+        }
+      });
+    } catch (error) {
+      console.error('[STORAGE-CONTRACTS] Escrow deposit failed:', error.message);
+      return res.status(500).json({
+        success: false,
+        error: `Failed to deposit escrow: ${error.message}`
+      });
+    }
   } catch (error) {
     console.error('[STORAGE-CONTRACTS] Error:', error.message);
     res.status(500).json({ success: false, error: error.message });

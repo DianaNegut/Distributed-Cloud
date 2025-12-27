@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  FileText, 
-  Calendar, 
-  DollarSign, 
+import {
+  FileText,
+  Calendar,
+  DollarSign,
   HardDrive,
   User,
   Server,
@@ -36,19 +36,20 @@ const API_KEY = process.env.REACT_APP_API_KEY || 'supersecret';
 const ContractsPage = () => {
   const { user, sessionToken } = useAuth();
   const [contracts, setContracts] = useState([]);
+  const [providers, setProviders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState('all');
   const [viewMode, setViewMode] = useState('renter'); // renter or provider
   const [filBalance, setFilBalance] = useState(null);
   const [walletLoading, setWalletLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('contracts'); // contracts, wallet, transactions, backup
-  
+
   // Wallet data
   const [wallet, setWallet] = useState(null);
   const [balance, setBalance] = useState(null);
   const [transactions, setTransactions] = useState([]);
   const [statistics, setStatistics] = useState(null);
-  
+
   // Transfer form
   const [transferForm, setTransferForm] = useState({
     toUserId: '',
@@ -60,6 +61,7 @@ const ContractsPage = () => {
   useEffect(() => {
     if (user) {
       loadContracts();
+      loadProviders();
       loadFilBalance();
       loadWalletData();
       loadStatistics();
@@ -70,7 +72,7 @@ const ContractsPage = () => {
     try {
       setLoading(true);
       const response = await axios.get(`${API_URL}/storage-contracts`, {
-        headers: { 
+        headers: {
           'x-api-key': API_KEY,
           'x-session-token': sessionToken
         }
@@ -80,6 +82,17 @@ const ContractsPage = () => {
       console.error('Error loading contracts:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadProviders = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/storage-providers`, {
+        headers: { 'x-api-key': API_KEY }
+      });
+      setProviders(response.data.providers || []);
+    } catch (error) {
+      console.error('Error loading providers:', error);
     }
   };
 
@@ -231,6 +244,28 @@ const ContractsPage = () => {
     }
   };
 
+  const handlePayContract = async (contractId) => {
+    if (!window.confirm('Sigur doriți să plătiți acest contract? Suma va fi reținută în escrow.')) {
+      return;
+    }
+
+    try {
+      const response = await axios.post(`${API_URL}/storage-contracts/${contractId}/pay`, {
+        paymentMethod: 'filecoin'
+      }, {
+        headers: { 'x-api-key': API_KEY }
+      });
+
+      if (response.data.success) {
+        alert('Contract plătit cu succes! Contractul este acum activ.');
+        loadContracts();
+        loadFilBalance();
+      }
+    } catch (error) {
+      alert('Eroare la plată: ' + (error.response?.data?.error || error.message));
+    }
+  };
+
   const handleCompleteContract = async (contractId) => {
     if (!window.confirm('Sigur doriți să finalizați contractul? Fondurile din escrow vor fi plătite furnizorului.')) {
       return;
@@ -286,16 +321,22 @@ const ContractsPage = () => {
     return Math.max(0, diff);
   };
 
+  // Get provider IDs owned by current user
+  const myProviderIds = providers
+    .filter(p => p.peerId === user?.username)
+    .map(p => p.id);
+
   const myContracts = user ? contracts.filter(c => {
     if (viewMode === 'renter') {
       return c.renterId === user.username;
     } else {
-      return c.providerId === user.username;
+      // Check if the contract's provider is owned by the current user
+      return myProviderIds.includes(c.providerId);
     }
   }) : [];
 
-  const filteredContracts = filterStatus === 'all' 
-    ? myContracts 
+  const filteredContracts = filterStatus === 'all'
+    ? myContracts
     : myContracts.filter(c => c.status === filterStatus);
 
   const activeCount = myContracts.filter(c => c.status === 'active').length;
@@ -343,44 +384,40 @@ const ContractsPage = () => {
         <div className="flex gap-2 mb-6 border-b border-dark-700">
           <button
             onClick={() => setActiveTab('contracts')}
-            className={`px-4 py-3 font-medium transition-colors flex items-center gap-2 ${
-              activeTab === 'contracts'
-                ? 'border-b-2 border-primary-500 text-white'
-                : 'text-gray-400 hover:text-white'
-            }`}
+            className={`px-4 py-3 font-medium transition-colors flex items-center gap-2 ${activeTab === 'contracts'
+              ? 'border-b-2 border-primary-500 text-white'
+              : 'text-gray-400 hover:text-white'
+              }`}
           >
             <FileText className="w-4 h-4" />
             Contracte
           </button>
           <button
             onClick={() => setActiveTab('wallet')}
-            className={`px-4 py-3 font-medium transition-colors flex items-center gap-2 ${
-              activeTab === 'wallet'
-                ? 'border-b-2 border-primary-500 text-white'
-                : 'text-gray-400 hover:text-white'
-            }`}
+            className={`px-4 py-3 font-medium transition-colors flex items-center gap-2 ${activeTab === 'wallet'
+              ? 'border-b-2 border-primary-500 text-white'
+              : 'text-gray-400 hover:text-white'
+              }`}
           >
             <Wallet className="w-4 h-4" />
             Wallet FIL
           </button>
           <button
             onClick={() => setActiveTab('transactions')}
-            className={`px-4 py-3 font-medium transition-colors flex items-center gap-2 ${
-              activeTab === 'transactions'
-                ? 'border-b-2 border-primary-500 text-white'
-                : 'text-gray-400 hover:text-white'
-            }`}
+            className={`px-4 py-3 font-medium transition-colors flex items-center gap-2 ${activeTab === 'transactions'
+              ? 'border-b-2 border-primary-500 text-white'
+              : 'text-gray-400 hover:text-white'
+              }`}
           >
             <ArrowDownUp className="w-4 h-4" />
             Istoric Tranzacții
           </button>
           <button
             onClick={() => setActiveTab('backup')}
-            className={`px-4 py-3 font-medium transition-colors flex items-center gap-2 ${
-              activeTab === 'backup'
-                ? 'border-b-2 border-primary-500 text-white'
-                : 'text-gray-400 hover:text-white'
-            }`}
+            className={`px-4 py-3 font-medium transition-colors flex items-center gap-2 ${activeTab === 'backup'
+              ? 'border-b-2 border-primary-500 text-white'
+              : 'text-gray-400 hover:text-white'
+              }`}
           >
             <Shield className="w-4 h-4" />
             Backup & Recovery
@@ -405,260 +442,271 @@ const ContractsPage = () => {
               />
               <StatCard
                 title="Valoare Totală"
-            value={`${Number(totalValue).toFixed(6)} FIL`}
-            icon={Coins}
-            color="primary"
-          />
-          <StatCard
-            title="Wallet FIL"
-            value={walletLoading ? '...' : filBalance !== null ? `${Number(filBalance).toFixed(6)} FIL` : 'N/A'}
-            icon={DollarSign}
-            color="purple"
-          />
-          <StatCard
-            title="Stocare Totală"
-            value={`${totalStorage} GB`}
-            icon={HardDrive}
-            color="info"
-          />
-        </div>
-
-        <Card className="mb-6">
-          <CardContent className="pt-6">
-            <div className="flex flex-col md:flex-row justify-between gap-4">
-              <div className="flex gap-2">
-                <Button
-                  variant={viewMode === 'renter' ? 'primary' : 'secondary'}
-                  onClick={() => setViewMode('renter')}
-                >
-                  <User className="w-4 h-4 mr-2" />
-                  Ca Chiriaș
-                </Button>
-                <Button
-                  variant={viewMode === 'provider' ? 'primary' : 'secondary'}
-                  onClick={() => setViewMode('provider')}
-                >
-                  <Server className="w-4 h-4 mr-2" />
-                  Ca Furnizor
-                </Button>
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant={filterStatus === 'all' ? 'primary' : 'secondary'}
-                  onClick={() => setFilterStatus('all')}
-                  size="sm"
-                >
-                  Toate
-                </Button>
-                <Button
-                  variant={filterStatus === 'active' ? 'primary' : 'secondary'}
-                  onClick={() => setFilterStatus('active')}
-                  size="sm"
-                >
-                  Active
-                </Button>
-                <Button
-                  variant={filterStatus === 'pending_payment' ? 'primary' : 'secondary'}
-                  onClick={() => setFilterStatus('pending_payment')}
-                  size="sm"
-                >
-                  În Așteptare
-                </Button>
-                <Button
-                  variant={filterStatus === 'expired' ? 'primary' : 'secondary'}
-                  onClick={() => setFilterStatus('expired')}
-                  size="sm"
-                >
-                  Expirate
-                </Button>
-              </div>
+                value={`${Number(totalValue).toFixed(6)} FIL`}
+                icon={Coins}
+                color="primary"
+              />
+              <StatCard
+                title="Wallet FIL"
+                value={walletLoading ? '...' : filBalance !== null ? `${Number(filBalance).toFixed(6)} FIL` : 'N/A'}
+                icon={DollarSign}
+                color="purple"
+              />
+              <StatCard
+                title="Stocare Totală"
+                value={`${totalStorage} GB`}
+                icon={HardDrive}
+                color="info"
+              />
             </div>
-          </CardContent>
-        </Card>
 
-        <div className="space-y-4">
-          {filteredContracts.map((contract) => {
-            const StatusIcon = getStatusIcon(contract.status);
-            const daysRemaining = getDaysRemaining(contract.terms.endDate);
-            const usagePercent = (contract.storage.usedGB / contract.storage.allocatedGB * 100).toFixed(1);
+            <Card className="mb-6">
+              <CardContent className="pt-6">
+                <div className="flex flex-col md:flex-row justify-between gap-4">
+                  <div className="flex gap-2">
+                    <Button
+                      variant={viewMode === 'renter' ? 'primary' : 'secondary'}
+                      onClick={() => setViewMode('renter')}
+                    >
+                      <User className="w-4 h-4 mr-2" />
+                      Ca Chiriaș
+                    </Button>
+                    <Button
+                      variant={viewMode === 'provider' ? 'primary' : 'secondary'}
+                      onClick={() => setViewMode('provider')}
+                    >
+                      <Server className="w-4 h-4 mr-2" />
+                      Ca Furnizor
+                    </Button>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant={filterStatus === 'all' ? 'primary' : 'secondary'}
+                      onClick={() => setFilterStatus('all')}
+                      size="sm"
+                    >
+                      Toate
+                    </Button>
+                    <Button
+                      variant={filterStatus === 'active' ? 'primary' : 'secondary'}
+                      onClick={() => setFilterStatus('active')}
+                      size="sm"
+                    >
+                      Active
+                    </Button>
+                    <Button
+                      variant={filterStatus === 'pending_payment' ? 'primary' : 'secondary'}
+                      onClick={() => setFilterStatus('pending_payment')}
+                      size="sm"
+                    >
+                      În Așteptare
+                    </Button>
+                    <Button
+                      variant={filterStatus === 'expired' ? 'primary' : 'secondary'}
+                      onClick={() => setFilterStatus('expired')}
+                      size="sm"
+                    >
+                      Expirate
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-            return (
-              <motion.div
-                key={contract.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-              >
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="flex flex-col lg:flex-row gap-6">
-                      {/* Left side - Main info */}
-                      <div className="flex-1">
-                        <div className="flex items-start justify-between mb-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 bg-primary-500/20 rounded-lg flex items-center justify-center">
-                              <FileText className="w-6 h-6 text-primary-400" />
-                            </div>
-                            <div>
-                              <h3 className="text-lg font-bold text-white">
-                                Contract #{contract.id.slice(-8)}
-                              </h3>
-                              <p className="text-gray-400 text-sm">
-                                {viewMode === 'renter' 
-                                  ? `Furnizor: ${contract.providerName}`
-                                  : `Chiriaș: ${contract.renterName}`
-                                }
-                              </p>
-                            </div>
-                          </div>
-                          <Badge variant={getStatusColor(contract.status)}>
-                            <StatusIcon className="w-3 h-3 mr-1" />
-                            {contract.status}
-                          </Badge>
-                        </div>
+            <div className="space-y-4">
+              {filteredContracts.map((contract) => {
+                const StatusIcon = getStatusIcon(contract.status);
+                const daysRemaining = getDaysRemaining(contract.terms.endDate);
+                const usagePercent = (contract.storage.usedGB / contract.storage.allocatedGB * 100).toFixed(1);
 
-                        {contract.metadata?.description && (
-                          <p className="text-gray-400 text-sm mb-4">{contract.metadata.description}</p>
-                        )}
-
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                          <div>
-                            <p className="text-gray-400 text-xs mb-1">Alocat</p>
-                            <p className="text-white font-bold">{contract.storage.allocatedGB} GB</p>
-                          </div>
-                          <div>
-                            <p className="text-gray-400 text-xs mb-1">Utilizat</p>
-                            <p className="text-white font-bold">
-                              {Number(contract.storage.usedGB || 0).toFixed(2)} GB
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-gray-400 text-xs mb-1">Fișiere</p>
-                            <p className="text-white font-bold">{contract.storage.files.length}</p>
-                          </div>
-                          <div>
-                            <p className="text-gray-400 text-xs mb-1">Preț</p>
-                            <div className="flex items-center gap-1">
-                              <Coins className="w-4 h-4 text-green-400" />
-                              <p className="text-green-400 font-bold">
-                                {Number(contract.pricing?.priceInFIL || 0).toFixed(6)} FIL
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="mb-4">
-                        <div className="flex justify-between text-sm mb-1">
-                          <span className="text-gray-400">Utilizare stocare</span>
-                          <span className="text-white">{usagePercent}%</span>
-                        </div>
-                          <div className="w-full bg-dark-700 rounded-full h-2">
-                            <div
-                              className="bg-gradient-to-r from-primary-500 to-primary-400 h-2 rounded-full"
-                              style={{ width: `${usagePercent}%` }}
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="lg:w-64 space-y-4">
-                        <div className="p-4 bg-dark-800/50 rounded-lg">
-                          <div className="flex items-center gap-2 mb-3">
-                            <Calendar className="w-4 h-4 text-gray-400" />
-                            <p className="text-gray-400 text-sm">Perioadă</p>
-                          </div>
-                          <p className="text-white text-sm mb-1">
-                            Început: {formatDate(contract.terms.startDate)}
-                          </p>
-                          <p className="text-white text-sm mb-2">
-                            Sfârșit: {formatDate(contract.terms.endDate)}
-                          </p>
-                          {contract.status === 'active' && (
-                            <div className={`text-sm font-medium ${daysRemaining <= 7 ? 'text-red-400' : 'text-green-400'}`}>
-                              <Clock className="w-3 h-3 inline mr-1" />
-                              {daysRemaining} zile rămase
-                            </div>
-                          )}
-                        </div>
-
-                        {contract.payment && (
-                          <div className="p-4 bg-dark-800/50 rounded-lg space-y-3">
-                            <div>
-                              <p className="text-gray-400 text-xs mb-2">Status Plată</p>
-                              <Badge variant={contract.payment.status === 'paid' ? 'success' : 'warning'}>
-                                {contract.payment.status}
+                return (
+                  <motion.div
+                    key={contract.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                  >
+                    <Card>
+                      <CardContent className="pt-6">
+                        <div className="flex flex-col lg:flex-row gap-6">
+                          {/* Left side - Main info */}
+                          <div className="flex-1">
+                            <div className="flex items-start justify-between mb-4">
+                              <div className="flex items-center gap-3">
+                                <div className="w-12 h-12 bg-primary-500/20 rounded-lg flex items-center justify-center">
+                                  <FileText className="w-6 h-6 text-primary-400" />
+                                </div>
+                                <div>
+                                  <h3 className="text-lg font-bold text-white">
+                                    Contract #{contract.id.slice(-8)}
+                                  </h3>
+                                  <p className="text-gray-400 text-sm">
+                                    {viewMode === 'renter'
+                                      ? `Furnizor: ${contract.providerName}`
+                                      : `Chiriaș: ${contract.renterName}`
+                                    }
+                                  </p>
+                                </div>
+                              </div>
+                              <Badge variant={getStatusColor(contract.status)}>
+                                <StatusIcon className="w-3 h-3 mr-1" />
+                                {contract.status}
                               </Badge>
-                              {contract.payment.paymentDate && (
-                                <p className="text-gray-500 text-xs mt-2">
-                                  {formatDate(contract.payment.paymentDate)}
+                            </div>
+
+                            {contract.metadata?.description && (
+                              <p className="text-gray-400 text-sm mb-4">{contract.metadata.description}</p>
+                            )}
+
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                              <div>
+                                <p className="text-gray-400 text-xs mb-1">Alocat</p>
+                                <p className="text-white font-bold">{contract.storage.allocatedGB} GB</p>
+                              </div>
+                              <div>
+                                <p className="text-gray-400 text-xs mb-1">Utilizat</p>
+                                <p className="text-white font-bold">
+                                  {Number(contract.storage.usedGB || 0).toFixed(2)} GB
                                 </p>
+                              </div>
+                              <div>
+                                <p className="text-gray-400 text-xs mb-1">Fișiere</p>
+                                <p className="text-white font-bold">{contract.storage.files.length}</p>
+                              </div>
+                              <div>
+                                <p className="text-gray-400 text-xs mb-1">Preț</p>
+                                <div className="flex items-center gap-1">
+                                  <Coins className="w-4 h-4 text-green-400" />
+                                  <p className="text-green-400 font-bold">
+                                    {Number(contract.pricing?.priceInFIL || 0).toFixed(6)} FIL
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="mb-4">
+                              <div className="flex justify-between text-sm mb-1">
+                                <span className="text-gray-400">Utilizare stocare</span>
+                                <span className="text-white">{usagePercent}%</span>
+                              </div>
+                              <div className="w-full bg-dark-700 rounded-full h-2">
+                                <div
+                                  className="bg-gradient-to-r from-primary-500 to-primary-400 h-2 rounded-full"
+                                  style={{ width: `${usagePercent}%` }}
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="lg:w-64 space-y-4">
+                            <div className="p-4 bg-dark-800/50 rounded-lg">
+                              <div className="flex items-center gap-2 mb-3">
+                                <Calendar className="w-4 h-4 text-gray-400" />
+                                <p className="text-gray-400 text-sm">Perioadă</p>
+                              </div>
+                              <p className="text-white text-sm mb-1">
+                                Început: {formatDate(contract.terms.startDate)}
+                              </p>
+                              <p className="text-white text-sm mb-2">
+                                Sfârșit: {formatDate(contract.terms.endDate)}
+                              </p>
+                              {contract.status === 'active' && (
+                                <div className={`text-sm font-medium ${daysRemaining <= 7 ? 'text-red-400' : 'text-green-400'}`}>
+                                  <Clock className="w-3 h-3 inline mr-1" />
+                                  {daysRemaining} zile rămase
+                                </div>
                               )}
                             </div>
-                            {contract.payment.escrowStatus && (
-                              <div>
-                                <p className="text-gray-400 text-xs mb-2">Status Escrow</p>
-                                <Badge variant={
-                                  contract.payment.escrowStatus === 'released' ? 'success' :
-                                  contract.payment.escrowStatus === 'deposited' ? 'warning' :
-                                  contract.payment.escrowStatus === 'refunded' ? 'secondary' : 'default'
-                                }>
-                                  {contract.payment.escrowStatus}
-                                </Badge>
-                                {contract.payment.escrowAmount && (
-                                  <div className="flex items-center gap-1 mt-2">
-                                    <Coins className="w-3 h-3 text-gray-400" />
-                                    <p className="text-gray-400 text-xs">
-                                      {Number(contract.payment.escrowAmount).toFixed(6)} FIL
+
+                            {contract.payment && (
+                              <div className="p-4 bg-dark-800/50 rounded-lg space-y-3">
+                                <div>
+                                  <p className="text-gray-400 text-xs mb-2">Status Plată</p>
+                                  <Badge variant={contract.payment.status === 'paid' ? 'success' : 'warning'}>
+                                    {contract.payment.status}
+                                  </Badge>
+                                  {contract.payment.paymentDate && (
+                                    <p className="text-gray-500 text-xs mt-2">
+                                      {formatDate(contract.payment.paymentDate)}
                                     </p>
+                                  )}
+                                </div>
+                                {contract.payment.escrowStatus && (
+                                  <div>
+                                    <p className="text-gray-400 text-xs mb-2">Status Escrow</p>
+                                    <Badge variant={
+                                      contract.payment.escrowStatus === 'released' ? 'success' :
+                                        contract.payment.escrowStatus === 'deposited' ? 'warning' :
+                                          contract.payment.escrowStatus === 'refunded' ? 'secondary' : 'default'
+                                    }>
+                                      {contract.payment.escrowStatus}
+                                    </Badge>
+                                    {contract.payment.escrowAmount && (
+                                      <div className="flex items-center gap-1 mt-2">
+                                        <Coins className="w-3 h-3 text-gray-400" />
+                                        <p className="text-gray-400 text-xs">
+                                          {Number(contract.payment.escrowAmount).toFixed(6)} FIL
+                                        </p>
+                                      </div>
+                                    )}
                                   </div>
                                 )}
                               </div>
                             )}
-                          </div>
-                        )}
 
-                        {viewMode === 'renter' && (
-                          <div className="flex flex-col gap-2">
-                            {contract.status === 'active' && contract.payment?.escrowStatus === 'deposited' && (
-                              <Button
-                                variant="success"
-                                size="sm"
-                                onClick={() => handleCompleteContract(contract.id)}
-                                title="Finalizează contractul și plătește furnizorul"
-                              >
-                                <Check className="w-4 h-4 mr-2" />
-                                Finalizează
-                              </Button>
-                            )}
-                            {contract.status === 'active' && (
-                              <Button
-                                variant="primary"
-                                size="sm"
-                                onClick={() => renewContract(contract.id)}
-                              >
-                                <RefreshCw className="w-4 h-4 mr-2" />
-                                Reînnoiește
-                              </Button>
-                            )}
-                            {(contract.status === 'active' || contract.status === 'pending_payment') && (
-                              <Button
-                                variant="danger"
-                                size="sm"
-                                onClick={() => cancelContract(contract.id)}
-                              >
-                                <XCircle className="w-4 h-4 mr-2" />
-                                Anulează
-                              </Button>
+                            {viewMode === 'renter' && (
+                              <div className="flex flex-col gap-2">
+                                {contract.status === 'pending_payment' && (
+                                  <Button
+                                    variant="success"
+                                    size="sm"
+                                    onClick={() => handlePayContract(contract.id)}
+                                    title="Plătește contractul pentru a-l activa"
+                                  >
+                                    <Coins className="w-4 h-4 mr-2" />
+                                    Plătește
+                                  </Button>
+                                )}
+                                {contract.status === 'active' && contract.payment?.escrowStatus === 'deposited' && (
+                                  <Button
+                                    variant="success"
+                                    size="sm"
+                                    onClick={() => handleCompleteContract(contract.id)}
+                                    title="Finalizează contractul și plătește furnizorul"
+                                  >
+                                    <Check className="w-4 h-4 mr-2" />
+                                    Finalizează
+                                  </Button>
+                                )}
+                                {contract.status === 'active' && (
+                                  <Button
+                                    variant="primary"
+                                    size="sm"
+                                    onClick={() => renewContract(contract.id)}
+                                  >
+                                    <RefreshCw className="w-4 h-4 mr-2" />
+                                    Reînnoiește
+                                  </Button>
+                                )}
+                                {(contract.status === 'active' || contract.status === 'pending_payment') && (
+                                  <Button
+                                    variant="danger"
+                                    size="sm"
+                                    onClick={() => cancelContract(contract.id)}
+                                  >
+                                    <XCircle className="w-4 h-4 mr-2" />
+                                    Anulează
+                                  </Button>
+                                )}
+                              </div>
                             )}
                           </div>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            );
-          })}
-        </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                );
+              })}
+            </div>
 
             {filteredContracts.length === 0 && (
               <Card>
@@ -667,14 +715,32 @@ const ContractsPage = () => {
                     <FileText className="w-16 h-16 mx-auto mb-4 text-gray-600" />
                     <h3 className="text-xl font-bold text-white mb-2">Nu ai contracte</h3>
                     <p className="text-gray-400 mb-6">
-                      {viewMode === 'renter' 
+                      {viewMode === 'renter'
                         ? 'Mergi la Piață pentru a închiria spațiu de stocare'
-                        : 'Înregistrează-te ca furnizor pentru a oferi spațiu de stocare'
+                        : myProviderIds.length > 0
+                          ? 'Ești înregistrat ca furnizor! Așteaptă ca utilizatorii să închirieze spațiu de la tine din Piață.'
+                          : 'Înregistrează-te ca furnizor pentru a oferi spațiu de stocare'
                       }
                     </p>
-                    <Button variant="primary" onClick={() => window.location.href = viewMode === 'renter' ? '/marketplace' : '/provider'}>
-                      {viewMode === 'renter' ? 'Mergi la Piață' : 'Devino Furnizor'}
-                    </Button>
+                    {viewMode === 'renter' ? (
+                      <Button variant="primary" onClick={() => window.location.href = '/marketplace'}>
+                        Mergi la Piață
+                      </Button>
+                    ) : myProviderIds.length > 0 ? (
+                      <div className="flex flex-col items-center gap-3">
+                        <Badge variant="success" className="text-sm px-4 py-2">
+                          <CheckCircle className="w-4 h-4 mr-2" />
+                          Provider activ
+                        </Badge>
+                        <Button variant="secondary" onClick={() => window.location.href = '/provider'}>
+                          Gestionează Providerii
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button variant="primary" onClick={() => window.location.href = '/provider'}>
+                        Devino Furnizor
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -705,11 +771,11 @@ const ContractsPage = () => {
                     <div>
                       <p className="text-xs text-white/70">Ultima actualizare</p>
                       <p className="text-sm font-medium text-white">
-                        {new Date(wallet.updatedAt).toLocaleString('ro-RO', { 
-                          month: 'short', 
-                          day: 'numeric', 
-                          hour: '2-digit', 
-                          minute: '2-digit' 
+                        {new Date(wallet.updatedAt).toLocaleString('ro-RO', {
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
                         })}
                       </p>
                     </div>
@@ -718,30 +784,30 @@ const ContractsPage = () => {
               </Card>
             )}
 
-            {/* Statistics */}
-            {statistics && (
+            {/* User Statistics */}
+            {wallet && (
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                 <StatCard
-                  title="Total Wallets"
-                  value={statistics.wallets?.totalWallets || 0}
-                  icon={Users}
+                  title="Wallet Creat"
+                  value={new Date(wallet.createdAt).toLocaleDateString('ro-RO', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  icon={Calendar}
                   color="info"
                 />
                 <StatCard
-                  title="Total în Sistem"
-                  value={`${Number(statistics.wallets?.totalBalance || 0).toFixed(2)} FIL`}
+                  title="Balanță Curentă"
+                  value={`${Number(balance?.balance || 0).toFixed(2)} FIL`}
                   icon={DollarSign}
                   color="success"
                 />
                 <StatCard
-                  title="Tranzacții Total"
-                  value={statistics.transactions?.totalTransactions || 0}
+                  title="Tranzacțiile Mele"
+                  value={transactions.length}
                   icon={ArrowDownUp}
                   color="purple"
                 />
                 <StatCard
-                  title="Volum Tranzacții"
-                  value={`${Number(statistics.transactions?.totalVolume || 0).toFixed(2)} FIL`}
+                  title="Volum Personal"
+                  value={`${Number(transactions.reduce((sum, tx) => sum + Number(tx.amount || 0), 0)).toFixed(2)} FIL`}
                   icon={TrendingUp}
                   color="warning"
                 />
@@ -792,7 +858,7 @@ const ContractsPage = () => {
                       <input
                         type="text"
                         value={transferForm.toUserId}
-                        onChange={(e) => setTransferForm({...transferForm, toUserId: e.target.value})}
+                        onChange={(e) => setTransferForm({ ...transferForm, toUserId: e.target.value })}
                         className="w-full px-4 py-2 bg-dark-800 border border-dark-700 rounded-lg text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                         placeholder="user-12345"
                         required
@@ -807,7 +873,7 @@ const ContractsPage = () => {
                         type="number"
                         step="0.000001"
                         value={transferForm.amount}
-                        onChange={(e) => setTransferForm({...transferForm, amount: e.target.value})}
+                        onChange={(e) => setTransferForm({ ...transferForm, amount: e.target.value })}
                         className="w-full px-4 py-2 bg-dark-800 border border-dark-700 rounded-lg text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                         placeholder="0.000000"
                         required
@@ -825,7 +891,7 @@ const ContractsPage = () => {
                       </label>
                       <textarea
                         value={transferForm.note}
-                        onChange={(e) => setTransferForm({...transferForm, note: e.target.value})}
+                        onChange={(e) => setTransferForm({ ...transferForm, note: e.target.value })}
                         className="w-full px-4 py-2 bg-dark-800 border border-dark-700 rounded-lg text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                         rows="3"
                         placeholder="Descriere transfer..."
@@ -839,11 +905,10 @@ const ContractsPage = () => {
                   </form>
 
                   {transferResult && (
-                    <div className={`mt-4 p-4 rounded-lg ${
-                      transferResult.success 
-                        ? 'bg-green-500/20 border border-green-500/50' 
-                        : 'bg-red-500/20 border border-red-500/50'
-                    }`}>
+                    <div className={`mt-4 p-4 rounded-lg ${transferResult.success
+                      ? 'bg-green-500/20 border border-green-500/50'
+                      : 'bg-red-500/20 border border-red-500/50'
+                      }`}>
                       {transferResult.success ? (
                         <>
                           <p className="font-semibold text-green-400">✓ Transfer realizat cu succes!</p>
@@ -893,9 +958,8 @@ const ContractsPage = () => {
                         )}
                       </div>
                       <div className="text-right">
-                        <p className={`text-lg font-bold ${
-                          tx.to === wallet?.address ? 'text-green-400' : 'text-red-400'
-                        }`}>
+                        <p className={`text-lg font-bold ${tx.to === wallet?.address ? 'text-green-400' : 'text-red-400'
+                          }`}>
                           {tx.to === wallet?.address ? '+' : '-'}
                           {filecoinService.formatFIL(tx.amount)} FIL
                         </p>

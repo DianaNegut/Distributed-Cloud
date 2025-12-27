@@ -310,6 +310,27 @@ app.post('/upload', async (req, res) => {
         const cid = response.data.Hash;
         console.log(chalk.green(`   ✓ File added to IPFS: ${cid}`));
 
+        // PIN the file to ensure it persists
+        try {
+            const pinUrl = `http://${config.IPFS.API_HOST}:${config.IPFS.API_PORT}/api/v0/pin/add?arg=${cid}`;
+            console.log(chalk.gray(`   📌 Sending pin request to: ${pinUrl}`));
+            const pinResponse = await axios.post(pinUrl, null, { timeout: 30000 });
+            console.log(chalk.gray(`   📌 Pin response status: ${pinResponse.status}`));
+            console.log(chalk.gray(`   📌 Pin response data: ${JSON.stringify(pinResponse.data)}`));
+            if (pinResponse.data && pinResponse.data.Pins && pinResponse.data.Pins.includes(cid)) {
+                console.log(chalk.green(`   ✓ File pinned successfully: ${cid}`));
+            } else {
+                console.log(chalk.yellow(`   ⚠️ Pin response unexpected: ${JSON.stringify(pinResponse.data)}`));
+            }
+        } catch (pinError) {
+            console.log(chalk.red(`   ❌ Pin FAILED: ${pinError.message}`));
+            if (pinError.response) {
+                console.log(chalk.red(`   ❌ Pin error status: ${pinError.response.status}`));
+                console.log(chalk.red(`   ❌ Pin error data: ${JSON.stringify(pinError.response.data)}`));
+            }
+            // Continue anyway - file might still be accessible
+        }
+
         // Clean up temp file
         if (fs.existsSync(uploadedFile.tempFilePath)) {
             fs.unlinkSync(uploadedFile.tempFilePath);

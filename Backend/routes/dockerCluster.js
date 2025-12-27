@@ -170,8 +170,19 @@ router.post('/add', async (req, res) => {
     if (contractId) {
       console.log(`[DOCKER-CLUSTER] 🎯 Provider-First Strategy: Checking contract ${contractId}`);
 
+      // DEBUG: Log contract and provider details
+      const StorageContract = require('../models/StorageContract');
+      const StorageProvider = require('../models/StorageProvider');
+      const debugContract = StorageContract.getContract(contractId);
+      console.log(`[DOCKER-CLUSTER] DEBUG - Contract: ${debugContract ? JSON.stringify({ id: debugContract.id, providerId: debugContract.providerId, status: debugContract.status }) : 'NOT FOUND'}`);
+
+      if (debugContract?.providerId) {
+        const debugProvider = StorageProvider.getProvider(debugContract.providerId);
+        console.log(`[DOCKER-CLUSTER] DEBUG - Provider: ${debugProvider ? JSON.stringify({ name: debugProvider.name, peerId: debugProvider.peerId, ipfsPeerId: debugProvider.ipfsPeerId, agentStatus: debugProvider.agentStatus, lastHeartbeat: debugProvider.lastHeartbeat }) : 'NOT FOUND'}`);
+      }
+
       const routingDecision = await providerRouter.getRoutingDecision(contractId, uploadedFile.size);
-      console.log(`[DOCKER-CLUSTER] Routing decision: ${routingDecision.reason}`);
+      console.log(`[DOCKER-CLUSTER] Routing decision: useProvider=${routingDecision.useProvider}, reason=${routingDecision.reason}`);
 
       if (routingDecision.useProvider && routingDecision.provider) {
         // Try direct upload to provider
@@ -411,18 +422,31 @@ router.post('/add', async (req, res) => {
 router.get('/pins', async (req, res) => {
   console.log('[DOCKER-CLUSTER] Obtinere lista fisiere pinuite...');
   try {
-    const pinsData = await clusterClient.get('/pins');
     const metadata = loadMetadata();
-
     let cidList = [];
 
-    if (pinsData && typeof pinsData === 'object') {
-      cidList = Object.keys(pinsData).filter(key =>
-        key.startsWith('Qm') || key.startsWith('baf') || key.startsWith('bafy')
-      );
+    // Try to get cluster pins, but don't fail if cluster is unavailable
+    try {
+      const pinsData = await clusterClient.get('/pins');
+      if (pinsData && typeof pinsData === 'object') {
+        cidList = Object.keys(pinsData).filter(key =>
+          key.startsWith('Qm') || key.startsWith('baf') || key.startsWith('bafy')
+        );
+      }
+    } catch (clusterError) {
+      console.warn('[DOCKER-CLUSTER] Cluster unavailable, using metadata only:', clusterError.message);
     }
 
-    const filesWithMetadata = cidList.map(cid => {
+    // Also include CIDs from metadata that might be on provider (not in cluster)
+    const metadataCids = Object.keys(metadata).filter(key =>
+      key.startsWith('Qm') || key.startsWith('baf') || key.startsWith('bafy')
+    );
+
+    // Merge unique CIDs from both sources
+    const allCids = [...new Set([...cidList, ...metadataCids])];
+    console.log(`[DOCKER-CLUSTER] Total CIDs: ${allCids.length} (${cidList.length} from cluster, ${metadataCids.length} from metadata)`);
+
+    const filesWithMetadata = allCids.map(cid => {
       const meta = metadata[cid] || {};
       return {
         hash: cid,
@@ -436,11 +460,12 @@ router.get('/pins', async (req, res) => {
         pinnedOn: meta.pinnedOn || 0,
         encryption: meta.encryption || null,
         contractId: meta.contractId || null,
-        uploadedBy: meta.uploadedBy || null
+        uploadedBy: meta.uploadedBy || null,
+        storedOn: cidList.includes(cid) ? 'cluster' : 'provider'
       };
     });
 
-    console.log(`[DOCKER-CLUSTER] ${filesWithMetadata.length} fisiere gasite in cluster`);
+    console.log(`[DOCKER-CLUSTER] ${filesWithMetadata.length} fisiere gasite total`);
 
     res.json({
       success: true,
@@ -475,22 +500,68 @@ router.delete('/pin/:cid', async (req, res) => {
   console.log(`[DOCKER-CLUSTER] Unpin fisier ${req.params.cid}...`);
   try {
     const { cid } = req.params;
-    await clusterClient.delete(`/pins/${cid}`);
+    const metadata = loadMetadata();
+    const fileInfo = metadata[cid];
 
+    let unpinnedFromCluster = false;
+    let unpinnedFromProvider = false;
+
+    // Check if file is stored on provider or cluster
+    const isProviderFile = fileInfo && (fileInfo.storedOn === 'provider' || !fileInfo.pinnedOn);
+
+    // Try to unpin from cluster (if it's there)
+    try {
+      await clusterClient.delete(`/pins/${cid}`);
+      unpinnedFromCluster = true;
+      console.log(`[DOCKER-CLUSTER] ✓ Unpinned from cluster: ${cid}`);
+    } catch (clusterError) {
+      // 404 means file isn't in cluster - that's OK for provider files
+      if (clusterError.message?.includes('404')) {
+        console.log(`[DOCKER-CLUSTER] File not in cluster (expected for provider files): ${cid}`);
+      } else {
+        console.warn(`[DOCKER-CLUSTER] Cluster unpin warning: ${clusterError.message}`);
+      }
+    }
+
+    // If it's a provider file, try to unpin from provider
+    if (isProviderFile && fileInfo?.contractId) {
+      try {
+        const contract = require('../models/StorageContract').getContract(fileInfo.contractId);
+        if (contract?.providerId) {
+          const provider = require('../models/StorageProvider').getProvider(contract.providerId);
+          if (provider?.agentEndpoint) {
+            const axios = require('axios');
+            await axios.post(`${provider.agentEndpoint}/unpin`, { cid }, { timeout: 10000 });
+            unpinnedFromProvider = true;
+            console.log(`[DOCKER-CLUSTER] ✓ Unpinned from provider: ${cid}`);
+          }
+        }
+      } catch (providerError) {
+        console.warn(`[DOCKER-CLUSTER] Provider unpin warning: ${providerError.message}`);
+        // Continue - we'll still remove from metadata
+      }
+    }
+
+    // Remove from user storage
     UserStorage.removeFileFromAllUsers(cid);
 
-    const metadata = loadMetadata();
+    // Remove from metadata
     if (metadata[cid]) {
       delete metadata[cid];
       saveMetadata(metadata);
+      console.log(`[DOCKER-CLUSTER] ✓ Removed from metadata: ${cid}`);
     }
 
-    console.log(`[DOCKER-CLUSTER] ✓ Fisier unpinuit: ${cid}`);
+    console.log(`[DOCKER-CLUSTER] ✓ Fisier sters: ${cid}`);
 
     res.json({
       success: true,
-      message: 'Fisier sters din cluster',
+      message: 'Fisier sters',
       cid: cid,
+      unpinnedFrom: {
+        cluster: unpinnedFromCluster,
+        provider: unpinnedFromProvider
+      },
       deletedAt: new Date().toISOString()
     });
   } catch (error) {
@@ -498,6 +569,7 @@ router.delete('/pin/:cid', async (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 });
+
 
 router.get('/download/:cid', async (req, res) => {
   console.log(`[DOCKER-CLUSTER] Download fisier ${req.params.cid}...`);

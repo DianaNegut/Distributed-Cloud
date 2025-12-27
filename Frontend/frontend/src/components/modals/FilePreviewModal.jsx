@@ -21,12 +21,10 @@ const FilePreviewModal = ({ isOpen, onClose, file, onDownload }) => {
   }, [isOpen, file]);
 
   const getFileType = (filename) => {
-    // Handle encrypted extension
     let cleanName = filename;
     if (filename.endsWith('.encrypted')) {
       cleanName = filename.replace('.encrypted', '');
     }
-
     const ext = cleanName.split('.').pop().toLowerCase();
     if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext)) return 'image';
     if (['pdf'].includes(ext)) return 'pdf';
@@ -41,106 +39,72 @@ const FilePreviewModal = ({ isOpen, onClose, file, onDownload }) => {
     setLoading(true);
     setError(null);
     setDecryptionStatus('');
-
-    // Gateway-ul local IPFS
     const GATEWAY = 'http://localhost:8080/ipfs';
 
     try {
       const isEncrypted = file.name.endsWith('.encrypted') || file.encryption?.encrypted;
       let previewUrl = null;
       let fileType = getFileType(file.name);
-
-      // Construct IPFS URL
       const ipfsUrl = `${GATEWAY}/${file.cid || file.hash}`;
 
       if (isEncrypted) {
-        setDecryptionStatus('Downloading encrypted file...');
-
-        // 1. Get the key
+        setDecryptionStatus('Se descarcă fișierul criptat...');
         let keyString = null;
         if (file.contractId) {
           keyString = localStorage.getItem(`contract_key_${file.contractId}`);
         }
-
-        // Try to find key in other contracts if not found directly
         if (!keyString && file.encryption?.key) {
           keyString = file.encryption.key;
         }
-
         if (!keyString) {
-          throw new Error('Decryption key not found. Cannot preview encrypted file.');
+          throw new Error('Cheia de decriptare nu a fost găsită.');
         }
 
-        // 2. Download encrypted blob
         let response;
         try {
           response = await fetch(ipfsUrl);
-          if (!response.ok) throw new Error('Failed to fetch from local gateway');
+          if (!response.ok) throw new Error('Failed to fetch');
         } catch (e) {
-          console.warn('Local gateway failed, trying public...');
           response = await fetch(`https://ipfs.io/ipfs/${file.cid || file.hash}`);
           if (!response.ok) throw new Error('Failed to fetch encrypted file');
         }
 
         const encryptedBlob = await response.blob();
-
-        // 3. Decrypt
-        setDecryptionStatus('Decrypting content...');
+        setDecryptionStatus('Se decriptează...');
         const key = await FileEncryption.importKey(keyString);
-
-        // We need IV - try to get it from metadata or file structure
         let iv = file.encryption?.iv;
 
-        // If file metadata doesn't have IV, we might need to parse it from the blob
-        // But our FileEncryption.decryptFile handles embedded metadata/IV parsing if we don't pass external metadata
-        // So we call it without external metadata first to let it try embedded
-
-        const decryptionResult = await FileEncryption.decryptFile(
-          encryptedBlob,
-          key,
-          iv, // Can be null/undefined if embedded
-          null // External metadata
-        );
-
+        const decryptionResult = await FileEncryption.decryptFile(encryptedBlob, key, iv, null);
         const decryptedBlob = decryptionResult.decryptedBlob;
         previewUrl = URL.createObjectURL(decryptedBlob);
 
-        // Update file type based on decrypted metadata if available
         if (decryptionResult.metadata?.originalName) {
           fileType = getFileType(decryptionResult.metadata.originalName);
         }
-
       } else {
-        // Not encrypted - use direct URL
         previewUrl = ipfsUrl;
-
-        // Verify accessibility for non-text files
         if (fileType !== 'text') {
           try {
             const check = await fetch(previewUrl, { method: 'HEAD' });
             if (!check.ok) throw new Error('File not reachable');
           } catch (e) {
-            console.warn('Local gateway failed, trying public...');
             previewUrl = `https://ipfs.io/ipfs/${file.cid || file.hash}`;
           }
         }
       }
 
-      // Render based on type
       if (fileType === 'image' || fileType === 'pdf' || fileType === 'video' || fileType === 'audio') {
         setPreviewData(previewUrl);
       } else if (fileType === 'text') {
-        // Fetch text content
         const response = await fetch(previewUrl);
         const text = await response.text();
         setPreviewData(text);
       } else {
         setPreviewData(null);
       }
-
     } catch (err) {
       console.error('Error loading preview:', err);
-      setError(err.message || 'Unable to load preview');
+      setError(err.message || 'Nu se poate încărca preview-ul');
     } finally {
       setLoading(false);
       setDecryptionStatus('');
@@ -150,10 +114,18 @@ const FilePreviewModal = ({ isOpen, onClose, file, onDownload }) => {
   const renderPreview = () => {
     if (loading) {
       return (
-        <div className="flex flex-col items-center justify-center h-96">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mb-4"></div>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '400px' }}>
+          <div style={{
+            width: '48px',
+            height: '48px',
+            border: '3px solid var(--border)',
+            borderTopColor: 'var(--accent)',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite',
+            marginBottom: '16px'
+          }} />
           {decryptionStatus && (
-            <p className="text-gray-500 text-sm animate-pulse">{decryptionStatus}</p>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>{decryptionStatus}</p>
           )}
         </div>
       );
@@ -161,7 +133,7 @@ const FilePreviewModal = ({ isOpen, onClose, file, onDownload }) => {
 
     if (error) {
       return (
-        <div className="flex items-center justify-center h-96 text-red-500">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '300px', color: '#ea4335' }}>
           <p>{error}</p>
         </div>
       );
@@ -172,40 +144,32 @@ const FilePreviewModal = ({ isOpen, onClose, file, onDownload }) => {
     switch (fileType) {
       case 'image':
         return (
-          <div className="flex items-center justify-center p-4 bg-gray-50">
-            <img
-              src={previewData}
-              alt={file.name}
-              className="max-w-full max-h-[600px] object-contain rounded"
-            />
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', background: 'var(--bg-tertiary)' }}>
+            <img src={previewData} alt={file.name} style={{ maxWidth: '100%', maxHeight: '500px', objectFit: 'contain', borderRadius: '8px' }} />
           </div>
         );
 
       case 'video':
         return (
-          <div className="flex items-center justify-center p-4 bg-gray-900">
-            <video
-              src={previewData}
-              controls
-              className="max-w-full max-h-[600px] rounded"
-            >
-              Your browser does not support video playback.
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', background: '#000' }}>
+            <video src={previewData} controls style={{ maxWidth: '100%', maxHeight: '500px', borderRadius: '8px' }}>
+              Browser-ul nu suportă video.
             </video>
           </div>
         );
 
       case 'audio':
         return (
-          <div className="flex flex-col items-center justify-center p-8 bg-gradient-to-br from-purple-50 to-pink-50">
-            <Music className="w-24 h-24 text-purple-400 mb-4" />
-            <audio src={previewData} controls className="w-full max-w-md" />
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px', background: 'var(--bg-tertiary)' }}>
+            <Music size={80} color="var(--accent)" style={{ marginBottom: '24px', opacity: 0.6 }} />
+            <audio src={previewData} controls style={{ width: '100%', maxWidth: '400px' }} />
           </div>
         );
 
       case 'text':
         return (
-          <div className="p-4 bg-gray-50 max-h-[600px] overflow-auto">
-            <pre className="whitespace-pre-wrap font-mono text-sm text-gray-800">
+          <div style={{ padding: '24px', background: 'var(--bg-secondary)', maxHeight: '500px', overflow: 'auto' }}>
+            <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: '13px', color: 'var(--text-primary)', margin: 0 }}>
               {previewData}
             </pre>
           </div>
@@ -213,30 +177,26 @@ const FilePreviewModal = ({ isOpen, onClose, file, onDownload }) => {
 
       case 'pdf':
         return (
-          <div className="h-[600px]">
-            <iframe
-              src={previewData}
-              className="w-full h-full border-0"
-              title={file.name}
-            />
+          <div style={{ height: '500px' }}>
+            <iframe src={previewData} style={{ width: '100%', height: '100%', border: 'none' }} title={file.name} />
           </div>
         );
 
       case 'archive':
         return (
-          <div className="flex flex-col items-center justify-center h-96 text-gray-500">
-            <Archive className="w-24 h-24 mb-4" />
-            <p className="text-lg font-medium">Archive File</p>
-            <p className="text-sm mt-2">Preview not available for archive files</p>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '300px', color: 'var(--text-muted)' }}>
+            <Archive size={80} style={{ marginBottom: '16px', opacity: 0.4 }} />
+            <p style={{ fontSize: '16px', fontWeight: '500' }}>Fișier Arhivă</p>
+            <p style={{ fontSize: '14px', marginTop: '8px' }}>Preview-ul nu este disponibil</p>
           </div>
         );
 
       default:
         return (
-          <div className="flex flex-col items-center justify-center h-96 text-gray-500">
-            <FileIcon className="w-24 h-24 mb-4" />
-            <p className="text-lg font-medium">Preview Not Available</p>
-            <p className="text-sm mt-2">This file type cannot be previewed</p>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '300px', color: 'var(--text-muted)' }}>
+            <FileIcon size={80} style={{ marginBottom: '16px', opacity: 0.4 }} />
+            <p style={{ fontSize: '16px', fontWeight: '500' }}>Preview Indisponibil</p>
+            <p style={{ fontSize: '14px', marginTop: '8px' }}>Acest tip de fișier nu poate fi previzualizat</p>
           </div>
         );
     }
@@ -270,70 +230,132 @@ const FilePreviewModal = ({ isOpen, onClose, file, onDownload }) => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '24px'
+          }}
           onClick={onClose}
         >
           <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
+            initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.9, opacity: 0 }}
-            className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden"
+            exit={{ scale: 0.95, opacity: 0 }}
+            style={{
+              background: 'var(--bg-primary)',
+              borderRadius: '12px',
+              boxShadow: 'var(--shadow-lg)',
+              maxWidth: '900px',
+              width: '100%',
+              maxHeight: '90vh',
+              overflow: 'hidden'
+            }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b bg-gradient-to-r from-purple-500 to-pink-500 text-white">
-              <div className="flex items-center space-x-3">
-                <FileTypeIcon className="w-6 h-6" />
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '16px 20px',
+              borderBottom: '1px solid var(--border)',
+              background: 'var(--bg-secondary)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '8px',
+                  background: 'var(--accent-light)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <FileTypeIcon size={20} color="var(--accent)" />
+                </div>
                 <div>
-                  <h3 className="font-semibold text-lg">{file?.name}</h3>
-                  <p className="text-sm text-purple-100">
-                    {file?.size && formatSize(file.size)} • CID: {file?.cid?.substring(0, 12)}...
+                  <h3 style={{ fontSize: '16px', fontWeight: '500', color: 'var(--text-primary)', margin: 0 }}>
+                    {file?.name}
+                  </h3>
+                  <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0 }}>
+                    {file?.size && formatSize(file.size)} • CID: {file?.cid?.substring(0, 16)}...
                   </p>
                 </div>
               </div>
-              <div className="flex items-center space-x-2">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <button
                   onClick={() => onDownload(file)}
-                  className="p-2 hover:bg-white hover:bg-opacity-20 rounded-lg transition-colors"
-                  title="Download"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '8px 16px',
+                    background: 'var(--accent)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '500'
+                  }}
                 >
-                  <Download className="w-5 h-5" />
+                  <Download size={16} />
+                  Descarcă
                 </button>
                 <button
                   onClick={onClose}
-                  className="p-2 hover:bg-white hover:bg-opacity-20 rounded-lg transition-colors"
+                  style={{
+                    width: '36px',
+                    height: '36px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: 'transparent',
+                    border: '1px solid var(--border)',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    color: 'var(--text-secondary)'
+                  }}
                 >
-                  <X className="w-5 h-5" />
+                  <X size={18} />
                 </button>
               </div>
             </div>
 
             {/* Preview Area */}
-            <div className="overflow-auto max-h-[calc(90vh-80px)]">
+            <div style={{ overflow: 'auto', maxHeight: 'calc(90vh - 140px)' }}>
               {renderPreview()}
             </div>
 
             {/* Footer with metadata */}
             {file && (
-              <div className="p-4 border-t bg-gray-50 text-sm text-gray-600">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <span className="font-semibold">Uploaded:</span>{' '}
-                    {file.addedAt ? new Date(file.addedAt).toLocaleString() : 'Unknown'}
-                  </div>
-                  <div>
-                    <span className="font-semibold">Type:</span>{' '}
-                    {getFileType(file.name).toUpperCase()}
-                  </div>
-                  {file.encryption?.encrypted && (
-                    <div className="col-span-2 flex items-center text-green-600">
-                      <span className="font-semibold">🔒 Encrypted</span>
-                      <span className="ml-2 text-xs text-gray-500">
-                        (Original: {file.encryption.originalName})
-                      </span>
-                    </div>
-                  )}
+              <div style={{
+                padding: '12px 20px',
+                borderTop: '1px solid var(--border)',
+                background: 'var(--bg-tertiary)',
+                display: 'flex',
+                gap: '24px',
+                fontSize: '13px',
+                color: 'var(--text-secondary)'
+              }}>
+                <div>
+                  <span style={{ fontWeight: '500' }}>Uploaded:</span>{' '}
+                  {file.addedAt ? new Date(file.addedAt).toLocaleString() : 'Necunoscut'}
                 </div>
+                <div>
+                  <span style={{ fontWeight: '500' }}>Tip:</span>{' '}
+                  {getFileType(file.name).toUpperCase()}
+                </div>
+                {file.encryption?.encrypted && (
+                  <div style={{ color: '#34a853' }}>
+                    🔒 Criptat
+                  </div>
+                )}
               </div>
             )}
           </motion.div>

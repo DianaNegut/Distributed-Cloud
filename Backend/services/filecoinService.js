@@ -26,7 +26,7 @@ class FilecoinService {
     console.log(`[FILECOIN] Initial balance: ${this.defaultInitialBalance} FIL`);
     console.log(`[FILECOIN] Default price: ${this.defaultPricePerGBPerMonth} FIL/GB/month`);
     console.log('═══════════════════════════════════════════════\n');
-    
+
     this.initialized = true;
   }
 
@@ -37,9 +37,9 @@ class FilecoinService {
     try {
       const balance = initialBalance !== null ? initialBalance : this.defaultInitialBalance;
       const wallet = await FilecoinWallet.createWallet(userId, balance);
-      
+
       console.log(`[FILECOIN] Created wallet for user ${userId}: ${wallet.address} (${balance} FIL)`);
-      
+
       // Înregistrează tranzacția de bonus inițial
       if (balance > 0) {
         await FilecoinTransaction.createTransaction({
@@ -50,7 +50,7 @@ class FilecoinService {
           metadata: { userId, reason: 'Welcome bonus' }
         });
       }
-      
+
       return wallet;
     } catch (error) {
       console.error(`[FILECOIN] Error creating wallet:`, error.message);
@@ -104,8 +104,12 @@ class FilecoinService {
    */
   async transfer(fromUserId, toUserId, amount, metadata = {}) {
     try {
+      // Asigură-te că ambele wallet-uri există (sau le creează)
+      await this.getOrCreateWallet(fromUserId);
+      await this.getOrCreateWallet(toUserId);
+
       const transaction = await FilecoinWallet.transfer(fromUserId, toUserId, amount, metadata);
-      
+
       const txRecord = await FilecoinTransaction.createTransaction({
         from: transaction.from,
         to: transaction.to,
@@ -116,7 +120,7 @@ class FilecoinService {
       });
 
       console.log(`[FILECOIN] Transfer: ${amount} FIL from ${fromUserId} to ${toUserId} (tx: ${txRecord.id})`);
-      
+
       return {
         success: true,
         transaction: txRecord,
@@ -135,7 +139,7 @@ class FilecoinService {
   calculateStorageCost(sizeGB, durationMonths, pricePerGBPerMonth = null) {
     const price = pricePerGBPerMonth || this.defaultPricePerGBPerMonth;
     const totalCost = sizeGB * durationMonths * price;
-    
+
     return {
       sizeGB,
       durationMonths,
@@ -150,14 +154,14 @@ class FilecoinService {
    */
   async depositEscrow(userId, contractId, amount) {
     try {
-      const wallet = await this.getWallet(userId);
-      
+      const wallet = await this.getOrCreateWallet(userId);
+
       if (wallet.balance < amount) {
         throw new Error(`Insufficient balance. Available: ${wallet.balance} FIL, Required: ${amount} FIL`);
       }
 
       const transaction = await FilecoinWallet.depositEscrow(userId, amount, contractId);
-      
+
       const txRecord = await FilecoinTransaction.createTransaction({
         from: wallet.address,
         to: 't1escrow000000000000000000000000000000',
@@ -168,7 +172,7 @@ class FilecoinService {
       });
 
       console.log(`[FILECOIN] Escrow deposit: ${amount} FIL for contract ${contractId} (tx: ${txRecord.id})`);
-      
+
       return {
         success: true,
         transaction: txRecord,
@@ -187,8 +191,9 @@ class FilecoinService {
   async releaseEscrow(providerId, contractId, amount) {
     try {
       const transaction = await FilecoinWallet.releaseEscrow(providerId, amount, contractId);
-      
-      const providerWallet = await this.getWallet(providerId);
+
+      // Asigură-te că wallet-ul provider-ului există
+      const providerWallet = await this.getOrCreateWallet(providerId);
       const txRecord = await FilecoinTransaction.createTransaction({
         from: 't1escrow000000000000000000000000000000',
         to: providerWallet.address,
@@ -199,7 +204,7 @@ class FilecoinService {
       });
 
       console.log(`[FILECOIN] Escrow release: ${amount} FIL to provider ${providerId} (tx: ${txRecord.id})`);
-      
+
       return {
         success: true,
         transaction: txRecord,
@@ -217,8 +222,9 @@ class FilecoinService {
   async refundEscrow(clientId, contractId, amount) {
     try {
       const transaction = await FilecoinWallet.refundEscrow(clientId, amount, contractId);
-      
-      const clientWallet = await this.getWallet(clientId);
+
+      // Asigură-te că wallet-ul clientului există
+      const clientWallet = await this.getOrCreateWallet(clientId);
       const txRecord = await FilecoinTransaction.createTransaction({
         from: 't1escrow000000000000000000000000000000',
         to: clientWallet.address,
@@ -229,7 +235,7 @@ class FilecoinService {
       });
 
       console.log(`[FILECOIN] Escrow refund: ${amount} FIL to client ${clientId} (tx: ${txRecord.id})`);
-      
+
       return {
         success: true,
         transaction: txRecord,
@@ -247,7 +253,7 @@ class FilecoinService {
   async getWalletTransactions(userId) {
     const wallet = await this.getWallet(userId);
     const transactions = await FilecoinTransaction.getTransactionsByAddress(wallet.address);
-    
+
     return {
       address: wallet.address,
       balance: wallet.balance,
@@ -270,7 +276,7 @@ class FilecoinService {
   async getStatistics() {
     const walletStats = await FilecoinWallet.getStatistics();
     const transactionStats = await FilecoinTransaction.getStatistics();
-    
+
     return {
       system: {
         mode: 'internal',

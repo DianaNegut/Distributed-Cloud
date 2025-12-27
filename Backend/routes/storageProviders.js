@@ -1,6 +1,7 @@
 ﻿const express = require('express');
 const router = express.Router();
 const StorageProvider = require('../models/StorageProvider');
+const StorageReservation = require('../models/StorageReservationManager');
 const { getDiskSpace } = require('../utils/getDiskSpace');
 const { getIPFSRepoSize } = require('../utils/getIPFSRepoSize');
 
@@ -49,7 +50,7 @@ router.post('/register', async (req, res) => {
     const ipfsRepo = await getIPFSRepoSize();
     const requestedGB = parseFloat(totalCapacityGB);
     const availableDiskGB = diskSpace.freeGB;
-    const maxSafeCapacity = availableDiskGB * 0.8; 
+    const maxSafeCapacity = availableDiskGB * 0.8;
 
     let warnings = [];
 
@@ -136,7 +137,7 @@ router.post('/:id/heartbeat', async (req, res) => {
 
     const diskSpace = await getDiskSpace();
     const ipfsRepo = await getIPFSRepoSize();
-    
+
     const actualFreeSpaceGB = diskSpace.freeGB;
     const ipfsUsageGB = ipfsRepo.repoSizeGB;
     const reservedGB = provider.capacity.reservedGB || 0;
@@ -146,23 +147,23 @@ router.post('/:id/heartbeat', async (req, res) => {
     let alerts = [];
 
     if (actualFreeSpaceGB < reservedGB) {
-      
+
       statusUpdate.status = 'suspended';
       alerts.push({
         level: 'critical',
         message: `Provider suspendat automat: Spatiu insuficient. Necesar: ${reservedGB}GB, Disponibil: ${actualFreeSpaceGB.toFixed(1)}GB`
       });
-      
+
       console.error(`[PROVIDER-HEARTBEAT] Provider ${provider.id} SUSPENDED: Insufficient space (need ${reservedGB}GB, has ${actualFreeSpaceGB.toFixed(1)}GB)`);
     } else if (actualFreeSpaceGB < reservedGB * 1.2) {
-      
+
       statusUpdate.status = 'active';
       alerts.push({
         level: 'warning',
         message: `Atentie: Spatiu liber scazut. Contracte: ${reservedGB}GB, Disponibil: ${actualFreeSpaceGB.toFixed(1)}GB`
       });
     } else {
-      
+
       statusUpdate.status = 'active';
     }
 
@@ -215,6 +216,19 @@ router.delete('/:id', (req, res) => {
       return res.status(400).json({ success: false, error: result.error });
     }
     res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ===== STORAGE RESERVATION STATISTICS =====
+router.get('/stats/storage-reservations', (req, res) => {
+  try {
+    const stats = StorageReservation.getStatistics();
+    res.json({
+      success: true,
+      ...stats
+    });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }

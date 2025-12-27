@@ -166,48 +166,189 @@ router.post('/add', async (req, res) => {
     let pinnedPeers = 0;
     let responseData = { allocations: [] };
 
-    // Step 1: Try provider first (if contract exists)
+    // Step 1: Check if upload is for a contract - use provider storage
     if (contractId) {
-      console.log(`[DOCKER-CLUSTER] 🎯 Provider-First Strategy: Checking contract ${contractId}`);
+      console.log(`[DOCKER-CLUSTER] 🎯 Contract-based upload detected: ${contractId}`);
 
-      // DEBUG: Log contract and provider details
-      const StorageContract = require('../models/StorageContract');
-      const StorageProvider = require('../models/StorageProvider');
-      const debugContract = StorageContract.getContract(contractId);
-      console.log(`[DOCKER-CLUSTER] DEBUG - Contract: ${debugContract ? JSON.stringify({ id: debugContract.id, providerId: debugContract.providerId, status: debugContract.status }) : 'NOT FOUND'}`);
+      try {
+        const StorageContract = require('../models/StorageContract');
+        const StorageProvider = require('../models/StorageProvider');
+        const StorageReservation = require('../models/StorageReservationManager');
+        const crypto = require('crypto');
 
-      if (debugContract?.providerId) {
-        const debugProvider = StorageProvider.getProvider(debugContract.providerId);
-        console.log(`[DOCKER-CLUSTER] DEBUG - Provider: ${debugProvider ? JSON.stringify({ name: debugProvider.name, peerId: debugProvider.peerId, ipfsPeerId: debugProvider.ipfsPeerId, agentStatus: debugProvider.agentStatus, lastHeartbeat: debugProvider.lastHeartbeat }) : 'NOT FOUND'}`);
-      }
+        // 1. Validate contract
+        const contract = StorageContract.getContract(contractId);
+        if (!contract) {
+          if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
+          return res.status(404).json({ success: false, error: 'Contract not found' });
+        }
 
-      const routingDecision = await providerRouter.getRoutingDecision(contractId, uploadedFile.size);
-      console.log(`[DOCKER-CLUSTER] Routing decision: useProvider=${routingDecision.useProvider}, reason=${routingDecision.reason}`);
+        if (contract.status !== 'active') {
+          if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
+          return res.status(400).json({
+            success: false,
+            error: `Contract is not active (status: ${contract.status})`
+          });
+        }
 
-      if (routingDecision.useProvider && routingDecision.provider) {
-        // Try direct upload to provider
-        console.log(`[DOCKER-CLUSTER] 📤 Attempting direct upload to provider: ${routingDecision.provider.name}`);
+        // 2. Check storage quota
+        const fileSizeGB = uploadedFile.size / (1024 * 1024 * 1024);
+        const newUsedGB = contract.storage.usedGB + fileSizeGB;
 
-        providerUploadResult = await providerRouter.uploadFileToProvider(
-          routingDecision.provider,
-          tempPath,
-          {
-            name: uploadedFile.name,
-            size: uploadedFile.size,
-            mimetype: uploadedFile.mimetype
+        if (newUsedGB > contract.storage.allocatedGB) {
+          if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
+          return res.status(400).json({
+            success: false,
+            error: `Storage quota exceeded. Allocated: ${contract.storage.allocatedGB}GB, Used: ${contract.storage.usedGB.toFixed(3)}GB, File: ${fileSizeGB.toFixed(3)}GB`,
+            quota: {
+              allocatedGB: contract.storage.allocatedGB,
+              usedGB: contract.storage.usedGB,
+              availableGB: contract.storage.allocatedGB - contract.storage.usedGB,
+              requestedGB: fileSizeGB
+            }
+          });
+        }
+
+        // 3. Get provider storage path
+        const providerPath = StorageReservation.getProviderStoragePath(contract.providerId);
+
+        if (!providerPath) {
+          if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
+          return res.status(500).json({
+            success: false,
+            error: 'Provider storage path not found. Provider may not be properly registered.'
+          });
+        }
+
+        // 4. Write file to provider folder
+        const timestamp = Date.now();
+        const hash = crypto.createHash('md5').update(uploadedFile.name + timestamp).digest('hex').substring(0, 8);
+        const safeFilename = `${timestamp}-${hash}-${uploadedFile.name}`;
+        const filePath = path.join(providerPath, safeFilename);
+
+        // Copy from temp to provider folder
+        fs.copyFileSync(tempPath, filePath);
+        console.log(`[DOCKER-CLUSTER] ✅ File written to provider storage: ${filePath}`);
+
+        // Clean up temp file
+        if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
+
+        // 5. Update contract metadata
+        const fileId = `file-${timestamp}-${hash}`;
+        const result = StorageContract.addFileToContract(contractId, {
+          cid: fileId,
+          name: uploadedFile.name,
+          sizeBytes: uploadedFile.size,
+          mimetype: uploadedFile.mimetype,
+          localPath: filePath,
+          safeFilename: safeFilename
+        });
+
+        if (!result.success) {
+          // Rollback: delete the file
+          try {
+            fs.unlinkSync(filePath);
+          } catch (unlinkError) {
+            console.error('[DOCKER-CLUSTER] Failed to rollback file:', unlinkError);
           }
-        );
+          return res.status(400).json(result);
+        }
 
-        if (providerUploadResult.success) {
-          cid = providerUploadResult.cid;
-          storedOn = 'provider';
-          console.log(`[DOCKER-CLUSTER] ✅ File stored on provider: ${cid}`);
-        } else {
-          console.log(`[DOCKER-CLUSTER] ⚠️ Provider upload failed: ${providerUploadResult.error}`);
-          if (providerUploadResult.shouldFallback) {
-            console.log(`[DOCKER-CLUSTER] 📦 Falling back to cluster...`);
+        // 6. Update provider tracking
+        StorageReservation.updateUsedSpace(contract.providerId, newUsedGB);
+        StorageProvider.updateUsedStorage(contract.providerId, newUsedGB);
+
+        // 7. Record upload for user storage tracking
+        UserStorage.recordUpload(peerId, fileId, uploadedFile.size, uploadedFile.name);
+
+        // 8. Save metadata
+        const metadata = loadMetadata();
+        const { description = '', tags = '', encryption } = req.body;
+        const parsedTags = typeof tags === 'string' && tags.trim()
+          ? tags.split(',').map(t => t.trim()).filter(t => t)
+          : [];
+
+        let encryptionInfo = null;
+        if (encryption) {
+          try {
+            encryptionInfo = typeof encryption === 'string' ? JSON.parse(encryption) : encryption;
+          } catch (e) {
+            console.warn('[DOCKER-CLUSTER] Invalid encryption metadata:', e.message);
           }
         }
+
+        metadata[fileId] = {
+          cid: fileId,
+          name: uploadedFile.name,
+          size: uploadedFile.size,
+          mimetype: uploadedFile.mimetype,
+          description: description.trim(),
+          tags: parsedTags,
+          uploadedAt: new Date().toISOString(),
+          uploadedBy: peerId,
+          contractId: contractId,
+          storedOn: 'provider',
+          localPath: filePath,
+          providerId: contract.providerId,
+          encryption: encryptionInfo
+        };
+        saveMetadata(metadata);
+
+        const updatedStorageInfo = UserStorage.getUserStorageInfo(peerId);
+        const provider = StorageProvider.getProvider(contract.providerId);
+
+        console.log(`[DOCKER-CLUSTER] ✅ File uploaded to provider storage successfully: ${fileId}`);
+
+        // Return response in same format as IPFS upload for compatibility
+        return res.json({
+          success: true,
+          message: 'File uploaded to provider storage successfully',
+          cid: fileId, // Use fileId as "CID" for compatibility
+          file: {
+            name: uploadedFile.name,
+            cid: fileId,
+            size: uploadedFile.size,
+            mimetype: uploadedFile.mimetype,
+            description: description.trim(),
+            tags: parsedTags,
+            uploadedAt: new Date().toISOString(),
+            accessUrls: [], // No IPFS URLs for provider storage
+            encryption: encryptionInfo ? {
+              enabled: true,
+              algorithm: encryptionInfo.algorithm,
+              originalName: encryptionInfo.originalName
+            } : { enabled: false }
+          },
+          providerRouting: {
+            sentToProvider: true,
+            providerName: provider?.name || 'Unknown',
+            providerStatus: 'stored',
+            storagePath: providerPath,
+            message: `✓ File stored in provider folder: ${provider?.name || contract.providerId}`
+          },
+          contract: {
+            id: contract.id,
+            usedGB: newUsedGB.toFixed(3),
+            allocatedGB: contract.storage.allocatedGB,
+            availableGB: (contract.storage.allocatedGB - newUsedGB).toFixed(3),
+            filesCount: result.contract.storage.files.length
+          },
+          storageInfo: {
+            usedGB: updatedStorageInfo.storage.usedGB,
+            limitGB: updatedStorageInfo.storage.limitGB,
+            usagePercent: updatedStorageInfo.storage.usagePercent,
+            remainingGB: updatedStorageInfo.storage.remainingGB
+          },
+          storageWarning: storageWarning
+        });
+
+      } catch (contractError) {
+        console.error('[DOCKER-CLUSTER] Contract upload error:', contractError);
+        if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
+        return res.status(500).json({
+          success: false,
+          error: `Contract upload failed: ${contractError.message}`
+        });
       }
     }
 

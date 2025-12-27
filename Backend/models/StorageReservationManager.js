@@ -201,6 +201,65 @@ class StorageReservationManager {
     }
 
     /**
+     * Creează fișier placeholder pentru rezervarea fizică a spațiului
+     * Folosește sparse file pentru eficiență (nu scrie efectiv toți bytes)
+     * @param {string} storagePath - Calea către folderul providerului
+     * @param {number} allocatedGB - GB de rezervat
+     * @returns {string} Calea către fișierul placeholder
+     */
+    createReservationPlaceholder(storagePath, allocatedGB) {
+        const placeholderPath = path.join(storagePath, '.reservation-placeholder');
+        const sizeBytes = Math.floor(allocatedGB * 1024 * 1024 * 1024);
+
+        try {
+            // Creează sparse file (eficient - nu scrie efectiv toți bytes)
+            // Fișierul va apărea ca având dimensiunea completă dar va ocupa spațiu minimal pe disc
+            // până când datele sunt efectiv scrise
+            const fd = fs.openSync(placeholderPath, 'w');
+            fs.ftruncateSync(fd, sizeBytes);
+            fs.closeSync(fd);
+
+            console.log(`[STORAGE-RESERVATION] Created placeholder file: ${placeholderPath} (${allocatedGB} GB)`);
+            return placeholderPath;
+        } catch (error) {
+            console.error(`[STORAGE-RESERVATION] Error creating placeholder:`, error.message);
+            throw new Error(`Failed to reserve ${allocatedGB} GB on disk: ${error.message}`);
+        }
+    }
+
+    /**
+     * Verifică existența și dimensiunea fișierului placeholder
+     * @param {string} providerId - ID-ul providerului
+     * @returns {Object} { exists, sizeGB, path }
+     */
+    verifyReservation(providerId) {
+        const reservation = this.reservations.providers[providerId];
+        if (!reservation || !reservation.storagePath) {
+            return { exists: false, sizeGB: 0, path: null };
+        }
+
+        const placeholderPath = path.join(reservation.storagePath, '.reservation-placeholder');
+
+        try {
+            if (fs.existsSync(placeholderPath)) {
+                const stats = fs.statSync(placeholderPath);
+                const sizeGB = parseFloat((stats.size / (1024 * 1024 * 1024)).toFixed(2));
+                return {
+                    exists: true,
+                    sizeGB,
+                    path: placeholderPath,
+                    expectedGB: reservation.allocatedGB,
+                    isCorrectSize: Math.abs(sizeGB - reservation.allocatedGB) < 0.01
+                };
+            }
+        } catch (error) {
+            console.error(`[STORAGE-RESERVATION] Error verifying placeholder:`, error.message);
+        }
+
+        return { exists: false, sizeGB: 0, path: placeholderPath };
+    }
+
+    /**
      * Înregistrează o rezervare de stocare pentru un provider
      * @param {string} providerId - ID-ul providerului
      * @param {number} allocatedGB - GB alocat
@@ -217,6 +276,22 @@ class StorageReservationManager {
         // Creează folderul
         const storagePath = this.createProviderFolder(providerId);
 
+        // ===== REZERVARE FIZICĂ A SPAȚIULUI =====
+        // Creează fișier placeholder care ocupă efectiv spațiul pe disc
+        let placeholderPath;
+        try {
+            placeholderPath = this.createReservationPlaceholder(storagePath, allocatedGB);
+        } catch (error) {
+            // Dacă nu reușim să creăm placeholder-ul, ștergem folderul și aruncăm eroare
+            try {
+                fs.rmdirSync(storagePath);
+            } catch (cleanupError) {
+                // Ignore cleanup errors
+            }
+            throw error;
+        }
+        // =========================================
+
         // Înregistrează rezervarea
         const reservation = {
             providerId,
@@ -224,6 +299,7 @@ class StorageReservationManager {
             allocatedGB,
             usedGB: 0,
             storagePath,
+            placeholderPath, // Salvăm calea către placeholder
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
         };
@@ -232,7 +308,7 @@ class StorageReservationManager {
         this.reservations.totalAllocatedGB = this.getTotalAllocated();
         this.saveReservations();
 
-        console.log(`[STORAGE-RESERVATION] Registered allocation: ${allocatedGB} GB for provider ${providerId}`);
+        console.log(`[STORAGE-RESERVATION] Registered allocation: ${allocatedGB} GB for provider ${providerId} (physical space reserved)`);
 
         return reservation;
     }
@@ -300,8 +376,21 @@ class StorageReservationManager {
     removeAllocation(providerId) {
         if (this.reservations.providers[providerId]) {
             const storagePath = this.reservations.providers[providerId].storagePath;
+            const placeholderPath = path.join(storagePath, '.reservation-placeholder');
 
-            // Opțional: șterge folderul (doar dacă e gol)
+            // ===== ELIBERARE SPAȚIU FIZIC =====
+            // Șterge fișierul placeholder pentru a elibera spațiul rezervat
+            try {
+                if (fs.existsSync(placeholderPath)) {
+                    fs.unlinkSync(placeholderPath);
+                    console.log(`[STORAGE-RESERVATION] Deleted placeholder file: ${placeholderPath}`);
+                }
+            } catch (error) {
+                console.error(`[STORAGE-RESERVATION] Error deleting placeholder:`, error.message);
+            }
+            // ==================================
+
+            // Șterge folderul (doar dacă e gol)
             try {
                 if (storagePath && fs.existsSync(storagePath)) {
                     const files = fs.readdirSync(storagePath);
@@ -320,7 +409,7 @@ class StorageReservationManager {
             this.reservations.totalAllocatedGB = this.getTotalAllocated();
             this.saveReservations();
 
-            console.log(`[STORAGE-RESERVATION] Removed allocation for provider ${providerId}`);
+            console.log(`[STORAGE-RESERVATION] Removed allocation for provider ${providerId} (physical space released)`);
         }
     }
 

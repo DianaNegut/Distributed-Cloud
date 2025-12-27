@@ -124,7 +124,7 @@ class StorageContract {
   static addFileToContract(contractId, fileData) {
     const data = this.loadContracts();
     const contract = data.contracts.find(c => c.id === contractId);
-    
+
     if (!contract) {
       return { success: false, error: 'Contract not found' };
     }
@@ -145,6 +145,8 @@ class StorageContract {
         name: fileData.name,
         sizeBytes: fileData.sizeBytes,
         mimetype: fileData.mimetype || 'application/octet-stream',
+        localPath: fileData.localPath || null, // Physical path on provider's disk
+        safeFilename: fileData.safeFilename || null, // Unique filename used on disk
         uploadedAt: new Date().toISOString()
       };
       contract.storage.usedGB = newUsedGB;
@@ -158,7 +160,7 @@ class StorageContract {
   static removeFileFromContract(contractId, fileCid) {
     const data = this.loadContracts();
     const contract = data.contracts.find(c => c.id === contractId);
-    
+
     if (!contract) {
       return { success: false, error: 'Contract not found' };
     }
@@ -181,12 +183,12 @@ class StorageContract {
   static updateContractStatus(contractId, status) {
     const data = this.loadContracts();
     const contract = data.contracts.find(c => c.id === contractId);
-    
+
     if (!contract) return null;
 
     contract.status = status;
     contract.updatedAt = new Date().toISOString();
-    
+
     this.saveContracts(data);
     return contract;
   }
@@ -194,20 +196,20 @@ class StorageContract {
   static renewContract(contractId, additionalDays) {
     const data = this.loadContracts();
     const contract = data.contracts.find(c => c.id === contractId);
-    
+
     if (!contract) return { success: false, error: 'Contract not found' };
 
     const currentEndDate = new Date(contract.terms.endDate);
     const newEndDate = new Date(currentEndDate.getTime() + additionalDays * 24 * 60 * 60 * 1000);
-    
+
     contract.terms.endDate = newEndDate.toISOString();
     contract.terms.durationDays += additionalDays;
     contract.status = 'active';
     contract.updatedAt = new Date().toISOString();
-    
+
     this.saveContracts(data);
     console.log(`[CONTRACT] Renewed contract ${contractId} until ${newEndDate.toISOString()}`);
-    
+
     return { success: true, contract };
   }
 
@@ -245,33 +247,33 @@ class StorageContract {
   static cancelContract(contractId, reason = '') {
     const data = this.loadContracts();
     const contract = data.contracts.find(c => c.id === contractId);
-    
+
     if (!contract) return { success: false, error: 'Contract not found' };
 
     contract.status = 'cancelled';
     contract.metadata.cancellationReason = reason;
     contract.metadata.cancelledAt = new Date().toISOString();
     contract.updatedAt = new Date().toISOString();
-    
+
     this.saveContracts(data);
     console.log(`[CONTRACT] Cancelled contract ${contractId}: ${reason}`);
-    
+
     return { success: true, contract };
   }
 
   static deleteContract(contractId) {
     const data = this.loadContracts();
     const contract = data.contracts.find(c => c.id === contractId);
-    
+
     if (!contract) return { success: false, error: 'Contract not found' };
-    
+
     if (contract.storage.files.length > 0) {
       return { success: false, error: 'Cannot delete contract with stored files' };
     }
 
     data.contracts = data.contracts.filter(c => c.id !== contractId);
     this.saveContracts(data);
-    
+
     console.log(`[CONTRACT] Deleted contract ${contractId}`);
     return { success: true };
   }
@@ -279,7 +281,7 @@ class StorageContract {
   static processPayment(contractId, paymentData) {
     const data = this.loadContracts();
     const contract = data.contracts.find(c => c.id === contractId);
-    
+
     if (!contract) return { success: false, error: 'Contract not found' };
     if (contract.payment.status === 'paid') {
       return { success: false, error: 'Contract already paid' };
@@ -308,7 +310,7 @@ class StorageContract {
     const now = new Date();
     const endDate = new Date(contract.terms.endDate);
     const daysRemaining = Math.max(0, Math.ceil((endDate - now) / (1000 * 60 * 60 * 24)));
-    
+
     return {
       contractId: contract.id,
       status: contract.status,

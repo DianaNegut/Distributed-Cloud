@@ -566,4 +566,199 @@ router.get('/maintenance/check-expired', (req, res) => {
   }
 });
 
+/**
+ * POST /api/storage-contracts/:contractId/upload
+ * Upload file directly to provider's storage folder for a specific contract
+ */
+router.post('/:contractId/upload', async (req, res) => {
+  console.log(`[STORAGE-CONTRACTS] Upload to contract ${req.params.contractId}...`);
+
+  try {
+    const { contractId } = req.params;
+
+    // 1. Validate contract
+    const contract = StorageContract.getContract(contractId);
+    if (!contract) {
+      return res.status(404).json({ success: false, error: 'Contract not found' });
+    }
+
+    if (contract.status !== 'active') {
+      return res.status(400).json({
+        success: false,
+        error: `Contract is not active (status: ${contract.status})`
+      });
+    }
+
+    // 2. Validate file upload
+    if (!req.files || !req.files.file) {
+      return res.status(400).json({ success: false, error: 'No file uploaded' });
+    }
+
+    const uploadedFile = req.files.file;
+    const fileSizeGB = uploadedFile.size / (1024 * 1024 * 1024);
+
+    // 3. Check storage quota
+    const newUsedGB = contract.storage.usedGB + fileSizeGB;
+    if (newUsedGB > contract.storage.allocatedGB) {
+      return res.status(400).json({
+        success: false,
+        error: `Storage quota exceeded. Allocated: ${contract.storage.allocatedGB}GB, Used: ${contract.storage.usedGB.toFixed(3)}GB, File: ${fileSizeGB.toFixed(3)}GB`,
+        quota: {
+          allocatedGB: contract.storage.allocatedGB,
+          usedGB: contract.storage.usedGB,
+          availableGB: contract.storage.allocatedGB - contract.storage.usedGB,
+          requestedGB: fileSizeGB
+        }
+      });
+    }
+
+    // 4. Get provider's storage path
+    const StorageReservation = require('../models/StorageReservationManager');
+    const providerPath = StorageReservation.getProviderStoragePath(contract.providerId);
+
+    if (!providerPath) {
+      return res.status(500).json({
+        success: false,
+        error: 'Provider storage path not found. Provider may not be properly registered.'
+      });
+    }
+
+    // 5. Write file to provider's folder
+    const fs = require('fs').promises;
+    const path = require('path');
+    const crypto = require('crypto');
+
+    // Generate unique filename to avoid collisions
+    const timestamp = Date.now();
+    const hash = crypto.createHash('md5').update(uploadedFile.name + timestamp).digest('hex').substring(0, 8);
+    const safeFilename = `${timestamp}-${hash}-${uploadedFile.name}`;
+    const filePath = path.join(providerPath, safeFilename);
+
+    try {
+      await fs.writeFile(filePath, uploadedFile.data);
+      console.log(`[STORAGE-CONTRACTS] File written to: ${filePath}`);
+    } catch (writeError) {
+      console.error('[STORAGE-CONTRACTS] File write error:', writeError);
+      return res.status(500).json({
+        success: false,
+        error: `Failed to write file to provider storage: ${writeError.message}`
+      });
+    }
+
+    // 6. Update contract metadata
+    const fileId = `file-${timestamp}-${hash}`;
+    const result = StorageContract.addFileToContract(contractId, {
+      cid: fileId, // Using unique ID instead of IPFS CID
+      name: uploadedFile.name,
+      sizeBytes: uploadedFile.size,
+      mimetype: uploadedFile.mimetype,
+      localPath: filePath,
+      safeFilename: safeFilename
+    });
+
+    if (!result.success) {
+      // Rollback: delete the file we just wrote
+      try {
+        await fs.unlink(filePath);
+      } catch (unlinkError) {
+        console.error('[STORAGE-CONTRACTS] Failed to rollback file:', unlinkError);
+      }
+      return res.status(400).json(result);
+    }
+
+    // 7. Update provider's used storage tracking
+    StorageReservation.updateUsedSpace(contract.providerId, newUsedGB);
+    StorageProvider.updateUsedStorage(contract.providerId, newUsedGB);
+
+    console.log(`[STORAGE-CONTRACTS] File uploaded successfully: ${uploadedFile.name} (${fileSizeGB.toFixed(3)}GB) to contract ${contractId}`);
+
+    res.json({
+      success: true,
+      message: 'File uploaded to provider storage successfully',
+      file: {
+        id: fileId,
+        name: uploadedFile.name,
+        size: uploadedFile.size,
+        sizeGB: fileSizeGB.toFixed(3),
+        mimetype: uploadedFile.mimetype,
+        uploadedAt: new Date().toISOString()
+      },
+      contract: {
+        id: contract.id,
+        usedGB: newUsedGB.toFixed(3),
+        allocatedGB: contract.storage.allocatedGB,
+        availableGB: (contract.storage.allocatedGB - newUsedGB).toFixed(3),
+        filesCount: result.contract.storage.files.length
+      },
+      provider: {
+        id: contract.providerId,
+        name: contract.providerName,
+        storagePath: providerPath
+      }
+    });
+
+  } catch (error) {
+    console.error('[STORAGE-CONTRACTS] Upload error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * GET /api/storage-contracts/:contractId/download/:fileId
+ * Download file from provider's storage folder
+ */
+router.get('/:contractId/download/:fileId', async (req, res) => {
+  console.log(`[STORAGE-CONTRACTS] Download file ${req.params.fileId} from contract ${req.params.contractId}...`);
+
+  try {
+    const { contractId, fileId } = req.params;
+
+    // 1. Validate contract
+    const contract = StorageContract.getContract(contractId);
+    if (!contract) {
+      return res.status(404).json({ success: false, error: 'Contract not found' });
+    }
+
+    // 2. Find file in contract
+    const fileDetail = contract.storage.fileDetails[fileId];
+    if (!fileDetail) {
+      return res.status(404).json({ success: false, error: 'File not found in contract' });
+    }
+
+    // 3. Read file from provider's folder
+    const fs = require('fs');
+    const filePath = fileDetail.localPath;
+
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({
+        success: false,
+        error: 'File not found on provider storage. It may have been deleted.'
+      });
+    }
+
+    // 4. Stream file to client
+    res.setHeader('Content-Disposition', `attachment; filename="${fileDetail.name}"`);
+    res.setHeader('Content-Type', fileDetail.mimetype || 'application/octet-stream');
+    res.setHeader('Content-Length', fileDetail.sizeBytes);
+
+    const fileStream = fs.createReadStream(filePath);
+    fileStream.pipe(res);
+
+    fileStream.on('error', (err) => {
+      console.error('[STORAGE-CONTRACTS] Stream error:', err);
+      if (!res.headersSent) {
+        res.status(500).json({ success: false, error: 'Error streaming file' });
+      }
+    });
+
+    console.log(`[STORAGE-CONTRACTS] File download started: ${fileDetail.name}`);
+
+  } catch (error) {
+    console.error('[STORAGE-CONTRACTS] Download error:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  }
+});
+
 module.exports = router;

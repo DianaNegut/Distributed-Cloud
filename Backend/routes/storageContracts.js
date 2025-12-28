@@ -7,16 +7,85 @@ const filecoinService = require('../services/filecoinService');
 
 router.get('/', (req, res) => {
   try {
+    // Get userId from headers (set by auth middleware)
+    const userId = req.headers['x-user-id'] || req.body.owner;
+
+    console.log(`[STORAGE-CONTRACTS] GET / endpoint called`);
+    console.log(`[STORAGE-CONTRACTS] userId from headers: ${userId}`);
+    console.log(`[STORAGE-CONTRACTS] query params:`, req.query);
+
+    // Build filters
     const filters = {
       status: req.query.status,
-      renterId: req.query.renterId,
+      renterId: req.query.renterId || userId, // Use userId if no renterId specified
       providerId: req.query.providerId
     };
-    const contracts = StorageContract.getAllContracts(filters);
+
+    let contracts = StorageContract.getAllContracts(filters);
+
+    // Additional filtering for "my contracts" - only active and paid
+    if (userId && !req.query.renterId) {
+      console.log(`[STORAGE-CONTRACTS] Filtering contracts for user: ${userId}`);
+
+      contracts = contracts.filter(contract => {
+        console.log(`[STORAGE-CONTRACTS] Checking contract ${contract.id}:`);
+        console.log(`  - renterId: ${contract.renterId}`);
+        console.log(`  - providerId: ${contract.providerId}`);
+        console.log(`  - status: ${contract.status}`);
+        console.log(`  - payment.status: ${contract.payment?.status}`);
+
+        // Filter by user - must be renter
+        if (contract.renterId !== userId) {
+          console.log(`  ❌ Excluded: Not my contract (renterId mismatch)`);
+          return false;
+        }
+
+        // IMPORTANT: Exclude contracts where user is the provider owner
+        // (can't store data on your own provider contract)
+        const provider = StorageProvider.getProvider(contract.providerId);
+        console.log(`  - Provider found:`, provider ? 'YES' : 'NO');
+        if (provider) {
+          console.log(`  - Provider peerId: ${provider.peerId}`);
+          console.log(`  - User ID: ${userId}`);
+          console.log(`  - Match: ${provider.peerId === userId}`);
+        }
+
+        if (provider && provider.peerId === userId) {
+          console.log(`  ❌ Excluded: User is provider owner`);
+          return false;
+        }
+
+        // Only show active contracts
+        if (contract.status !== 'active') {
+          console.log(`  ❌ Excluded: Not active (status: ${contract.status})`);
+          return false;
+        }
+
+        // Only show paid contracts
+        if (contract.payment?.status !== 'paid') {
+          console.log(`  ❌ Excluded: Not paid (payment.status: ${contract.payment?.status})`);
+          return false;
+        }
+
+        console.log(`  ✅ Included in list`);
+        return true;
+      });
+    }
+
+    // Remove duplicates by contract ID (just in case)
+    const uniqueContracts = [];
+    const seenIds = new Set();
+    for (const contract of contracts) {
+      if (!seenIds.has(contract.id)) {
+        seenIds.add(contract.id);
+        uniqueContracts.push(contract);
+      }
+    }
+
     res.json({
       success: true,
-      total: contracts.length,
-      contracts: contracts
+      total: uniqueContracts.length,
+      contracts: uniqueContracts
     });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -504,12 +573,14 @@ router.get('/calculate-price', (req, res) => {
 router.patch('/:id/storage', (req, res) => {
   console.log('[STORAGE-CONTRACTS] Actualizare storage contract:', req.params.id);
   try {
-    const contract = StorageContract.getContract(req.params.id);
+    const data = StorageContract.loadContracts();
+    const contract = data.contracts.find(c => c.id === req.params.id);
+
     if (!contract) {
       return res.status(404).json({ success: false, error: 'Contract not found' });
     }
 
-    const { usedGB, files } = req.body;
+    const { usedGB, files, fileDetails } = req.body;
 
     if (usedGB !== undefined) {
       if (usedGB > contract.storage.allocatedGB) {
@@ -525,7 +596,19 @@ router.patch('/:id/storage', (req, res) => {
       contract.storage.files = files;
     }
 
+    // Handle fileDetails update (for file deletion)
+    if (fileDetails !== undefined) {
+      contract.storage.fileDetails = fileDetails;
+      // Also update the files array to keep it in sync
+      contract.storage.files = Object.keys(fileDetails);
+    }
+
     contract.updatedAt = new Date().toISOString();
+
+    // Save the updated contracts to disk
+    StorageContract.saveContracts(data);
+
+    console.log(`[STORAGE-CONTRACTS] Contract updated: ${contract.id}, usedGB: ${contract.storage.usedGB.toFixed(3)}GB, files: ${contract.storage.files.length}`);
 
     res.json({
       success: true,

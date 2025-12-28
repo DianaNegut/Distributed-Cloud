@@ -39,13 +39,36 @@ const FilePreviewModal = ({ isOpen, onClose, file, onDownload }) => {
     setLoading(true);
     setError(null);
     setDecryptionStatus('');
+    const API_URL = 'http://localhost:3001/api';
+    const API_KEY = 'supersecret';
     const GATEWAY = 'http://localhost:8080/ipfs';
+
+    // Get session token from localStorage
+    const sessionToken = localStorage.getItem('sessionToken');
+    const username = localStorage.getItem('username');
 
     try {
       const isEncrypted = file.name.endsWith('.encrypted') || file.encryption?.encrypted;
       let previewUrl = null;
       let fileType = getFileType(file.name);
-      const ipfsUrl = `${GATEWAY}/${file.cid || file.hash}`;
+      const cid = file.cid || file.hash;
+
+      // ========================================
+      // Check if this is a contract file (file-xxx)
+      // Use backend API instead of IPFS gateway
+      // ========================================
+      let ipfsUrl;
+      let needsAuth = false;
+
+      if (cid.startsWith('file-')) {
+        // Contract file - use backend API with authentication
+        ipfsUrl = `${API_URL}/docker-cluster/download/${cid}`;
+        needsAuth = true;
+        console.log('[PREVIEW] Contract file detected, using backend:', ipfsUrl);
+      } else {
+        // Regular IPFS file
+        ipfsUrl = `${GATEWAY}/${cid}`;
+      }
 
       if (isEncrypted) {
         setDecryptionStatus('Se descarcă fișierul criptat...');
@@ -62,11 +85,25 @@ const FilePreviewModal = ({ isOpen, onClose, file, onDownload }) => {
 
         let response;
         try {
-          response = await fetch(ipfsUrl);
+          // Add auth headers for backend requests
+          const fetchOptions = needsAuth ? {
+            headers: {
+              'x-api-key': API_KEY,
+              'x-session-token': sessionToken,
+              'x-user-id': username
+            }
+          } : {};
+
+          response = await fetch(ipfsUrl, fetchOptions);
           if (!response.ok) throw new Error('Failed to fetch');
         } catch (e) {
-          response = await fetch(`https://ipfs.io/ipfs/${file.cid || file.hash}`);
-          if (!response.ok) throw new Error('Failed to fetch encrypted file');
+          // Fallback to public IPFS gateway only for non-contract files
+          if (!cid.startsWith('file-')) {
+            response = await fetch(`https://ipfs.io/ipfs/${cid}`);
+            if (!response.ok) throw new Error('Failed to fetch encrypted file');
+          } else {
+            throw new Error('Contract file not accessible from backend: ' + e.message);
+          }
         }
 
         const encryptedBlob = await response.blob();
@@ -82,13 +119,37 @@ const FilePreviewModal = ({ isOpen, onClose, file, onDownload }) => {
           fileType = getFileType(decryptionResult.metadata.originalName);
         }
       } else {
-        previewUrl = ipfsUrl;
-        if (fileType !== 'text') {
+        // For non-encrypted files
+        if (needsAuth) {
+          // Contract files need auth - create blob URL from authenticated fetch
           try {
-            const check = await fetch(previewUrl, { method: 'HEAD' });
-            if (!check.ok) throw new Error('File not reachable');
+            const response = await fetch(ipfsUrl, {
+              headers: {
+                'x-api-key': API_KEY,
+                'x-session-token': sessionToken,
+                'x-user-id': username
+              }
+            });
+
+            if (!response.ok) {
+              throw new Error(`Backend returned ${response.status}: ${response.statusText}`);
+            }
+
+            const blob = await response.blob();
+            previewUrl = URL.createObjectURL(blob);
           } catch (e) {
-            previewUrl = `https://ipfs.io/ipfs/${file.cid || file.hash}`;
+            throw new Error('Contract file not accessible from backend: ' + e.message);
+          }
+        } else {
+          // IPFS files - can use direct URL
+          previewUrl = ipfsUrl;
+          if (fileType !== 'text') {
+            try {
+              const check = await fetch(previewUrl, { method: 'HEAD' });
+              if (!check.ok) throw new Error('File not reachable');
+            } catch (e) {
+              previewUrl = `https://ipfs.io/ipfs/${cid}`;
+            }
           }
         }
       }
@@ -96,7 +157,15 @@ const FilePreviewModal = ({ isOpen, onClose, file, onDownload }) => {
       if (fileType === 'image' || fileType === 'pdf' || fileType === 'video' || fileType === 'audio') {
         setPreviewData(previewUrl);
       } else if (fileType === 'text') {
-        const response = await fetch(previewUrl);
+        const fetchOptions = needsAuth ? {
+          headers: {
+            'x-api-key': API_KEY,
+            'x-session-token': sessionToken,
+            'x-user-id': username
+          }
+        } : {};
+
+        const response = await fetch(previewUrl, fetchOptions);
         const text = await response.text();
         setPreviewData(text);
       } else {

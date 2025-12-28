@@ -235,6 +235,15 @@ router.post('/add', async (req, res) => {
 
         // 5. Update contract metadata
         const fileId = `file-${timestamp}-${hash}`;
+        console.log(`[DOCKER-CLUSTER] 📝 Adding file to contract ${contractId}:`, {
+          fileId,
+          name: uploadedFile.name,
+          sizeBytes: uploadedFile.size,
+          mimetype: uploadedFile.mimetype,
+          localPath: filePath,
+          safeFilename: safeFilename
+        });
+
         const result = StorageContract.addFileToContract(contractId, {
           cid: fileId,
           name: uploadedFile.name,
@@ -244,8 +253,11 @@ router.post('/add', async (req, res) => {
           safeFilename: safeFilename
         });
 
+        console.log(`[DOCKER-CLUSTER] 📊 addFileToContract result:`, result);
+
         if (!result.success) {
           // Rollback: delete the file
+          console.error(`[DOCKER-CLUSTER] ❌ Failed to add file to contract:`, result.error);
           try {
             fs.unlinkSync(filePath);
           } catch (unlinkError) {
@@ -611,12 +623,61 @@ router.get('/pins', async (req, res) => {
 
     // Also include CIDs from metadata that might be on provider (not in cluster)
     const metadataCids = Object.keys(metadata).filter(key =>
-      key.startsWith('Qm') || key.startsWith('baf') || key.startsWith('bafy')
+      key.startsWith('Qm') || key.startsWith('baf') || key.startsWith('bafy') || key.startsWith('file-')
     );
 
     // Merge unique CIDs from both sources
     const allCids = [...new Set([...cidList, ...metadataCids])];
-    console.log(`[DOCKER-CLUSTER] Total CIDs: ${allCids.length} (${cidList.length} from cluster, ${metadataCids.length} from metadata)`);
+
+    // ========================================
+    // Also include files from storage contracts
+    // ========================================
+    const StorageContract = require('../models/StorageContract');
+    const allContracts = StorageContract.getAllContracts();
+
+    let contractFiles = [];
+    allContracts.forEach(contract => {
+      if (contract.files && contract.files.length > 0) {
+        contract.files.forEach(file => {
+          // Avoid duplicates
+          if (!allCids.includes(file.cid)) {
+            // Safely parse encryption
+            let encryptionData = null;
+            try {
+              if (file.encryption) {
+                encryptionData = typeof file.encryption === 'string'
+                  ? JSON.parse(file.encryption)
+                  : file.encryption;
+              }
+            } catch (e) {
+              encryptionData = null;
+            }
+
+            contractFiles.push({
+              hash: file.ipfsCID || file.cid,
+              cid: file.cid,
+              name: file.name || 'Unknown',
+              size: file.sizeBytes || 0,
+              mimetype: file.mimetype || 'application/octet-stream',
+              description: '',
+              tags: [],
+              uploadedAt: file.uploadedAt || contract.createdAt,
+              pinnedOn: file.pinnedAt ? 1 : 0,
+              encryption: encryptionData,
+              contractId: contract.id,
+              uploadedBy: contract.renterId,  // Fixed: use renterId instead of clientId
+              storedOn: 'provider',
+              providerId: contract.providerId,
+              ipfsCID: file.ipfsCID || null,
+              storageType: 'contract',
+              localPath: file.localPath || null
+            });
+          }
+        });
+      }
+    });
+
+    console.log(`[DOCKER-CLUSTER] Total CIDs: ${allCids.length} (${cidList.length} from cluster, ${metadataCids.length} from metadata, ${contractFiles.length} from contracts)`);
 
     const filesWithMetadata = allCids.map(cid => {
       const meta = metadata[cid] || {};
@@ -633,16 +694,20 @@ router.get('/pins', async (req, res) => {
         encryption: meta.encryption || null,
         contractId: meta.contractId || null,
         uploadedBy: meta.uploadedBy || null,
-        storedOn: cidList.includes(cid) ? 'cluster' : 'provider'
+        storedOn: cidList.includes(cid) ? 'cluster' : 'provider',
+        storageType: meta.contractId ? 'contract' : 'cluster'
       };
     });
 
-    console.log(`[DOCKER-CLUSTER] ${filesWithMetadata.length} fisiere gasite total`);
+    // Combine all files
+    const allFiles = [...filesWithMetadata, ...contractFiles];
+
+    console.log(`[DOCKER-CLUSTER] ${allFiles.length} fisiere gasite total`);
 
     res.json({
       success: true,
-      totalPins: filesWithMetadata.length,
-      pins: filesWithMetadata
+      totalPins: allFiles.length,
+      pins: allFiles
     });
   } catch (error) {
     console.error('[DOCKER-CLUSTER] Eroare la pins:', error.message);
@@ -677,40 +742,98 @@ router.delete('/pin/:cid', async (req, res) => {
 
     let unpinnedFromCluster = false;
     let unpinnedFromProvider = false;
+    let deletedFromDisk = false;
 
-    // Check if file is stored on provider or cluster
-    const isProviderFile = fileInfo && (fileInfo.storedOn === 'provider' || !fileInfo.pinnedOn);
+    // ========================================
+    // PRIORITATE: Verifică dacă e fișier de contract (file-xxx)
+    // ========================================
+    if (cid.startsWith('file-')) {
+      console.log(`[DOCKER-CLUSTER] 🗑️ Deleting contract file: ${cid}`);
 
-    // Try to unpin from cluster (if it's there)
-    try {
-      await clusterClient.delete(`/pins/${cid}`);
-      unpinnedFromCluster = true;
-      console.log(`[DOCKER-CLUSTER] ✓ Unpinned from cluster: ${cid}`);
-    } catch (clusterError) {
-      // 404 means file isn't in cluster - that's OK for provider files
-      if (clusterError.message?.includes('404')) {
-        console.log(`[DOCKER-CLUSTER] File not in cluster (expected for provider files): ${cid}`);
-      } else {
-        console.warn(`[DOCKER-CLUSTER] Cluster unpin warning: ${clusterError.message}`);
-      }
-    }
-
-    // If it's a provider file, try to unpin from provider
-    if (isProviderFile && fileInfo?.contractId) {
       try {
-        const contract = require('../models/StorageContract').getContract(fileInfo.contractId);
-        if (contract?.providerId) {
-          const provider = require('../models/StorageProvider').getProvider(contract.providerId);
-          if (provider?.agentEndpoint) {
-            const axios = require('axios');
-            await axios.post(`${provider.agentEndpoint}/unpin`, { cid }, { timeout: 10000 });
-            unpinnedFromProvider = true;
-            console.log(`[DOCKER-CLUSTER] ✓ Unpinned from provider: ${cid}`);
+        const StorageContract = require('../models/StorageContract');
+        const StorageReservation = require('../models/StorageReservationManager');
+        const allContracts = StorageContract.getAllContracts();
+
+        // Găsește contractul care conține fișierul
+        for (const contract of allContracts) {
+          if (contract.storage && contract.storage.fileDetails && contract.storage.fileDetails[cid]) {
+            const fileDetail = contract.storage.fileDetails[cid];
+            const localPath = fileDetail.localPath;
+            const fileSizeBytes = fileDetail.sizeBytes || 0;
+            const fileSizeGB = fileSizeBytes / (1024 * 1024 * 1024);
+
+            // 1. Șterge fișierul FIZIC de pe disc
+            if (localPath && fs.existsSync(localPath)) {
+              fs.unlinkSync(localPath);
+              deletedFromDisk = true;
+              console.log(`[DOCKER-CLUSTER] ✅ Deleted physical file from disk: ${localPath}`);
+            } else {
+              console.warn(`[DOCKER-CLUSTER] ⚠️ Physical file not found: ${localPath}`);
+            }
+
+            // 2. Actualizează contractul - șterge fișierul din storage
+            const removeResult = StorageContract.removeFileFromContract(contract.id, cid);
+
+            if (removeResult.success) {
+              console.log(`[DOCKER-CLUSTER] ✅ Removed file from contract ${contract.id}`);
+
+              // 3. Actualizează usedGB în rezervare (asta va ajusta automat placeholder-ul!)
+              const newUsedGB = contract.storage.usedGB - fileSizeGB;
+              StorageReservation.updateUsedSpace(contract.providerId, Math.max(0, newUsedGB));
+              console.log(`[DOCKER-CLUSTER] ✅ Updated provider storage: ${newUsedGB.toFixed(3)}GB used (freed ${fileSizeGB.toFixed(3)}GB)`);
+
+              unpinnedFromProvider = true;
+            }
+
+            break; // Găsit contractul, ieșim din loop
           }
         }
-      } catch (providerError) {
-        console.warn(`[DOCKER-CLUSTER] Provider unpin warning: ${providerError.message}`);
-        // Continue - we'll still remove from metadata
+
+        if (!deletedFromDisk) {
+          console.warn(`[DOCKER-CLUSTER] ⚠️ Contract file ${cid} not found in any contract`);
+        }
+      } catch (contractError) {
+        console.error(`[DOCKER-CLUSTER] ❌ Error deleting contract file:`, contractError.message);
+        // Continuăm - ștergem măcar metadata
+      }
+    } else {
+      // ========================================
+      // Fișier IPFS normal (din cluster)
+      // ========================================
+      const isProviderFile = fileInfo && (fileInfo.storedOn === 'provider' || !fileInfo.pinnedOn);
+
+      // Try to unpin from cluster (if it's there)
+      try {
+        await clusterClient.delete(`/pins/${cid}`);
+        unpinnedFromCluster = true;
+        console.log(`[DOCKER-CLUSTER] ✓ Unpinned from cluster: ${cid}`);
+      } catch (clusterError) {
+        // 404 means file isn't in cluster - that's OK for provider files
+        if (clusterError.message?.includes('404')) {
+          console.log(`[DOCKER-CLUSTER] File not in cluster (expected for provider files): ${cid}`);
+        } else {
+          console.warn(`[DOCKER-CLUSTER] Cluster unpin warning: ${clusterError.message}`);
+        }
+      }
+
+      // If it's a provider file, try to unpin from provider
+      if (isProviderFile && fileInfo?.contractId) {
+        try {
+          const contract = require('../models/StorageContract').getContract(fileInfo.contractId);
+          if (contract?.providerId) {
+            const provider = require('../models/StorageProvider').getProvider(contract.providerId);
+            if (provider?.agentEndpoint) {
+              const axios = require('axios');
+              await axios.post(`${provider.agentEndpoint}/unpin`, { cid }, { timeout: 10000 });
+              unpinnedFromProvider = true;
+              console.log(`[DOCKER-CLUSTER] ✓ Unpinned from provider: ${cid}`);
+            }
+          }
+        } catch (providerError) {
+          console.warn(`[DOCKER-CLUSTER] Provider unpin warning: ${providerError.message}`);
+          // Continue - we'll still remove from metadata
+        }
       }
     }
 
@@ -724,7 +847,7 @@ router.delete('/pin/:cid', async (req, res) => {
       console.log(`[DOCKER-CLUSTER] ✓ Removed from metadata: ${cid}`);
     }
 
-    console.log(`[DOCKER-CLUSTER] ✓ Fisier sters: ${cid}`);
+    console.log(`[DOCKER-CLUSTER] ✅ Fisier sters complet: ${cid}`);
 
     res.json({
       success: true,
@@ -732,7 +855,8 @@ router.delete('/pin/:cid', async (req, res) => {
       cid: cid,
       unpinnedFrom: {
         cluster: unpinnedFromCluster,
-        provider: unpinnedFromProvider
+        provider: unpinnedFromProvider,
+        disk: deletedFromDisk
       },
       deletedAt: new Date().toISOString()
     });
@@ -747,14 +871,58 @@ router.get('/download/:cid', async (req, res) => {
   console.log(`[DOCKER-CLUSTER] Download fisier ${req.params.cid}...`);
   try {
     const { cid } = req.params;
-    const axios = require('axios');
-    const gateways = clusterClient.getIPFSGateways();
-
     const metadata = loadMetadata();
     const fileInfo = metadata[cid];
     let filename = fileInfo?.name || cid;
 
     console.log(`[DOCKER-CLUSTER] Filename din metadata: ${filename}`);
+
+    // ========================================
+    // Check if this is a contract file (file-xxx)
+    // ========================================
+    if (cid.startsWith('file-')) {
+      console.log(`[DOCKER-CLUSTER] Contract file detected: ${cid}`);
+
+      // Find file in contract
+      const StorageContract = require('../models/StorageContract');
+      const allContracts = StorageContract.getAllContracts();
+
+      for (const contract of allContracts) {
+        if (contract.storage && contract.storage.fileDetails && contract.storage.fileDetails[cid]) {
+          const fileDetail = contract.storage.fileDetails[cid];
+          const localPath = fileDetail.localPath;
+
+          if (localPath && fs.existsSync(localPath)) {
+            console.log(`[DOCKER-CLUSTER] Serving contract file from disk: ${localPath}`);
+
+            // Set headers
+            res.setHeader('Content-Disposition', `attachment; filename="${fileDetail.name}"`);
+            res.setHeader('Content-Type', fileDetail.mimetype || 'application/octet-stream');
+
+            const stat = fs.statSync(localPath);
+            res.setHeader('Content-Length', stat.size);
+
+            // Stream file from disk
+            const fileStream = fs.createReadStream(localPath);
+            fileStream.pipe(res);
+            return;
+          }
+        }
+      }
+
+      // File not found in contracts
+      return res.status(404).json({
+        success: false,
+        error: 'Contract file not found on disk',
+        cid: cid
+      });
+    }
+
+    // ========================================
+    // Regular IPFS file - download from gateway
+    // ========================================
+    const axios = require('axios');
+    const gateways = clusterClient.getIPFSGateways();
 
     let lastError;
     for (const gateway of gateways) {
@@ -848,10 +1016,67 @@ router.get('/file/:cid', async (req, res) => {
     const { promisify } = require('util');
     const execPromise = promisify(exec);
     const fileType = require('file-type');
+    const fs = require('fs');
+    const path = require('path');
 
     let fileName = cid;
     let mimeType = 'application/octet-stream';
 
+    // ========================================
+    // Check if this is a contract file (file-xxx)
+    // ========================================
+    if (cid.startsWith('file-')) {
+      console.log(`[DOCKER-CLUSTER] Contract file detected: ${cid}`);
+
+      // Find file in contract
+      const StorageContract = require('../models/StorageContract');
+      const allContracts = StorageContract.getAllContracts();
+
+      for (const contract of allContracts) {
+        if (contract.files) {
+          const file = contract.files.find(f => f.cid === cid);
+          if (file && file.localPath) {
+            console.log(`[DOCKER-CLUSTER] Found file in contract: ${file.localPath}`);
+
+            // Serve from local path
+            if (fs.existsSync(file.localPath)) {
+              const fileContent = fs.readFileSync(file.localPath);
+              fileName = file.name || path.basename(file.localPath);
+
+              // Detect mime type
+              try {
+                const detectedType = await fileType.fromBuffer(fileContent);
+                if (detectedType) {
+                  mimeType = detectedType.mime;
+                }
+              } catch (e) { }
+
+              const inline = req.query.inline === 'true';
+              const disposition = inline ? 'inline' : 'attachment';
+
+              res.setHeader('Content-Type', mimeType);
+              res.setHeader('Content-Disposition', `${disposition}; filename="${fileName}"`);
+              res.setHeader('Content-Length', fileContent.length);
+              res.send(fileContent);
+
+              console.log(`[DOCKER-CLUSTER] Contract file served: ${fileName} (${fileContent.length} bytes)`);
+              return;
+            }
+          }
+        }
+      }
+
+      // File not found in contracts
+      return res.status(404).json({
+        success: false,
+        error: 'Contract file not found',
+        cid: cid
+      });
+    }
+
+    // ========================================
+    // Regular IPFS CID - try cluster
+    // ========================================
     try {
       const pinInfo = await clusterClient.get(`/pins/${cid}`);
       if (pinInfo && pinInfo.name) {

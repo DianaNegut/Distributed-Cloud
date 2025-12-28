@@ -201,8 +201,9 @@ class StorageReservationManager {
     }
 
     /**
-     * Creează fișier placeholder pentru rezervarea fizică a spațiului
-     * Folosește sparse file pentru eficiență (nu scrie efectiv toți bytes)
+     * Creează fișier placeholder pentru rezervarea FIZICĂ a spațiului
+     * Pe Windows: folosește fsutil pentru alocare rapidă non-sparse
+     * Pe Linux/Mac: folosește fallocate sau dd
      * @param {string} storagePath - Calea către folderul providerului
      * @param {number} allocatedGB - GB de rezervat
      * @returns {string} Calea către fișierul placeholder
@@ -212,14 +213,48 @@ class StorageReservationManager {
         const sizeBytes = Math.floor(allocatedGB * 1024 * 1024 * 1024);
 
         try {
-            // Creează sparse file (eficient - nu scrie efectiv toți bytes)
-            // Fișierul va apărea ca având dimensiunea completă dar va ocupa spațiu minimal pe disc
-            // până când datele sunt efectiv scrise
-            const fd = fs.openSync(placeholderPath, 'w');
-            fs.ftruncateSync(fd, sizeBytes);
-            fs.closeSync(fd);
+            const isWindows = process.platform === 'win32';
 
-            console.log(`[STORAGE-RESERVATION] Created placeholder file: ${placeholderPath} (${allocatedGB} GB)`);
+            if (isWindows) {
+                // Windows: Alocare FIZICĂ rapidă folosind fsutil
+                console.log(`[STORAGE-RESERVATION] Allocating ${allocatedGB}GB physically on Windows...`);
+
+                // Creează fișierul gol
+                fs.writeFileSync(placeholderPath, '');
+
+                try {
+                    // Setează dimensiunea fișierului (alocare fizică RAPIDĂ)
+                    // NOTĂ: Necesită privilegii de administrator pe unele sisteme
+                    execSync(`fsutil file createnew "${placeholderPath}" ${sizeBytes}`, {
+                        stdio: 'pipe'
+                    });
+
+                    console.log(`[STORAGE-RESERVATION] ✅ Physical allocation successful: ${allocatedGB}GB (Windows fast method)`);
+                } catch (fsutilError) {
+                    console.warn(`[STORAGE-RESERVATION] ⚠️ fsutil failed (may need admin rights), using sparse file fallback`);
+                    console.warn(`[STORAGE-RESERVATION] Note: Space is NOT physically reserved, only logically allocated`);
+
+                    // Fallback la sparse file (nu rezervă fizic)
+                    const fd = fs.openSync(placeholderPath, 'w');
+                    fs.ftruncateSync(fd, sizeBytes);
+                    fs.closeSync(fd);
+                }
+            } else {
+                // Linux/Mac: folosește fallocate (dacă există)
+                console.log(`[STORAGE-RESERVATION] Allocating ${allocatedGB}GB physically on Linux/Mac...`);
+
+                try {
+                    execSync(`fallocate -l ${sizeBytes} "${placeholderPath}"`, { stdio: 'pipe' });
+                    console.log(`[STORAGE-RESERVATION] ✅ Physical allocation successful: ${allocatedGB}GB (fallocate)`);
+                } catch (fallocateError) {
+                    // Fallback: sparse file
+                    console.warn(`[STORAGE-RESERVATION] fallocate not available, using sparse file`);
+                    const fd = fs.openSync(placeholderPath, 'w');
+                    fs.ftruncateSync(fd, sizeBytes);
+                    fs.closeSync(fd);
+                }
+            }
+
             return placeholderPath;
         } catch (error) {
             console.error(`[STORAGE-RESERVATION] Error creating placeholder:`, error.message);
@@ -315,14 +350,103 @@ class StorageReservationManager {
 
     /**
      * Actualizează spațiul folosit de un provider
+     * ȘI AJUSTEAZĂ PLACEHOLDER-UL pentru a menține spațiul total constant
      * @param {string} providerId - ID-ul providerului
-     * @param {number} usedGB - GB folosit efectiv
+     * @param {number} usedGB - GB folosit efectiv de fișiere reale
      */
     updateUsedSpace(providerId, usedGB) {
         if (this.reservations.providers[providerId]) {
-            this.reservations.providers[providerId].usedGB = usedGB;
-            this.reservations.providers[providerId].updatedAt = new Date().toISOString();
+            const reservation = this.reservations.providers[providerId];
+            reservation.usedGB = usedGB;
+            reservation.updatedAt = new Date().toISOString();
+
+            // ===== AJUSTARE DINAMICĂ PLACEHOLDER =====
+            // Spațiu total = allocatedGB (fix)
+            // Placeholder trebui să ocupe: allocatedGB - usedGB (spațiul liber)
+            this.adjustPlaceholder(providerId);
+            // =========================================
+
             this.saveReservations();
+        }
+    }
+
+    /**
+     * Ajustează dimensiunea placeholder-ului pentru a menține spațiul total constant
+     * Formula: placeholder_size = allocatedGB - usedGB
+     * 
+     * Exemplu:
+     * - allocatedGB = 5GB (fix)
+     * - usedGB = 3GB (fișiere reale)
+     * - placeholder = 5GB - 3GB = 2GB (ajustat)
+     * - Total pe disc = 2GB + 3GB = 5GB ✅
+     * 
+     * @param {string} providerId - ID-ul providerului
+     */
+    adjustPlaceholder(providerId) {
+        const reservation = this.reservations.providers[providerId];
+        if (!reservation || !reservation.storagePath) {
+            console.warn(`[STORAGE-RESERVATION] Cannot adjust placeholder: reservation not found for ${providerId}`);
+            return;
+        }
+
+        const placeholderPath = path.join(reservation.storagePath, '.reservation-placeholder');
+        const allocatedGB = reservation.allocatedGB || 0;
+        const usedGB = reservation.usedGB || 0;
+        const remainingGB = Math.max(0, allocatedGB - usedGB);
+        const newSizeBytes = Math.floor(remainingGB * 1024 * 1024 * 1024);
+
+        try {
+            if (!fs.existsSync(placeholderPath)) {
+                console.warn(`[STORAGE-RESERVATION] Placeholder not found, creating new one: ${placeholderPath}`);
+                this.createReservationPlaceholder(reservation.storagePath, remainingGB);
+                return;
+            }
+
+            const currentStats = fs.statSync(placeholderPath);
+            const currentSizeBytes = currentStats.size;
+
+            // Dacă dimensiunea este deja corectă, nu face nimic
+            if (Math.abs(currentSizeBytes - newSizeBytes) < 1024) {
+                return;
+            }
+
+            console.log(`[STORAGE-RESERVATION] Adjusting placeholder for ${providerId}: ${(currentSizeBytes / 1024 / 1024 / 1024).toFixed(2)}GB → ${remainingGB.toFixed(2)}GB`);
+
+            const isWindows = process.platform === 'win32';
+
+            if (isWindows) {
+                // Windows: Recreează fișierul cu noua dimensiune
+                try {
+                    // Șterge placeholder-ul vechi
+                    fs.unlinkSync(placeholderPath);
+
+                    // Creează uno nou cu dimensiunea corectă
+                    if (newSizeBytes > 0) {
+                        fs.writeFileSync(placeholderPath, '');
+                        execSync(`fsutil file createnew "${placeholderPath}" ${newSizeBytes}`, {
+                            stdio: 'pipe'
+                        });
+                        console.log(`[STORAGE-RESERVATION] ✅ Placeholder adjusted: ${remainingGB}GB (allocated: ${allocatedGB}GB, used: ${usedGB}GB)`);
+                    } else {
+                        // Dacă nu mai e spațiu liber, nu creăm placeholder
+                        console.log(`[STORAGE-RESERVATION] ℹ️ No free space, placeholder removed (allocated: ${allocatedGB}GB, used: ${usedGB}GB)`);
+                    }
+                } catch (fsutilError) {
+                    console.warn(`[STORAGE-RESERVATION] fsutil failed, using truncate fallback`);
+                    const fd = fs.openSync(placeholderPath, 'w');
+                    fs.ftruncateSync(fd, newSizeBytes);
+                    fs.closeSync(fd);
+                }
+            } else {
+                // Linux/Mac: Folosește truncate (simplu și rapid)
+                const fd = fs.openSync(placeholderPath, 'r+');
+                fs.ftruncateSync(fd, newSizeBytes);
+                fs.closeSync(fd);
+                console.log(`[STORAGE-RESERVATION] ✅ Placeholder adjusted: ${remainingGB}GB`);
+            }
+        } catch (error) {
+            console.error(`[STORAGE-RESERVATION] Error adjusting placeholder for ${providerId}:`, error.message);
+            // Nu aruncăm eroare - continuăm fără ajustare
         }
     }
 

@@ -22,6 +22,7 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Badge } from '../components/ui/Badge';
 import { StatCard } from '../components/ui/StatCard';
+import LocationAutocomplete from '../components/ui/LocationAutocomplete';
 import ProviderAnalytics from '../components/analytics/ProviderAnalytics';
 import BackupManager from '../components/backup/BackupManager';
 import axios from 'axios';
@@ -44,11 +45,7 @@ const ProviderPage = () => {
     description: '',
     totalCapacityGB: 50,
     location: '',
-    pricePerGBPerMonth: 0.10,
-    uptimeGuarantee: 95,
-    discountThreeMonths: 5,
-    discountSixMonths: 10,
-    discountTwelveMonths: 20
+    pricePerGBPerMonth: 0.10
   });
 
   useEffect(() => {
@@ -144,8 +141,7 @@ const ProviderPage = () => {
         ...registerForm,
         peerId: user.username,
         totalCapacityGB: parseFloat(registerForm.totalCapacityGB),
-        pricePerGBPerMonth: parseFloat(registerForm.pricePerGBPerMonth),
-        uptimeGuarantee: parseFloat(registerForm.uptimeGuarantee)
+        pricePerGBPerMonth: parseFloat(registerForm.pricePerGBPerMonth)
       }, {
         headers: {
           'x-api-key': API_KEY,
@@ -168,11 +164,7 @@ const ProviderPage = () => {
           description: '',
           totalCapacityGB: 50,
           location: '',
-          pricePerGBPerMonth: 0.10,
-          uptimeGuarantee: 95,
-          discountThreeMonths: 5,
-          discountSixMonths: 10,
-          discountTwelveMonths: 20
+          pricePerGBPerMonth: 0.10
         });
       }
     } catch (error) {
@@ -516,10 +508,10 @@ const ProviderPage = () => {
 
                     <div>
                       <label className="block text-gray-400 mb-2">Locație</label>
-                      <Input
+                      <LocationAutocomplete
                         value={registerForm.location}
-                        onChange={(e) => setRegisterForm({ ...registerForm, location: e.target.value })}
-                        placeholder="Ex: București, Romania"
+                        onChange={(value) => setRegisterForm({ ...registerForm, location: value })}
+                        placeholder="Ex: București, România"
                       />
                     </div>
 
@@ -534,52 +526,9 @@ const ProviderPage = () => {
                       />
                     </div>
 
-                    <div>
-                      <label className="block text-gray-400 mb-2">Uptime Garantat (%)</label>
-                      <Input
-                        type="number"
-                        value={registerForm.uptimeGuarantee}
-                        onChange={(e) => setRegisterForm({ ...registerForm, uptimeGuarantee: e.target.value })}
-                        min="0"
-                        max="100"
-                      />
-                    </div>
 
-                    <div className="md:col-span-2 p-4 bg-dark-700/50 rounded-lg">
-                      <h3 className="text-white font-bold mb-3">Reduceri pentru contracte pe termen lung</h3>
-                      <div className="grid grid-cols-3 gap-4">
-                        <div>
-                          <label className="block text-gray-400 text-sm mb-2">3 luni (%)</label>
-                          <Input
-                            type="number"
-                            value={registerForm.discountThreeMonths}
-                            onChange={(e) => setRegisterForm({ ...registerForm, discountThreeMonths: e.target.value })}
-                            min="0"
-                            max="50"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-gray-400 text-sm mb-2">6 luni (%)</label>
-                          <Input
-                            type="number"
-                            value={registerForm.discountSixMonths}
-                            onChange={(e) => setRegisterForm({ ...registerForm, discountSixMonths: e.target.value })}
-                            min="0"
-                            max="50"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-gray-400 text-sm mb-2">12 luni (%)</label>
-                          <Input
-                            type="number"
-                            value={registerForm.discountTwelveMonths}
-                            onChange={(e) => setRegisterForm({ ...registerForm, discountTwelveMonths: e.target.value })}
-                            min="0"
-                            max="50"
-                          />
-                        </div>
-                      </div>
-                    </div>
+
+
                   </div>
 
                   <div className="flex gap-3 mt-6">

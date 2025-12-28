@@ -14,6 +14,7 @@ import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Badge } from '../components/ui/Badge';
+import LocationAutocomplete from '../components/ui/LocationAutocomplete';
 import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
 import filecoinService from '../services/filecoinService';
@@ -27,6 +28,7 @@ const MarketplacePage = () => {
   const [filteredProviders, setFilteredProviders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [locationFilter, setLocationFilter] = useState('');
   const [sortBy, setSortBy] = useState('space');
   const [showRentModal, setShowRentModal] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState(null);
@@ -60,7 +62,7 @@ const MarketplacePage = () => {
 
   useEffect(() => {
     filterProviders();
-  }, [searchTerm, providers]);
+  }, [searchTerm, locationFilter, providers]);
 
   const loadProviders = async () => {
     try {
@@ -88,11 +90,17 @@ const MarketplacePage = () => {
     // First filter out user's own providers (prevent self-rental)
     let available = providers.filter(p => p.peerId !== user?.username);
 
-    // Then apply search filter
+    // Apply search filter (name)
     if (searchTerm) {
       available = available.filter(p =>
-        p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.metadata.location.toLowerCase().includes(searchTerm.toLowerCase())
+        p.name.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Apply location filter (separate)
+    if (locationFilter) {
+      available = available.filter(p =>
+        p.metadata.location.toLowerCase().includes(locationFilter.toLowerCase())
       );
     }
 
@@ -206,15 +214,27 @@ const MarketplacePage = () => {
         <Card className="mb-6">
           <CardContent className="pt-6">
             <div className="flex flex-col md:flex-row gap-4">
+              {/* Search by Name */}
               <div className="flex-1 relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <Input
-                  placeholder="Caută după nume sau locație..."
+                  placeholder="Caută după nume provider..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
                 />
               </div>
+
+              {/* Location Filter */}
+              <div className="flex-1">
+                <LocationAutocomplete
+                  value={locationFilter}
+                  onChange={(value) => setLocationFilter(value)}
+                  placeholder="Filtrează după locație..."
+                />
+              </div>
+
+              {/* Sort Buttons */}
               <div className="flex gap-2">
                 <Button
                   variant={sortBy === 'space' ? 'primary' : 'secondary'}
@@ -239,6 +259,45 @@ const MarketplacePage = () => {
                 </Button>
               </div>
             </div>
+
+            {/* Active Filters Display */}
+            {(searchTerm || locationFilter) && (
+              <div className="mt-4 flex flex-wrap gap-2 items-center">
+                <span className="text-gray-400 text-sm">Filtre active:</span>
+                {searchTerm && (
+                  <Badge variant="primary" className="flex items-center gap-1">
+                    Nume: {searchTerm}
+                    <button
+                      onClick={() => setSearchTerm('')}
+                      className="ml-1 hover:text-red-400 transition-colors"
+                    >
+                      ×
+                    </button>
+                  </Badge>
+                )}
+                {locationFilter && (
+                  <Badge variant="success" className="flex items-center gap-1">
+                    <MapPin className="w-3 h-3" />
+                    {locationFilter}
+                    <button
+                      onClick={() => setLocationFilter('')}
+                      className="ml-1 hover:text-red-400 transition-colors"
+                    >
+                      ×
+                    </button>
+                  </Badge>
+                )}
+                <button
+                  onClick={() => {
+                    setSearchTerm('');
+                    setLocationFilter('');
+                  }}
+                  className="text-xs text-gray-400 hover:text-white transition-colors underline"
+                >
+                  Șterge toate
+                </button>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -308,23 +367,7 @@ const MarketplacePage = () => {
                     </div>
                   </div>
 
-                  {/* Discounts */}
-                  {provider.pricing?.discounts && (
-                    <div className="mb-4 p-3 bg-dark-800/50 rounded-lg">
-                      <p className="text-xs text-gray-400 mb-2">Reduceri:</p>
-                      <div className="flex flex-wrap gap-2">
-                        {provider.pricing.discounts.threeMonths > 0 && (
-                          <Badge variant="success">3 luni: -{provider.pricing.discounts.threeMonths}%</Badge>
-                        )}
-                        {provider.pricing.discounts.sixMonths > 0 && (
-                          <Badge variant="success">6 luni: -{provider.pricing.discounts.sixMonths}%</Badge>
-                        )}
-                        {provider.pricing.discounts.twelveMonths > 0 && (
-                          <Badge variant="success">12 luni: -{provider.pricing.discounts.twelveMonths}%</Badge>
-                        )}
-                      </div>
-                    </div>
-                  )}
+
 
                   <Button
                     variant="primary"
@@ -392,9 +435,9 @@ const MarketplacePage = () => {
                     className="w-full bg-dark-700 text-white px-4 py-2 rounded-lg border border-dark-600"
                   >
                     <option value="1">1 lună</option>
-                    <option value="3">3 luni (reducere {selectedProvider.pricing?.discounts?.threeMonths || 5}%)</option>
-                    <option value="6">6 luni (reducere {selectedProvider.pricing?.discounts?.sixMonths || 10}%)</option>
-                    <option value="12">12 luni (reducere {selectedProvider.pricing?.discounts?.twelveMonths || 20}%)</option>
+                    <option value="3">3 luni</option>
+                    <option value="6">6 luni</option>
+                    <option value="12">12 luni</option>
                   </select>
                 </div>
 

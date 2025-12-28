@@ -82,15 +82,27 @@ export default function FilesPage() {
 
   useEffect(() => {
     if (user) {
-      loadFiles();
       loadContracts();
     }
   }, [user]);
 
+  // Load files when contracts change
+  useEffect(() => {
+    if (contracts.length > 0) {
+      loadFiles();
+    }
+  }, [contracts]);
+
   const loadContracts = async () => {
     try {
+      const sessionToken = localStorage.getItem('solid_token');
+
       const response = await axios.get(`${API_URL}/storage-contracts`, {
-        headers: { 'x-api-key': API_KEY }
+        headers: {
+          'x-api-key': API_KEY,
+          'x-session-token': sessionToken || '',
+          'x-user-id': user?.username || ''
+        }
       });
 
       if (response.data.success) {
@@ -211,28 +223,46 @@ export default function FilesPage() {
   }, []);
 
   const loadFiles = async () => {
-    if (!user) return;
+    if (!user || contracts.length === 0) return;
     setLoading(true);
     try {
-      const response = await axios.get(`${API_URL}/docker-cluster/pins`, {
-        headers: {
-          'x-api-key': API_KEY,
-          'x-session-token': sessionToken
+      // Extract all files from ALL contracts
+      let allFiles = [];
+
+      contracts.forEach(contract => {
+        if (contract.storage && contract.storage.fileDetails) {
+          // Convert fileDetails object to array
+          const contractFiles = Object.entries(contract.storage.fileDetails).map(([cid, fileDetail]) => ({
+            hash: cid,
+            name: fileDetail.name,
+            size: fileDetail.sizeBytes,
+            uploadedAt: fileDetail.uploadedAt,
+            mimetype: fileDetail.mimetype,
+            contractId: contract.id,
+            contractName: `Contract ${contract.id.slice(-8)}`,
+            localPath: fileDetail.localPath,
+            uploadedBy: user.username // For compatibility
+          }));
+
+          allFiles = [...allFiles, ...contractFiles];
         }
       });
 
-      if (response.data.success) {
-        const allFiles = response.data.pins || [];
-        // Filter files to show only those uploaded by current user
-        const myFiles = allFiles.filter(file => {
-          // Check uploadedBy field (stored at root level by backend)
-          return file.uploadedBy === user.username;
-        });
-        setFiles(myFiles);
-        toast.success(`${myFiles.length} fișiere personale încărcate`);
-      }
+      // Remove duplicates by hash (CID)
+      const uniqueFiles = [];
+      const seenHashes = new Set();
+
+      allFiles.forEach(file => {
+        if (!seenHashes.has(file.hash)) {
+          seenHashes.add(file.hash);
+          uniqueFiles.push(file);
+        }
+      });
+
+      console.log(`📁 Loaded ${uniqueFiles.length} unique files from ${contracts.length} contracts (${allFiles.length - uniqueFiles.length} duplicates removed)`);
+      setFiles(uniqueFiles);
+
     } catch (error) {
-      toast.error('Eroare la încărcarea fișierelor');
       console.error('Error loading files:', error);
     } finally {
       setLoading(false);
@@ -551,18 +581,46 @@ export default function FilesPage() {
   const handleDelete = async (file) => {
     if (!window.confirm(`Ștergi "${file.name || file.hash}"?`)) return;
 
+    const toastId = toast.loading('🗑️ Ștergere fișier...');
+
     try {
-      const response = await axios.delete(`${API_URL}/docker-cluster/pin/${file.hash}`, {
-        headers: { 'x-api-key': API_KEY }
+      // Find the contract that contains this file
+      const fileContract = contracts.find(c => c.id === file.contractId);
+
+      if (!fileContract) {
+        toast.dismiss(toastId);
+        toast.error('❌ Contract negăsit pentru acest fișier');
+        return;
+      }
+
+      // Remove file from contract storage
+      const updatedFileDetails = { ...fileContract.storage.fileDetails };
+      delete updatedFileDetails[file.hash];
+
+      const fileSizeGB = (file.size || 0) / (1024 * 1024 * 1024);
+      const updatedUsedGB = Math.max(0, fileContract.storage.usedGB - fileSizeGB);
+
+      // Update contract
+      const response = await axios.patch(`${API_URL}/storage-contracts/${fileContract.id}/storage`, {
+        usedGB: updatedUsedGB,
+        fileDetails: updatedFileDetails
+      }, {
+        headers: {
+          'x-api-key': API_KEY,
+          'x-session-token': sessionToken
+        }
       });
 
       if (response.data.success) {
-        toast.success(`Șters: ${file.name || file.hash}`);
-        await loadFiles();
-        await loadStorageInfo();
+        toast.dismiss(toastId);
+        toast.success(`✅ Șters: ${file.name || file.hash}`);
+
+        // Reload contracts and files
+        await loadContracts();
       }
     } catch (error) {
-      toast.error('Ștergere eșuată');
+      toast.dismiss(toastId);
+      toast.error('❌ Ștergere eșuată');
       console.error('Delete error:', error);
     }
   };
@@ -618,7 +676,7 @@ export default function FilesPage() {
                         Stocare Utilizată: {storageInfo.storage.usedGB} GB / {storageInfo.storage.limitGB} GB
                       </p>
                       <p className="text-gray-400 text-sm">
-                        {storageInfo.storage.remainingGB} GB disponibili • {storageInfo.storage.filesCount} fișiere
+                        {storageInfo.storage.remainingGB} GB disponibili • {files.length} fișiere
                       </p>
                     </div>
                   </div>
@@ -843,6 +901,7 @@ export default function FilesPage() {
               <FileSearchFilter
                 files={files}
                 onFilterChange={setFilteredFiles}
+                totalFiles={filteredFiles.length > 0 ? filteredFiles.length : files.length}
               />
 
               {loading ? (

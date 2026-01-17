@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Settings, HelpCircle, FileText, Image, Video, Music, Archive, X } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import WalletButton from '../WalletButton';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
@@ -279,6 +280,9 @@ export default function Header() {
 
             {/* Actions */}
             <div className="header-actions">
+                {/* Wallet Connection */}
+                <WalletButton />
+
                 <button className="header-icon-btn" title="Ajutor">
                     <HelpCircle size={20} />
                 </button>

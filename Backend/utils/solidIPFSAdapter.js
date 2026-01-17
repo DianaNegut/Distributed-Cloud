@@ -1,14 +1,3 @@
-/**
- * Solid-IPFS Adapter
- * 
- * Adapter pentru stocarea datelor Solid POD pe IPFS
- * Implementează compatibilitate cu Linked Data Platform (LDP)
- * 
- * Acest adapter permite ca datele Solid să fie persistent pe IPFS
- * în loc de un filesystem tradițional, menținând compatibilitatea
- * cu specificația Solid și aplicațiile existente.
- */
-
 const FormData = require('form-data');
 const axios = require('axios');
 const path = require('path');
@@ -18,30 +7,14 @@ class SolidIPFSAdapter {
     this.clusterClient = dockerClusterClient;
   }
 
-  /**
-   * Creează structura de directoare pentru un POD Solid
-   * Conform specificației Solid, un POD are următoarea structură:
-   * 
-   * /
-   * ├── profile/         (Public profile information)
-   * │   └── card         (WebID Profile Document)
-   * ├── public/          (Publicly readable resources)
-   * ├── private/         (Private resources)
-   * ├── inbox/           (Notifications & messages)
-   * └── settings/        (User preferences)
-   * 
-   * @param {Object} podData - Date POD
-   * @returns {Promise<Object>} CID-uri pentru fiecare container
-   */
+  // initializez cele 5 foldere solid
   async initializePodStructure(podData) {
     console.log(`[SOLID-IPFS] Initializing POD structure for ${podData.username}`);
 
     try {
-      // Creează Profile Document (WebID card)
       const profileCard = this.createProfileCard(podData);
       const profileCid = await this.uploadDocument(profileCard, 'card.ttl');
 
-      // Creează README pentru fiecare container
       const publicReadme = this.createContainerReadme('public', 'Public resources accessible to everyone');
       const publicCid = await this.uploadDocument(publicReadme, 'README.md');
 
@@ -68,14 +41,7 @@ class SolidIPFSAdapter {
       throw error;
     }
   }
-
-  /**
-   * Creează WebID Profile Card în format Turtle (RDF)
-   * Acesta este documentul principal de identitate în Solid
-   * 
-   * @param {Object} podData - Date POD
-   * @returns {string} Conținut Turtle
-   */
+  // creez profile card in format rdf
   createProfileCard(podData) {
     const { webId, name, username, ownerId } = podData;
 
@@ -94,25 +60,18 @@ pro:card a foaf:PersonalProfileDocument; foaf:maker :me; foaf:primaryTopic :me.
     foaf:nick "${username}";
     solid:oidcIssuer <http://localhost:3001/>;
     
-    # Storage
     solid:storage <..>;
     
-    # Linked containers
     ldp:inbox </inbox/>;
     solid:publicTypeIndex </settings/publicTypeIndex.ttl>;
     solid:privateTypeIndex </settings/privateTypeIndex.ttl>;
     
-    # Preferences
     solid:preferencesFile </settings/prefs.ttl>;
     
-    # Owner ID
     solid:account "${ownerId}".
 `;
   }
 
-  /**
-   * Creează README pentru un container
-   */
   createContainerReadme(containerName, description) {
     return `# ${containerName.charAt(0).toUpperCase() + containerName.slice(1)} Container
 
@@ -133,24 +92,15 @@ providing content-addressable, peer-to-peer hypermedia distribution.
 Last updated: ${new Date().toISOString()}
 `;
   }
-
-  /**
-   * Upload document pe IPFS via cluster
-   * 
-   * @param {string|Buffer} content - Conținut document
-   * @param {string} filename - Nume fișier
-   * @returns {Promise<string>} CID document
-   */
+  // upload document in ipfs
   async uploadDocument(content, filename) {
     try {
-      // Creează form data
       const formData = new FormData();
       formData.append('file', Buffer.from(content), {
         filename: filename,
         contentType: 'text/plain'
       });
 
-      // Upload prin cluster client
       const response = await this.clusterClient.executeWithRetry(async (node) => {
         return await axios.post(`${node}/add`, formData, {
           headers: {
@@ -166,22 +116,14 @@ Last updated: ${new Date().toISOString()}
 
       const cid = response.data.cid;
       console.log(`[SOLID-IPFS] Uploaded document ${filename}: ${cid}`);
-      
+
       return cid;
     } catch (error) {
       console.error(`[SOLID-IPFS] Error uploading document:`, error.message);
       throw error;
     }
   }
-
-  /**
-   * Upload fișier în POD
-   * 
-   * @param {Object} file - Fișier de upload (Express file object)
-   * @param {string} containerPath - Calea containerului (/public/, /private/, etc.)
-   * @param {Object} metadata - Metadata adițională
-   * @returns {Promise<Object>} Info despre upload
-   */
+  // upload fisier utilizator in ipfs
   async uploadFileToPod(file, containerPath, metadata = {}) {
     try {
       const formData = new FormData();
@@ -189,8 +131,7 @@ Last updated: ${new Date().toISOString()}
         filename: file.name,
         contentType: file.mimetype
       });
-
-      // Upload prin cluster
+      // incarc fisierul pe mai multe noduri 
       const response = await this.clusterClient.executeWithRetry(async (node) => {
         return await axios.post(`${node}/add`, formData, {
           headers: {
@@ -206,7 +147,6 @@ Last updated: ${new Date().toISOString()}
 
       const cid = response.data.cid;
 
-      // Creează metadata LDP-compatibilă
       const resourceMetadata = {
         cid,
         name: file.name,
@@ -216,11 +156,9 @@ Last updated: ${new Date().toISOString()}
         created: new Date().toISOString(),
         modified: new Date().toISOString(),
         ...metadata,
-        
-        // LDP Resource type
+
         ldpType: 'ldp:Resource',
-        
-        // RDF metadata (pentru compatibilitate Solid)
+
         rdfMetadata: {
           'dcterms:title': file.name,
           'dcterms:created': new Date().toISOString(),
@@ -242,12 +180,6 @@ Last updated: ${new Date().toISOString()}
     }
   }
 
-  /**
-   * Citește fișier din POD
-   * 
-   * @param {string} cid - CID fișier
-   * @returns {Promise<Buffer>} Conținut fișier
-   */
   async readFileFromPod(cid) {
     try {
       const response = await this.clusterClient.executeWithRetry(async (node) => {
@@ -264,14 +196,7 @@ Last updated: ${new Date().toISOString()}
       throw error;
     }
   }
-
-  /**
-   * Listează fișiere dintr-un container
-   * Simulează structura unui director LDP
-   * 
-   * @param {Array} resources - Lista de resurse (CID-uri)
-   * @returns {Promise<Array>} Lista formatată pentru LDP
-   */
+  // transform lista de fisiere in format rdf
   async listContainerResources(resources) {
     try {
       const ldpResources = resources.map(resource => ({
@@ -300,24 +225,14 @@ Last updated: ${new Date().toISOString()}
     }
   }
 
-  /**
-   * Creează ACL (Access Control List) document
-   * ACL-urile controlează cine poate accesa ce resurse în POD
-   * 
-   * @param {Object} aclData - Date ACL
-   * @returns {string} Document ACL în format Turtle
-   */
   createACLDocument(aclData) {
     const { resourcePath, owner, readers = [], writers = [], public: isPublic = false } = aclData;
 
     let acl = `@prefix acl: <http://www.w3.org/ns/auth/acl#>.
 @prefix foaf: <http://xmlns.com/foaf/0.1/>.
 
-# Access Control List for ${resourcePath}
-
 `;
 
-    // Owner authorization (full control)
     acl += `<#owner>
     a acl:Authorization;
     acl:agent <${owner}>;
@@ -326,7 +241,6 @@ Last updated: ${new Date().toISOString()}
 
 `;
 
-    // Public access if enabled
     if (isPublic) {
       acl += `<#public>
     a acl:Authorization;
@@ -337,7 +251,6 @@ Last updated: ${new Date().toISOString()}
 `;
     }
 
-    // Readers
     readers.forEach((reader, index) => {
       acl += `<#reader${index}>
     a acl:Authorization;
@@ -348,7 +261,6 @@ Last updated: ${new Date().toISOString()}
 `;
     });
 
-    // Writers
     writers.forEach((writer, index) => {
       acl += `<#writer${index}>
     a acl:Authorization;
@@ -362,17 +274,11 @@ Last updated: ${new Date().toISOString()}
     return acl;
   }
 
-  /**
-   * Upload ACL document pe IPFS
-   * 
-   * @param {Object} aclData - Date ACL
-   * @returns {Promise<string>} CID ACL document
-   */
   async uploadACL(aclData) {
     try {
       const aclDocument = this.createACLDocument(aclData);
       const cid = await this.uploadDocument(aclDocument, '.acl');
-      
+
       console.log(`[SOLID-IPFS] Uploaded ACL document: ${cid}`);
       return cid;
     } catch (error) {
@@ -381,12 +287,6 @@ Last updated: ${new Date().toISOString()}
     }
   }
 
-  /**
-   * Verifică integritatea unui POD
-   * 
-   * @param {Object} pod - Date POD
-   * @returns {Promise<Object>} Status integritate
-   */
   async verifyPodIntegrity(pod) {
     const checks = {
       profile: false,
@@ -399,7 +299,6 @@ Last updated: ${new Date().toISOString()}
     try {
       for (const [container, data] of Object.entries(pod.containers)) {
         if (data.cid) {
-          // Verifică dacă CID-ul este accesibil
           try {
             await this.clusterClient.get(`/pins/${data.cid}`);
             checks[container] = true;

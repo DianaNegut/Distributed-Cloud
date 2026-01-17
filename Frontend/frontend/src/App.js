@@ -4,6 +4,7 @@ import Sidebar from './components/layout/Sidebar';
 import Header from './components/layout/Header';
 import NotificationProvider from './contexts/NotificationContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { WalletProvider } from './contexts/WalletContext';
 import Dashboard from './pages/Dashboard';
 import MarketplacePage from './pages/MarketplacePage';
 import ProviderPage from './pages/ProviderPage';
@@ -122,9 +123,11 @@ function App() {
   return (
     <NotificationProvider>
       <AuthProvider>
-        <Router>
-          <AppContent />
-        </Router>
+        <WalletProvider>
+          <Router>
+            <AppContent />
+          </Router>
+        </WalletProvider>
       </AuthProvider>
     </NotificationProvider>
   );

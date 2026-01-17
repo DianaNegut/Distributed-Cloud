@@ -26,7 +26,7 @@ import LocationAutocomplete from '../components/ui/LocationAutocomplete';
 import ProviderAnalytics from '../components/analytics/ProviderAnalytics';
 import BackupManager from '../components/backup/BackupManager';
 import axios from 'axios';
-import filecoinService from '../services/filecoinService';
+import { useWallet } from '../contexts/WalletContext';
 import { useAuth } from '../contexts/AuthContext';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
@@ -34,11 +34,10 @@ const API_KEY = process.env.REACT_APP_API_KEY || 'supersecret';
 
 const ProviderPage = () => {
   const { user, sessionToken } = useAuth();
+  const { balance: walletBalance } = useWallet();
   const [providers, setProviders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showRegisterModal, setShowRegisterModal] = useState(false);
-  const [filBalance, setFilBalance] = useState(null);
-  const [walletLoading, setWalletLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('providers'); // providers, analytics, backup
   const [registerForm, setRegisterForm] = useState({
     name: '',
@@ -48,9 +47,12 @@ const ProviderPage = () => {
     pricePerGBPerMonth: 0.10
   });
 
+  // Get balance from wallet hook
+  const filBalance = walletBalance?.formatted ? parseFloat(walletBalance.formatted) : null;
+  const walletLoading = false; // Managed by WalletContext
+
   useEffect(() => {
     loadProviders();
-    loadFilBalance();
   }, [user]);
 
   const loadProviders = async () => {
@@ -67,21 +69,6 @@ const ProviderPage = () => {
       console.error('Error loading providers:', error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const loadFilBalance = async () => {
-    if (!user) return;
-    try {
-      setWalletLoading(true);
-      const data = await filecoinService.getBalance(user.username);
-      if (data.success) {
-        setFilBalance(data.balance);
-      }
-    } catch (error) {
-      console.error('Error loading FIL balance:', error);
-    } finally {
-      setWalletLoading(false);
     }
   };
 

@@ -16,18 +16,19 @@ const dockerClusterRoutes = require('./routes/dockerCluster');
 const networkInfoRoutes = require('./routes/networkInfo');
 const storageProvidersRoutes = require('./routes/storageProviders');
 const storageContractsRoutes = require('./routes/storageContracts');
+
 const userStorageRoutes = require('./routes/userStorage');
-const filecoinRoutes = require('./routes/filecoin');
+
 const solidRoutes = require('./routes/solid');
 const authRoutes = require('./routes/auth');
-const didRoutes = require('./routes/did');
+
 const { router: integrityRoutes, integrityVerifier } = require('./routes/integrity');
 const { router: failoverRoutes, failoverManager, setupFailoverWebSocket } = require('./routes/failover');
-const ethereumRoutes = require('./routes/ethereum');
+
 const fileAccessRoutes = require('./routes/fileAccess');
 const providerAgentRoutes = require('./routes/providerAgent');
 
-const filecoinService = require('./services/filecoinService');
+
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -75,13 +76,14 @@ app.use('/api/docker-cluster', dockerClusterRoutes); // Frontend uses this path
 app.use('/api/network-info', networkInfoRoutes);
 app.use('/api/storage-providers', storageProvidersRoutes);
 app.use('/api/storage-contracts', storageContractsRoutes);
+
 app.use('/api/user-storage', userStorageRoutes);
-app.use('/api/filecoin', filecoinRoutes);
+
 app.use('/api/solid', solidRoutes);
-app.use('/api/did', didRoutes);
+
 app.use('/api/integrity', integrityRoutes);
 app.use('/api/failover', failoverRoutes);
-app.use('/api/ethereum', ethereumRoutes);
+
 app.use('/api/file-access', fileAccessRoutes);
 
 app.use((err, req, res, next) => {
@@ -118,21 +120,9 @@ const server = app.listen(PORT, async () => {
     console.log('[SERVER] Continuing without WebSocket support...\n');
   }
 
-  // Inițializare Filecoin service
-  try {
-    await filecoinService.initialize();
-    console.log('[SERVER] Filecoin service initialized\n');
-  } catch (error) {
-    console.error('[SERVER] Filecoin initialization failed:', error.message);
-  }
 
-  // Inițializare DID System
-  try {
-    console.log('[SERVER] Decentralized Identity (DID) system initialized');
-    console.log(`[SERVER] DID API available at http://localhost:${PORT}/api/did\n`);
-  } catch (error) {
-    console.error('[SERVER] DID initialization failed:', error.message);
-  }
+
+
 
   // Inițializare Integrity Verifier cu scheduler
   try {
@@ -163,12 +153,5 @@ const server = app.listen(PORT, async () => {
     console.error('[SERVER] Failover Manager initialization failed:', error.message);
   }
 
-  // Inițializare Ethereum Smart Contracts
-  try {
-    console.log('[SERVER] Ethereum Smart Contracts integration initialized');
-    console.log(`[SERVER] Network: ${process.env.ETHEREUM_NETWORK || 'sepolia-testnet'}`);
-    console.log(`[SERVER] Ethereum API available at http://localhost:${PORT}/api/ethereum\n`);
-  } catch (error) {
-    console.error('[SERVER] Ethereum integration failed:', error.message);
-  }
+
 });

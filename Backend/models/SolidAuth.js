@@ -1,9 +1,3 @@
-/**
- * Solid Authentication Model
- * Gestionează autentificarea utilizatorilor pentru POD-uri
- * Folosește bcrypt pentru hash-uirea parolelor și JWT pentru sesiuni
- */
-
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
@@ -18,13 +12,9 @@ class SolidAuth {
     this.sessions = new Map();
     this.loadData();
     this.loadSessions();
-    // Cleanup expired sessions every hour
     setInterval(() => this.cleanupExpiredSessions(), 60 * 60 * 1000);
   }
 
-  /**
-   * Încarcă date de autentificare
-   */
   loadData() {
     try {
       if (fs.existsSync(AUTH_FILE)) {
@@ -40,9 +30,6 @@ class SolidAuth {
     }
   }
 
-  /**
-   * Salvează date de autentificare
-   */
   saveData() {
     try {
       const dir = path.dirname(AUTH_FILE);
@@ -63,9 +50,6 @@ class SolidAuth {
     }
   }
 
-  /**
-   * Load sessions from disk
-   */
   loadSessions() {
     try {
       if (fs.existsSync(SESSION_FILE)) {
@@ -80,9 +64,6 @@ class SolidAuth {
     }
   }
 
-  /**
-   * Save sessions to disk
-   */
   saveSessions() {
     try {
       const dir = path.dirname(SESSION_FILE);
@@ -102,9 +83,6 @@ class SolidAuth {
     }
   }
 
-  /**
-   * Cleanup expired sessions
-   */
   cleanupExpiredSessions() {
     const now = new Date();
     let cleaned = 0;
@@ -122,63 +100,44 @@ class SolidAuth {
     }
   }
 
-  /**
-   * Hash parolă folosind crypto (în producție: bcrypt)
-   */
   hashPassword(password) {
-    // Folosim SHA-256 cu salt pentru simplitate
-    // În producție: bcrypt.hash(password, 10)
     const salt = crypto.randomBytes(16).toString('hex');
     const hash = crypto.pbkdf2Sync(password, salt, 10000, 64, 'sha512').toString('hex');
     return `${salt}:${hash}`;
   }
 
-  /**
-   * Verifică parolă
-   */
   verifyPassword(password, hashedPassword) {
     const [salt, hash] = hashedPassword.split(':');
     const verifyHash = crypto.pbkdf2Sync(password, salt, 10000, 64, 'sha512').toString('hex');
     return hash === verifyHash;
   }
 
-  /**
-   * Generează token de sesiune
-   */
   generateSessionToken() {
     return crypto.randomBytes(32).toString('hex');
   }
 
-  /**
-   * Înregistrează utilizator nou
-   */
   register(username, password, email = null) {
-    // Verifică dacă username-ul există
     if (this.users.has(username)) {
       throw new Error('Username already exists');
     }
 
-    // Validare username
     if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
       throw new Error('Username can only contain alphanumeric characters, hyphens and underscores');
     }
 
-    // Validare parolă
     if (!password || password.length < 6) {
       throw new Error('Password must be at least 6 characters');
     }
 
-    // Determine role - first user or username 'admin' gets admin role
     const isFirstUser = this.users.size === 0;
     const role = (isFirstUser || username.toLowerCase() === 'admin') ? 'admin' : 'user';
 
-    // Creează user
     const user = {
       username,
       passwordHash: this.hashPassword(password),
       email,
-      role, // 'admin' or 'user'
-      podId: null, // Va fi setat când se creează POD-ul
+      role,
+      podId: null,
       webId: null,
       createdAt: new Date().toISOString(),
       lastLogin: null,
@@ -197,9 +156,6 @@ class SolidAuth {
     };
   }
 
-  /**
-   * Login utilizator
-   */
   login(username, password) {
     const user = this.users.get(username);
 
@@ -211,24 +167,21 @@ class SolidAuth {
       throw new Error('Account is not active');
     }
 
-    // Verifică parola
     if (!this.verifyPassword(password, user.passwordHash)) {
       throw new Error('Invalid username or password');
     }
 
-    // Generează token de sesiune
     const sessionToken = this.generateSessionToken();
     const session = {
       username,
       token: sessionToken,
       createdAt: new Date().toISOString(),
-      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24h
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
     };
 
     this.sessions.set(sessionToken, session);
     this.saveSessions();
 
-    // Actualizează last login
     user.lastLogin = new Date().toISOString();
     this.saveData();
 
@@ -245,9 +198,6 @@ class SolidAuth {
     };
   }
 
-  /**
-   * Logout utilizator
-   */
   logout(token) {
     if (!token) {
       throw new Error('Token required');
@@ -265,9 +215,6 @@ class SolidAuth {
     return { success: true };
   }
 
-  /**
-   * Verifică sesiune
-   */
   verifySession(token) {
     if (!token) {
       throw new Error('Token required');
@@ -278,7 +225,6 @@ class SolidAuth {
       throw new Error('Invalid session');
     }
 
-    // Verifică expirare
     if (new Date(session.expiresAt) < new Date()) {
       this.sessions.delete(token);
       throw new Error('Session expired');
@@ -298,9 +244,6 @@ class SolidAuth {
     };
   }
 
-  /**
-   * Asociază POD cu user
-   */
   setPodForUser(username, podId, webId) {
     const user = this.users.get(username);
     if (!user) {
@@ -315,16 +258,12 @@ class SolidAuth {
     return user;
   }
 
-  /**
-   * Obține user după username
-   */
   getUser(username) {
     const user = this.users.get(username);
     if (!user) {
       throw new Error('User not found');
     }
 
-    // Nu returnăm parola hash
     return {
       username: user.username,
       email: user.email,
@@ -337,21 +276,16 @@ class SolidAuth {
     };
   }
 
-  /**
-   * Schimbă parola
-   */
   changePassword(username, oldPassword, newPassword) {
     const user = this.users.get(username);
     if (!user) {
       throw new Error('User not found');
     }
 
-    // Verifică parola veche
     if (!this.verifyPassword(oldPassword, user.passwordHash)) {
       throw new Error('Invalid old password');
     }
 
-    // Validare parolă nouă
     if (!newPassword || newPassword.length < 6) {
       throw new Error('New password must be at least 6 characters');
     }
@@ -363,9 +297,6 @@ class SolidAuth {
     return { success: true };
   }
 
-  /**
-   * Șterge user
-   */
   deleteUser(username) {
     const user = this.users.get(username);
     if (!user) {
@@ -374,7 +305,6 @@ class SolidAuth {
 
     this.users.delete(username);
 
-    // Șterge toate sesiunile utilizatorului
     for (const [token, session] of this.sessions.entries()) {
       if (session.username === username) {
         this.sessions.delete(token);
@@ -387,9 +317,6 @@ class SolidAuth {
     return { success: true, deletedUser: username };
   }
 
-  /**
-   * Obține statistici
-   */
   getStatistics() {
     return {
       totalUsers: this.users.size,
@@ -400,5 +327,4 @@ class SolidAuth {
   }
 }
 
-// Singleton instance
 module.exports = new SolidAuth();

@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { IPFS_PATH } = require('../config/paths');
 
+// citeste de aici datele despre poduri
 const PODS_FILE = path.join(IPFS_PATH, 'solid-pods.json');
 
 class SolidPod {

@@ -16,14 +16,15 @@ import { Input } from '../components/ui/Input';
 import { Badge } from '../components/ui/Badge';
 import LocationAutocomplete from '../components/ui/LocationAutocomplete';
 import { useAuth } from '../contexts/AuthContext';
+import { useWallet } from '../contexts/WalletContext';
 import axios from 'axios';
-import filecoinService from '../services/filecoinService';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
 const API_KEY = process.env.REACT_APP_API_KEY || 'supersecret';
 
 const MarketplacePage = () => {
   const { user, sessionToken } = useAuth();
+  const { isConnected, balance: walletBalance } = useWallet();
   const [providers, setProviders] = useState([]);
   const [filteredProviders, setFilteredProviders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -32,7 +33,6 @@ const MarketplacePage = () => {
   const [sortBy, setSortBy] = useState('space');
   const [showRentModal, setShowRentModal] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState(null);
-  const [filBalance, setFilBalance] = useState(null);
   const [calculatedFilCost, setCalculatedFilCost] = useState(null);
   const [rentForm, setRentForm] = useState({
     allocatedGB: 10,
@@ -41,24 +41,14 @@ const MarketplacePage = () => {
   });
   const [calculatedPrice, setCalculatedPrice] = useState(null);
 
+  // Get balance from wallet hook
+  const filBalance = walletBalance?.formatted ? parseFloat(walletBalance.formatted) : null;
+
   useEffect(() => {
     if (user) {
       loadProviders();
-      loadFilBalance();
     }
   }, [sortBy, user]);
-
-  const loadFilBalance = async () => {
-    if (!user) return;
-    try {
-      const data = await filecoinService.getBalance(user.username);
-      if (data.success) {
-        setFilBalance(data.balance);
-      }
-    } catch (error) {
-      console.error('Error loading FIL balance:', error);
-    }
-  };
 
   useEffect(() => {
     filterProviders();
@@ -111,7 +101,7 @@ const MarketplacePage = () => {
     if (!selectedProvider) return;
 
     try {
-      // Calculate USD price (legacy)
+      // Calculate price from backend
       const response = await axios.get(`${API_URL}/storage-contracts/calculate-price`, {
         headers: { 'x-api-key': API_KEY },
         params: {
@@ -122,14 +112,16 @@ const MarketplacePage = () => {
       });
       setCalculatedPrice(response.data.pricing);
 
-      // Calculate FIL cost
-      const filResponse = await filecoinService.calculateStorageCost(
-        rentForm.allocatedGB,
-        rentForm.durationMonths
-      );
-      if (filResponse.success) {
-        setCalculatedFilCost(filResponse);
-      }
+      // Calculate ETH cost locally (simplified)
+      const pricePerGBMonth = selectedProvider.pricing?.pricePerGBPerMonth || 0.10;
+      const totalCost = rentForm.allocatedGB * pricePerGBMonth * rentForm.durationMonths;
+      setCalculatedFilCost({
+        success: true,
+        sizeGB: rentForm.allocatedGB,
+        months: rentForm.durationMonths,
+        pricePerGBPerMonth: pricePerGBMonth,
+        totalCost: totalCost
+      });
     } catch (error) {
       console.error('Error calculating price:', error);
     }
@@ -176,7 +168,7 @@ const MarketplacePage = () => {
         alert(`✅ Contract creat cu succes!\n\nID: ${response.data.contract.id}\nCost: ${calculatedFilCost?.totalCost.toFixed(6) || 'N/A'} FIL\nEscrow: Deposited\n\nMergi la Contracte pentru a gestiona contractul.`);
         setShowRentModal(false);
         loadProviders();
-        loadFilBalance(); // Refresh balance
+        // Balance handled by useWallet // Refresh balance
       }
     } catch (error) {
       alert('❌ Eroare la crearea contractului: ' + (error.response?.data?.error || error.message));
@@ -188,7 +180,7 @@ const MarketplacePage = () => {
     setShowRentModal(true);
     setCalculatedPrice(null);
     setCalculatedFilCost(null);
-    loadFilBalance(); // Refresh balance
+    // Balance handled by useWallet // Refresh balance
   };
 
   if (loading) {
@@ -524,3 +516,4 @@ const MarketplacePage = () => {
 };
 
 export default MarketplacePage;
+

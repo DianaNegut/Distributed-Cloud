@@ -27,32 +27,25 @@ import { Badge } from '../components/ui/Badge';
 import { StatCard } from '../components/ui/StatCard';
 import BackupManager from '../components/backup/BackupManager';
 import { useAuth } from '../contexts/AuthContext';
+import { useWallet } from '../contexts/WalletContext';
 import axios from 'axios';
-import filecoinService from '../services/filecoinService';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
 const API_KEY = process.env.REACT_APP_API_KEY || 'supersecret';
 
 const ContractsPage = () => {
   const { user, sessionToken } = useAuth();
+  const { isConnected, balance: walletBalance, shortAddress, payContract, refreshBalance, networkInfo } = useWallet();
   const [contracts, setContracts] = useState([]);
   const [providers, setProviders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState('all');
   const [viewMode, setViewMode] = useState('renter'); // renter or provider
-  const [filBalance, setFilBalance] = useState(null);
-  const [walletLoading, setWalletLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('contracts'); // contracts, wallet, transactions, backup
 
-  // Wallet data
-  const [wallet, setWallet] = useState(null);
-  const [balance, setBalance] = useState(null);
-  const [transactions, setTransactions] = useState([]);
-  const [statistics, setStatistics] = useState(null);
-
-  // Transfer form
+  // Transfer form (simplified - now uses MetaMask)
   const [transferForm, setTransferForm] = useState({
-    toUserId: '',
+    toAddress: '',
     amount: '',
     note: ''
   });
@@ -62,9 +55,6 @@ const ContractsPage = () => {
     if (user) {
       loadContracts();
       loadProviders();
-      loadFilBalance();
-      loadWalletData();
-      loadStatistics();
     }
   }, [user]);
 
@@ -96,55 +86,9 @@ const ContractsPage = () => {
     }
   };
 
-  const loadFilBalance = async () => {
-    if (!user) return;
-    try {
-      setWalletLoading(true);
-      const balance = await filecoinService.getBalance(user.username);
-      if (balance.success) {
-        setFilBalance(balance.balance);
-      }
-    } catch (error) {
-      console.error('Error loading FIL balance:', error);
-    } finally {
-      setWalletLoading(false);
-    }
-  };
-  const loadWalletData = async () => {
-    if (!user) return;
-    try {
-      // Get wallet
-      const walletResponse = await filecoinService.getWallet(user.username);
-      if (walletResponse.success) {
-        setWallet(walletResponse.wallet);
-      }
-
-      // Get balance
-      const balanceResponse = await filecoinService.getBalance(user.username);
-      if (balanceResponse.success) {
-        setBalance(balanceResponse);
-      }
-
-      // Get transactions
-      const txResponse = await filecoinService.getWalletTransactions(user.username);
-      if (txResponse.success) {
-        setTransactions(txResponse.transactions || []);
-      }
-    } catch (error) {
-      console.error('Error loading wallet data:', error);
-    }
-  };
-
-  const loadStatistics = async () => {
-    try {
-      const statsResponse = await filecoinService.getStatistics();
-      if (statsResponse.success) {
-        setStatistics(statsResponse);
-      }
-    } catch (error) {
-      console.error('Error loading statistics:', error);
-    }
-  };
+  // Wallet balance now comes from useWallet hook
+  const filBalance = walletBalance?.formatted ? parseFloat(walletBalance.formatted) : null;
+  const walletLoading = false; // Managed by WalletContext
 
   const handleTransfer = async (e) => {
     e.preventDefault();
@@ -157,29 +101,41 @@ const ContractsPage = () => {
         return;
       }
 
-      if (!transferForm.toUserId) {
-        setTransferResult({ success: false, error: 'User ID destinatar este obligatoriu' });
+      if (!transferForm.toAddress) {
+        setTransferResult({ success: false, error: 'Adresa destinatarului este obligatorie' });
         return;
       }
 
-      const result = await filecoinService.transfer(
-        user.username,
-        transferForm.toUserId,
-        amount,
-        { note: transferForm.note }
-      );
-
-      if (result.success) {
-        setTransferResult({ success: true, transaction: result.transaction });
-        setTransferForm({ toUserId: '', amount: '', note: '' });
-        await loadWalletData();
-        await loadFilBalance();
-      } else {
-        setTransferResult({ success: false, error: result.error });
+      // Use MetaMask to send payment
+      if (!isConnected) {
+        setTransferResult({ success: false, error: 'Te rog conectează wallet-ul MetaMask mai întâi' });
+        return;
       }
+
+      const result = await payContract(null, amount.toString(), transferForm.toAddress);
+      setTransferResult({ success: true, transaction: { hash: result.hash } });
+      setTransferForm({ toAddress: '', amount: '', note: '' });
+      await refreshBalance();
     } catch (error) {
       setTransferResult({ success: false, error: error.message });
     }
+  };
+
+  // Helper function to format balance
+  const formatFIL = (value) => {
+    if (value === null || value === undefined) return '0.000000';
+    return parseFloat(value).toFixed(6);
+  };
+
+  // Helper function to format date
+  const formatDateTime = (timestamp) => {
+    return new Date(timestamp).toLocaleString('ro-RO', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
 
   const getTransactionTypeColor = (type) => {
@@ -237,7 +193,7 @@ const ContractsPage = () => {
       if (response.data.success) {
         alert('Contract anulat cu succes! Escrow-ul a fost rambursat.');
         loadContracts();
-        loadFilBalance(); // Refresh FIL balance
+        refreshBalance(); // Refresh FIL balance
       }
     } catch (error) {
       alert('Eroare: ' + (error.response?.data?.error || error.message));
@@ -245,13 +201,32 @@ const ContractsPage = () => {
   };
 
   const handlePayContract = async (contractId) => {
-    if (!window.confirm('Sigur doriți să plătiți acest contract? Suma va fi reținută în escrow.')) {
+    const contract = contracts.find(c => c.id === contractId);
+    if (!contract) return;
+
+    // Get amount from contract (fallback to 0 if missing)
+    const amount = contract.payment?.requiredAmount || contract.totalPrice || '0';
+
+    if (!window.confirm(`Sigur doriți să plătiți acest contract? Suma de ${amount} ETH/tFIL va fi procesată prin MetaMask.`)) {
       return;
     }
 
     try {
+      if (!isConnected) {
+        alert('Te rog conectează wallet-ul MetaMask mai întâi.');
+        return;
+      }
+
+      // 1. Pay via MetaMask
+      const txResult = await payContract(
+        contract.id,
+        amount.toString(),
+        null // Todo: Add provider address if available
+      );
+
+      // 2. Confirm to backend with transaction hash
       const response = await axios.post(`${API_URL}/storage-contracts/${contractId}/pay`, {
-        paymentMethod: 'filecoin'
+        transactionHash: txResult.hash
       }, {
         headers: { 'x-api-key': API_KEY }
       });
@@ -259,10 +234,11 @@ const ContractsPage = () => {
       if (response.data.success) {
         alert('Contract plătit cu succes! Contractul este acum activ.');
         loadContracts();
-        loadFilBalance();
+        refreshBalance();
       }
     } catch (error) {
-      alert('Eroare la plată: ' + (error.response?.data?.error || error.message));
+      console.error('Payment error:', error);
+      alert('Eroare la plată: ' + (error.message || 'Unknown error'));
     }
   };
 
@@ -279,7 +255,7 @@ const ContractsPage = () => {
       if (response.data.success) {
         alert('Contract finalizat cu succes! Plata a fost efectuată furnizorului.');
         loadContracts();
-        loadFilBalance(); // Refresh FIL balance
+        refreshBalance(); // Refresh FIL balance
       }
     } catch (error) {
       alert('Eroare: ' + (error.response?.data?.error || error.message));
@@ -367,13 +343,13 @@ const ContractsPage = () => {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-4xl font-bold text-white mb-2">Contractele Mele</h1>
-              <p className="text-gray-400">Gestionează contractele de stocare și wallet FIL</p>
+              <p className="text-gray-400">Gestionează contractele de stocare și wallet</p>
             </div>
-            {balance && (
+            {walletBalance && (
               <div className="text-right">
                 <p className="text-sm text-gray-400">Balanță disponibilă</p>
                 <p className="text-3xl font-bold text-primary-400">
-                  {filecoinService.formatFIL(balance.balance)} FIL
+                  {walletBalance.formatted} {walletBalance.symbol}
                 </p>
               </div>
             )}
@@ -751,177 +727,138 @@ const ContractsPage = () => {
         {/* Tab Content: Wallet */}
         {activeTab === 'wallet' && (
           <>
-            {/* Wallet Info Card */}
-            {wallet && (
-              <Card className="mb-6 bg-gradient-to-r from-primary-500 to-purple-600">
-                <CardContent className="pt-6">
-                  <p className="text-sm text-white/80 mb-2">Adresă Wallet</p>
-                  <p className="text-lg font-mono text-white break-all">{wallet.address}</p>
-                  <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t border-white/20">
-                    <div>
-                      <p className="text-xs text-white/70">User ID</p>
-                      <p className="text-sm font-medium text-white">{wallet.userId}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-white/70">Creat la</p>
-                      <p className="text-sm font-medium text-white">
-                        {new Date(wallet.createdAt).toLocaleDateString('ro-RO')}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-white/70">Ultima actualizare</p>
-                      <p className="text-sm font-medium text-white">
-                        {new Date(wallet.updatedAt).toLocaleString('ro-RO', {
-                          month: 'short',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* User Statistics */}
-            {wallet && (
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                <StatCard
-                  title="Wallet Creat"
-                  value={new Date(wallet.createdAt).toLocaleDateString('ro-RO', { day: 'numeric', month: 'short', year: 'numeric' })}
-                  icon={Calendar}
-                  color="info"
-                />
-                <StatCard
-                  title="Balanță Curentă"
-                  value={`${Number(balance?.balance || 0).toFixed(2)} FIL`}
-                  icon={DollarSign}
-                  color="success"
-                />
-                <StatCard
-                  title="Tranzacțiile Mele"
-                  value={transactions.length}
-                  icon={ArrowDownUp}
-                  color="purple"
-                />
-                <StatCard
-                  title="Volum Personal"
-                  value={`${Number(transactions.reduce((sum, tx) => sum + Number(tx.amount || 0), 0)).toFixed(2)} FIL`}
-                  icon={TrendingUp}
-                  color="warning"
-                />
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Wallet Details */}
-              <Card>
-                <CardContent className="pt-6">
-                  <h3 className="text-xl font-bold text-white mb-4">Detalii Wallet</h3>
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center py-3 border-b border-dark-700">
-                      <span className="text-gray-400">Balanță disponibilă:</span>
-                      <span className="text-xl font-bold text-primary-400">
-                        {balance ? filecoinService.formatFIL(balance.balance) : '0.000000'} FIL
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center py-3 border-b border-dark-700">
-                      <span className="text-gray-400">Total primit:</span>
-                      <span className="text-green-400 font-semibold">
-                        +{Number(transactions.filter(tx => tx.to === wallet?.address).reduce((sum, tx) => sum + Number(tx.amount || 0), 0)).toFixed(6)} FIL
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center py-3 border-b border-dark-700">
-                      <span className="text-gray-400">Total trimis:</span>
-                      <span className="text-red-400 font-semibold">
-                        -{Number(transactions.filter(tx => tx.from === wallet?.address).reduce((sum, tx) => sum + Number(tx.amount || 0), 0)).toFixed(6)} FIL
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center py-3">
-                      <span className="text-gray-400">Număr tranzacții:</span>
-                      <span className="text-white font-semibold">{transactions.length}</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Transfer Form */}
-              <Card>
-                <CardContent className="pt-6">
-                  <h3 className="text-xl font-bold text-white mb-4">Transfer FIL</h3>
-                  <form onSubmit={handleTransfer} className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-400 mb-2">
-                        User ID Destinatar
-                      </label>
-                      <input
-                        type="text"
-                        value={transferForm.toUserId}
-                        onChange={(e) => setTransferForm({ ...transferForm, toUserId: e.target.value })}
-                        className="w-full px-4 py-2 bg-dark-800 border border-dark-700 rounded-lg text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                        placeholder="user-12345"
-                        required
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-400 mb-2">
-                        Sumă (FIL)
-                      </label>
-                      <input
-                        type="number"
-                        step="0.000001"
-                        value={transferForm.amount}
-                        onChange={(e) => setTransferForm({ ...transferForm, amount: e.target.value })}
-                        className="w-full px-4 py-2 bg-dark-800 border border-dark-700 rounded-lg text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                        placeholder="0.000000"
-                        required
-                      />
-                      {balance && (
-                        <p className="text-sm text-gray-500 mt-1">
-                          Disponibil: {filecoinService.formatFIL(balance.balance)} FIL
+            {/* MetaMask Wallet Info */}
+            {isConnected ? (
+              <>
+                <Card className="mb-6 bg-gradient-to-r from-primary-500 to-purple-600">
+                  <CardContent className="pt-6">
+                    <p className="text-sm text-white/80 mb-2">Wallet MetaMask Conectat</p>
+                    <p className="text-lg font-mono text-white break-all">{shortAddress}</p>
+                    <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-white/20">
+                      <div>
+                        <p className="text-xs text-white/70">Balanță</p>
+                        <p className="text-2xl font-bold text-white">
+                          {walletBalance?.formatted || '0'} {walletBalance?.symbol || 'ETH'}
                         </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-white/70">Utilizator</p>
+                        <p className="text-sm font-medium text-white">{user?.username}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Wallet Details */}
+                  <Card>
+                    <CardContent className="pt-6">
+                      <h3 className="text-xl font-bold text-white mb-4">Detalii Wallet</h3>
+                      <div className="space-y-4">
+                        <div className="flex justify-between items-center py-3 border-b border-dark-700">
+                          <span className="text-gray-400">Balanță disponibilă:</span>
+                          <span className="text-xl font-bold text-primary-400">
+                            {walletBalance?.formatted || '0'} {walletBalance?.symbol || 'ETH'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center py-3 border-b border-dark-700">
+                          <span className="text-gray-400">Adresă wallet:</span>
+                          <span className="text-white font-mono text-sm">{shortAddress}</span>
+                        </div>
+                        <div className="flex justify-between items-center py-3">
+                          <span className="text-gray-400">Status:</span>
+                          <Badge variant="success">
+                            <CheckCircle className="w-3 h-3 mr-1" />
+                            Conectat
+                          </Badge>
+                        </div>
+                        {/* Debug Info */}
+                        <div className="flex justify-between items-center py-1 border-t border-dark-700 mt-2">
+                          <span className="text-gray-500 text-xs">Chain ID:</span>
+                          <span className="text-gray-500 text-xs font-mono">{networkInfo?.chainId || 'Unknown'}</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Transfer Form */}
+                  <Card>
+                    <CardContent className="pt-6">
+                      <h3 className="text-xl font-bold text-white mb-4">Transfer {walletBalance?.symbol || 'ETH'}</h3>
+                      <form onSubmit={handleTransfer} className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-400 mb-2">
+                            Adresă Destinatar
+                          </label>
+                          <input
+                            type="text"
+                            value={transferForm.toAddress}
+                            onChange={(e) => setTransferForm({ ...transferForm, toAddress: e.target.value })}
+                            className="w-full px-4 py-2 bg-dark-800 border border-dark-700 rounded-lg text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                            placeholder="0x..."
+                            required
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-400 mb-2">
+                            Sumă ({walletBalance?.symbol || 'ETH'})
+                          </label>
+                          <input
+                            type="number"
+                            step="0.000001"
+                            value={transferForm.amount}
+                            onChange={(e) => setTransferForm({ ...transferForm, amount: e.target.value })}
+                            className="w-full px-4 py-2 bg-dark-800 border border-dark-700 rounded-lg text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                            placeholder="0.000000"
+                            required
+                          />
+                          <p className="text-sm text-gray-500 mt-1">
+                            Disponibil: {walletBalance?.formatted || '0'} {walletBalance?.symbol || 'ETH'}
+                          </p>
+                        </div>
+
+                        <Button type="submit" variant="primary" className="w-full">
+                          <Send className="w-4 h-4 mr-2" />
+                          Trimite via MetaMask
+                        </Button>
+                      </form>
+
+                      {transferResult && (
+                        <div className={`mt-4 p-4 rounded-lg ${transferResult.success
+                          ? 'bg-green-500/20 border border-green-500/50'
+                          : 'bg-red-500/20 border border-red-500/50'
+                          }`}>
+                          {transferResult.success ? (
+                            <>
+                              <p className="font-semibold text-green-400">✓ Transfer realizat cu succes!</p>
+                              <p className="text-sm text-gray-400 mt-1">TX Hash: {transferResult.transaction?.hash}</p>
+                            </>
+                          ) : (
+                            <p className="font-semibold text-red-400">✗ Eroare: {transferResult.error}</p>
+                          )}
+                        </div>
                       )}
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-400 mb-2">
-                        Notă (opțional)
-                      </label>
-                      <textarea
-                        value={transferForm.note}
-                        onChange={(e) => setTransferForm({ ...transferForm, note: e.target.value })}
-                        className="w-full px-4 py-2 bg-dark-800 border border-dark-700 rounded-lg text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                        rows="3"
-                        placeholder="Descriere transfer..."
-                      />
-                    </div>
-
-                    <Button type="submit" variant="primary" className="w-full">
-                      <Send className="w-4 h-4 mr-2" />
-                      Trimite FIL
-                    </Button>
-                  </form>
-
-                  {transferResult && (
-                    <div className={`mt-4 p-4 rounded-lg ${transferResult.success
-                      ? 'bg-green-500/20 border border-green-500/50'
-                      : 'bg-red-500/20 border border-red-500/50'
-                      }`}>
-                      {transferResult.success ? (
-                        <>
-                          <p className="font-semibold text-green-400">✓ Transfer realizat cu succes!</p>
-                          <p className="text-sm text-gray-400 mt-1">ID Tranzacție: {transferResult.transaction?.id}</p>
-                        </>
-                      ) : (
-                        <p className="font-semibold text-red-400">✗ Eroare: {transferResult.error}</p>
-                      )}
-                    </div>
-                  )}
+                    </CardContent>
+                  </Card>
+                </div>
+              </>
+            ) : (
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="text-center py-12">
+                    <Wallet className="w-16 h-16 mx-auto mb-4 text-gray-600" />
+                    <h3 className="text-xl font-bold text-white mb-2">Wallet neconectat</h3>
+                    <p className="text-gray-400 mb-6">
+                      Conectează-ți wallet-ul MetaMask pentru a gestiona fondurile
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      Folosește butonul "Connect Wallet" din header pentru a te conecta
+                    </p>
+                  </div>
                 </CardContent>
               </Card>
-            </div>
+            )}
           </>
         )}
 
@@ -930,47 +867,15 @@ const ContractsPage = () => {
           <Card>
             <CardContent className="pt-6">
               <h3 className="text-xl font-bold text-white mb-4">Istoric Tranzacții</h3>
-              {transactions.length === 0 ? (
-                <div className="text-center py-12">
-                  <ArrowDownUp className="w-16 h-16 mx-auto mb-4 text-gray-600" />
-                  <p className="text-gray-400">Nu există tranzacții încă</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {transactions.map((tx) => (
-                    <div key={tx.id} className="flex items-center justify-between p-4 bg-dark-800/50 rounded-lg hover:bg-dark-800 transition">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className={`font-semibold ${getTransactionTypeColor(tx.type)}`}>
-                            {getTransactionTypeLabel(tx.type)}
-                          </span>
-                          {tx.contractId && (
-                            <span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-1 rounded border border-blue-500/30">
-                              Contract: {tx.contractId.substring(0, 20)}...
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-xs text-gray-500 mt-1">
-                          {filecoinService.formatDate(tx.timestamp)}
-                        </p>
-                        {tx.metadata?.note && (
-                          <p className="text-xs text-gray-400 mt-1 italic">"{tx.metadata.note}"</p>
-                        )}
-                      </div>
-                      <div className="text-right">
-                        <p className={`text-lg font-bold ${tx.to === wallet?.address ? 'text-green-400' : 'text-red-400'
-                          }`}>
-                          {tx.to === wallet?.address ? '+' : '-'}
-                          {filecoinService.formatFIL(tx.amount)} FIL
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {tx.status === 'completed' ? '✓ Completat' : 'În așteptare'}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+              <div className="text-center py-12">
+                <ArrowDownUp className="w-16 h-16 mx-auto mb-4 text-gray-600" />
+                <p className="text-gray-400 mb-4">
+                  Istoricul tranzacțiilor este disponibil în MetaMask
+                </p>
+                <p className="text-sm text-gray-500">
+                  Deschide extensia MetaMask pentru a vedea toate tranzacțiile tale
+                </p>
+              </div>
             </CardContent>
           </Card>
         )}
@@ -985,3 +890,5 @@ const ContractsPage = () => {
 };
 
 export default ContractsPage;
+
+

@@ -1,13 +1,3 @@
-/**
- * IPFS Data Accessor for Community Solid Server
- * 
- * Implementează interfața DataAccessor din CSS pentru a integra IPFS Cluster
- * ca backend de stocare pentru Solid PODs.
- * 
- * Bazat pe articolul: "Solid over the Interplanetary File System"
- * by Fabrizio Parrillo & Christian Tschudin
- */
-
 const { DataAccessor } = require('@solid/community-server');
 const { guardedStreamFrom } = require('@solid/community-server');
 const axios = require('axios');
@@ -15,47 +5,31 @@ const FormData = require('form-data');
 const { Readable } = require('stream');
 const path = require('path');
 
-/**
- * IPFSDataAccessor - Conectează CSS cu IPFS Cluster
- * 
- * Mapează operațiile Solid (read, write, delete) la operațiile IPFS MFS
- */
 class IPFSDataAccessor extends DataAccessor {
   constructor(ipfsClusterUrl) {
     super();
     this.ipfsClusterUrl = ipfsClusterUrl || 'http://localhost:9094';
-    this.apiKey = 'supersecret'; // Ar trebui să vină din configurație
+    this.apiKey = 'supersecret';
     console.log(`[IPFS-ACCESSOR] Initialized with cluster: ${this.ipfsClusterUrl}`);
   }
-
-  /**
-   * Verifică dacă poate gestiona reprezentarea dată
-   * @param {Representation} representation
-   */
+  // verific daca pot gestiona reprezentarea dată
+  // ipfs stocheaza bytes raw
   async canHandle(representation) {
-    // Acceptăm orice tip de reprezentare binară
     if (representation.binary) {
       return;
     }
     throw new Error('IPFSDataAccessor only handles binary data');
   }
-
-  /**
-   * Citește date de la o resursă IPFS
-   * @param {ResourceIdentifier} identifier
-   * @returns {Promise<Readable>}
-   */
+  // cineva cere un fisier din pod
   async getData(identifier) {
     try {
       const ipfsPath = this.urlToIPFSPath(identifier.path);
-      
-      // Verifică dacă este container (director)
+      // verific daca e director
       const stats = await this.getStats(ipfsPath);
       if (stats.type === 'directory') {
         throw new Error('Cannot read data from container resource');
       }
-
-      // Citește fișierul din IPFS MFS
+      // get la ipfs cluster
       const response = await axios.get(`${this.ipfsClusterUrl}/mfs/read`, {
         params: { arg: ipfsPath },
         headers: { 'x-api-key': this.apiKey },
@@ -69,19 +43,14 @@ class IPFSDataAccessor extends DataAccessor {
     }
   }
 
-  /**
-   * Obține metadata pentru o resursă
-   * @param {ResourceIdentifier} identifier
-   * @returns {Promise<RepresentationMetadata>}
-   */
   async getMetadata(identifier) {
     try {
       const ipfsPath = this.urlToIPFSPath(identifier.path);
       const stats = await this.getStats(ipfsPath);
 
       const metadata = {
-        contentType: stats.type === 'directory' 
-          ? 'text/turtle' 
+        contentType: stats.type === 'directory'
+          ? 'text/turtle'
           : 'application/octet-stream',
         size: stats.size,
         modified: new Date(stats.mtime * 1000),
@@ -89,7 +58,6 @@ class IPFSDataAccessor extends DataAccessor {
         cid: stats.cid
       };
 
-      // Dacă este container, listează conținutul
       if (stats.type === 'directory') {
         const children = await this.listDirectory(ipfsPath);
         metadata.children = children;
@@ -104,26 +72,18 @@ class IPFSDataAccessor extends DataAccessor {
     }
   }
 
-  /**
-   * Scrie un document în IPFS
-   * @param {ResourceIdentifier} identifier
-   * @param {Readable} data
-   * @param {RepresentationMetadata} metadata
-   */
   async writeDocument(identifier, data, metadata) {
     try {
       const ipfsPath = this.urlToIPFSPath(identifier.path);
-      
-      // Asigură-te că directorul părinte există
+
       const parentPath = path.dirname(ipfsPath);
       await this.ensureDirectory(parentPath);
 
-      // Uploadează fișierul pe IPFS
       const formData = new FormData();
       formData.append('file', data);
 
       const response = await axios.post(`${this.ipfsClusterUrl}/mfs/write`, formData, {
-        params: { 
+        params: {
           arg: ipfsPath,
           create: true,
           truncate: true
@@ -141,17 +101,12 @@ class IPFSDataAccessor extends DataAccessor {
     }
   }
 
-  /**
-   * Creează un container (director)
-   * @param {ResourceIdentifier} identifier
-   * @param {RepresentationMetadata} metadata
-   */
   async writeContainer(identifier, metadata) {
     try {
       const ipfsPath = this.urlToIPFSPath(identifier.path);
-      
+
       await axios.post(`${this.ipfsClusterUrl}/mfs/mkdir`, null, {
-        params: { 
+        params: {
           arg: ipfsPath,
           parents: true
         },
@@ -160,7 +115,6 @@ class IPFSDataAccessor extends DataAccessor {
 
       console.log(`[IPFS-ACCESSOR] Created container: ${ipfsPath}`);
     } catch (error) {
-      // Ignoră eroarea dacă directorul există deja
       if (!error.response?.data?.includes('already exists')) {
         console.error('[IPFS-ACCESSOR] writeContainer error:', error.message);
         throw new Error(`Failed to create container in IPFS: ${error.message}`);
@@ -168,26 +122,20 @@ class IPFSDataAccessor extends DataAccessor {
     }
   }
 
-  /**
-   * Șterge o resursă din IPFS
-   * @param {ResourceIdentifier} identifier
-   */
   async deleteResource(identifier) {
     try {
       const ipfsPath = this.urlToIPFSPath(identifier.path);
       const stats = await this.getStats(ipfsPath);
 
       if (stats.type === 'directory') {
-        // Șterge director
         await axios.post(`${this.ipfsClusterUrl}/mfs/rm`, null, {
-          params: { 
+          params: {
             arg: ipfsPath,
             recursive: true
           },
           headers: { 'x-api-key': this.apiKey }
         });
       } else {
-        // Șterge fișier
         await axios.post(`${this.ipfsClusterUrl}/mfs/rm`, null, {
           params: { arg: ipfsPath },
           headers: { 'x-api-key': this.apiKey }
@@ -201,18 +149,9 @@ class IPFSDataAccessor extends DataAccessor {
     }
   }
 
-  // === HELPER METHODS ===
-
-  /**
-   * Convertește URL Solid la path IPFS MFS
-   * @param {string} url
-   * @returns {string}
-   */
   urlToIPFSPath(url) {
-    // Remove base URL and leading slash for IPFS MFS path
     let ipfsPath = url.replace(/^https?:\/\/[^\/]+/, '');
-    
-    // Asigură-te că începe cu /
+
     if (!ipfsPath.startsWith('/')) {
       ipfsPath = '/' + ipfsPath;
     }
@@ -220,11 +159,6 @@ class IPFSDataAccessor extends DataAccessor {
     return ipfsPath;
   }
 
-  /**
-   * Obține statistici pentru un path IPFS
-   * @param {string} ipfsPath
-   * @returns {Promise<Object>}
-   */
   async getStats(ipfsPath) {
     try {
       const response = await axios.post(`${this.ipfsClusterUrl}/mfs/stat`, null, {
@@ -246,11 +180,6 @@ class IPFSDataAccessor extends DataAccessor {
     }
   }
 
-  /**
-   * Listează conținutul unui director
-   * @param {string} ipfsPath
-   * @returns {Promise<Array>}
-   */
   async listDirectory(ipfsPath) {
     try {
       const response = await axios.post(`${this.ipfsClusterUrl}/mfs/ls`, null, {
@@ -274,17 +203,12 @@ class IPFSDataAccessor extends DataAccessor {
     }
   }
 
-  /**
-   * Asigură că un director există
-   * @param {string} ipfsPath
-   */
   async ensureDirectory(ipfsPath) {
     try {
       await this.getStats(ipfsPath);
     } catch (error) {
-      // Directorul nu există, creează-l
       await axios.post(`${this.ipfsClusterUrl}/mfs/mkdir`, null, {
-        params: { 
+        params: {
           arg: ipfsPath,
           parents: true
         },

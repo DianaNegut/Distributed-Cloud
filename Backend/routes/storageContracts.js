@@ -3,7 +3,7 @@ const router = express.Router();
 const StorageContract = require('../models/StorageContract');
 const StorageProvider = require('../models/StorageProvider');
 const UserStorage = require('../models/UserStorage');
-const filecoinService = require('../services/filecoinService');
+// Note: Blockchain payment functionality removed - will be handled by MetaMask in frontend
 
 router.get('/', (req, res) => {
   try {
@@ -182,35 +182,11 @@ router.post('/create', async (req, res) => {
 
     console.log('[STORAGE-CONTRACTS] Pricing calculated:', pricing);
 
+    // Calculate cost based on provider's pricing (simple calculation, no blockchain)
+    const pricePerGBPerMonth = provider.pricing?.pricePerGBPerMonth || 0.10;
+    const totalCost = requestedGB * months * pricePerGBPerMonth;
 
-    const filCost = filecoinService.calculateStorageCost(requestedGB, months, provider.pricing?.pricePerGBPerMonth);
-    console.log('[STORAGE-CONTRACTS] FIL cost:', filCost);
-
-
-    try {
-      const clientBalance = await filecoinService.getBalance(renterId);
-      if (clientBalance.balance < filCost.totalCost) {
-        return res.status(400).json({
-          success: false,
-          error: `Insufficient FIL balance. Available: ${clientBalance.balance} FIL, Required: ${filCost.totalCost} FIL`,
-          required: filCost.totalCost,
-          available: clientBalance.balance
-        });
-      }
-    } catch (error) {
-      console.warn('[STORAGE-CONTRACTS] Balance check failed, creating wallet:', error.message);
-
-      await filecoinService.createUserWallet(renterId);
-      const newBalance = await filecoinService.getBalance(renterId);
-      if (newBalance.balance < filCost.totalCost) {
-        return res.status(400).json({
-          success: false,
-          error: `Insufficient FIL balance. Available: ${newBalance.balance} FIL, Required: ${filCost.totalCost} FIL`,
-          required: filCost.totalCost,
-          available: newBalance.balance
-        });
-      }
-    }
+    console.log('[STORAGE-CONTRACTS] Cost calculated:', { totalCost, pricePerGBPerMonth });
 
     const allocationResult = StorageProvider.allocateStorage(providerId, requestedGB);
     if (!allocationResult.success) {
@@ -228,45 +204,37 @@ router.post('/create', async (req, res) => {
       replicationFactor,
       slaUptimeMin,
       autoRenew: autoRenew === true,
-      pricePerGBPerMonth: filCost.pricePerGBPerMonth,
-      totalPrice: filCost.totalCost,
-      priceInFIL: filCost.totalCost,
-      basePrice: filCost.totalCost,
+      pricePerGBPerMonth: pricePerGBPerMonth,
+      totalPrice: totalCost,
+      basePrice: totalCost,
       discount: 0,
       discountAmount: 0,
-      currency: 'FIL'
+      currency: 'ETH' // Will be paid via MetaMask
     });
 
-
-    try {
-      const escrowResult = await filecoinService.depositEscrow(renterId, contract.id, filCost.totalCost);
-      console.log('[STORAGE-CONTRACTS] Escrow deposit:', escrowResult);
-
-
-      contract.payment.escrowStatus = 'deposited';
-      contract.payment.escrowAmount = filCost.totalCost;
-      contract.payment.escrowTxId = escrowResult.transaction.id;
-      contract.status = 'active';
-    } catch (error) {
-
-      StorageProvider.deallocateStorage(providerId, requestedGB);
-      console.error('[STORAGE-CONTRACTS] Escrow deposit failed:', error.message);
-      return res.status(500).json({
-        success: false,
-        error: `Failed to deposit escrow: ${error.message}`
-      });
-    }
+    // Contract starts as pending_payment - will be activated after MetaMask payment
+    contract.status = 'pending_payment';
+    contract.payment.status = 'pending';
+    contract.payment.requiredAmount = totalCost;
 
     UserStorage.addContractStorage(renterId, contract.id, requestedGB);
     console.log(`[STORAGE-CONTRACTS] Stocare adaugata pentru ${renterId}: +${requestedGB}GB`);
 
     res.json({
       success: true,
-      message: 'Contract created successfully with FIL payment',
+      message: 'Contract created - awaiting payment via MetaMask',
       contract: contract,
       pricing: {
-        ...filCost,
-        escrowDeposit: filCost.totalCost
+        sizeGB: requestedGB,
+        durationMonths: months,
+        pricePerGBPerMonth: pricePerGBPerMonth,
+        totalCost: totalCost,
+        currency: 'ETH'
+      },
+      paymentRequired: {
+        amount: totalCost,
+        currency: 'ETH',
+        instructions: 'Complete payment using MetaMask to activate contract'
       },
       warnings: warnings.length > 0 ? warnings : undefined
     });
@@ -381,21 +349,8 @@ router.post('/:id/cancel', async (req, res) => {
       return res.status(400).json(result);
     }
 
-
-    if (contract.payment.escrowStatus === 'deposited' && contract.payment.escrowAmount > 0) {
-      try {
-        const refundResult = await filecoinService.refundEscrow(
-          contract.renterId,
-          contract.id,
-          contract.payment.escrowAmount
-        );
-        console.log('[STORAGE-CONTRACTS] Escrow refunded:', refundResult);
-        contract.payment.escrowStatus = 'refunded';
-      } catch (error) {
-        console.error('[STORAGE-CONTRACTS] Escrow refund failed:', error.message);
-
-      }
-    }
+    // Note: Refunds should be handled via MetaMask/smart contract in frontend
+    console.log('[STORAGE-CONTRACTS] Contract cancelled - refund should be processed via MetaMask if payment was made');
 
     StorageProvider.releaseStorage(contract.providerId, contract.storage.allocatedGB);
 
@@ -428,35 +383,15 @@ router.post('/:id/complete', async (req, res) => {
       });
     }
 
-
-    if (contract.payment.escrowStatus === 'deposited' && contract.payment.escrowAmount > 0) {
-      try {
-        const releaseResult = await filecoinService.releaseEscrow(
-          contract.providerId,
-          contract.id,
-          contract.payment.escrowAmount
-        );
-        console.log('[STORAGE-CONTRACTS] Escrow released to provider:', releaseResult);
-        contract.payment.escrowStatus = 'released';
-        contract.payment.status = 'paid';
-        contract.payment.paidAmount = contract.payment.escrowAmount;
-        contract.payment.paymentDate = new Date().toISOString();
-      } catch (error) {
-        console.error('[STORAGE-CONTRACTS] Escrow release failed:', error.message);
-        return res.status(500).json({
-          success: false,
-          error: `Failed to release escrow: ${error.message}`
-        });
-      }
-    }
-
+    // Note: Payment release to provider should be handled via MetaMask/smart contract
+    console.log('[STORAGE-CONTRACTS] Contract completed - payment release should be processed via MetaMask');
 
     StorageContract.updateContractStatus(contract.id, 'completed');
-    StorageProvider.updateEarnings(contract.providerId, contract.payment.escrowAmount);
+    StorageProvider.updateEarnings(contract.providerId, contract.payment?.paidAmount || 0);
 
     res.json({
       success: true,
-      message: 'Contract completed and payment released to provider',
+      message: 'Contract completed - payment release should be processed via MetaMask',
       contract: contract
     });
   } catch (error) {
@@ -466,8 +401,10 @@ router.post('/:id/complete', async (req, res) => {
 });
 
 router.post('/:id/pay', async (req, res) => {
-  console.log(`[STORAGE-CONTRACTS] Procesare plata pentru contract ${req.params.id}...`);
+  console.log(`[STORAGE-CONTRACTS] Confirmare plata pentru contract ${req.params.id}...`);
   try {
+    const { transactionHash } = req.body; // MetaMask transaction hash
+
     const contract = StorageContract.getContract(req.params.id);
     if (!contract) {
       return res.status(404).json({ success: false, error: 'Contract not found' });
@@ -480,59 +417,30 @@ router.post('/:id/pay', async (req, res) => {
       });
     }
 
-    const filCost = contract.pricing?.priceInFIL || contract.pricing?.totalPrice || 0;
-
-    // Check balance first
-    try {
-      const clientBalance = await filecoinService.getBalance(contract.renterId);
-      if (clientBalance.balance < filCost) {
-        return res.status(400).json({
-          success: false,
-          error: `Insufficient FIL balance. Available: ${clientBalance.balance} FIL, Required: ${filCost} FIL`,
-          required: filCost,
-          available: clientBalance.balance
-        });
-      }
-    } catch (error) {
-      console.warn('[STORAGE-CONTRACTS] Balance check failed:', error.message);
-      return res.status(400).json({ success: false, error: 'Could not verify balance' });
+    // Update contract status after MetaMask payment confirmation
+    const data = StorageContract.loadContracts();
+    const contractToUpdate = data.contracts.find(c => c.id === contract.id);
+    if (contractToUpdate) {
+      contractToUpdate.payment.status = 'paid';
+      contractToUpdate.payment.transactionHash = transactionHash || 'pending_verification';
+      contractToUpdate.payment.paymentDate = new Date().toISOString();
+      contractToUpdate.payment.paymentMethod = 'metamask';
+      contractToUpdate.status = 'active';
+      contractToUpdate.updatedAt = new Date().toISOString();
+      StorageContract.saveContracts(data);
     }
 
-    // Deposit to escrow
-    try {
-      const escrowResult = await filecoinService.depositEscrow(contract.renterId, contract.id, filCost);
-      console.log('[STORAGE-CONTRACTS] Escrow deposit:', escrowResult);
+    console.log(`[STORAGE-CONTRACTS] Contract ${req.params.id} activated after MetaMask payment`);
 
-      // Update contract status
-      const data = StorageContract.loadContracts();
-      const contractToUpdate = data.contracts.find(c => c.id === contract.id);
-      if (contractToUpdate) {
-        contractToUpdate.payment.escrowStatus = 'deposited';
-        contractToUpdate.payment.escrowAmount = filCost;
-        contractToUpdate.payment.escrowTxId = escrowResult.transaction.id;
-        contractToUpdate.payment.status = 'paid';
-        contractToUpdate.payment.paymentDate = new Date().toISOString();
-        contractToUpdate.status = 'active';
-        contractToUpdate.updatedAt = new Date().toISOString();
-        StorageContract.saveContracts(data);
+    res.json({
+      success: true,
+      message: 'Payment confirmed - contract is now active',
+      contract: contractToUpdate,
+      payment: {
+        transactionHash: transactionHash || 'pending_verification',
+        method: 'metamask'
       }
-
-      res.json({
-        success: true,
-        message: 'Payment processed successfully - contract is now active',
-        contract: contractToUpdate,
-        escrow: {
-          amount: filCost,
-          transactionId: escrowResult.transaction.id
-        }
-      });
-    } catch (error) {
-      console.error('[STORAGE-CONTRACTS] Escrow deposit failed:', error.message);
-      return res.status(500).json({
-        success: false,
-        error: `Failed to deposit escrow: ${error.message}`
-      });
-    }
+    });
   } catch (error) {
     console.error('[STORAGE-CONTRACTS] Error:', error.message);
     res.status(500).json({ success: false, error: error.message });
